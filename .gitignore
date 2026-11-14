@@ -1,0 +1,23 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Node dependencies
+node_modules/
+dist/
+npm-debug.log*
+
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugin-dependencies
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store

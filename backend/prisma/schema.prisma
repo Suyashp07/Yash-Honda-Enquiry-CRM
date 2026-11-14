@@ -35,18 +35,18 @@ model Branch {
 }
 
 model User {
-  id               String       @id @default(cuid())
-  name             String
-  mobile           String       @unique
-  passwordHash     String
-  role             Role
-  status           String       @default("Active")
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  userBranches     UserBranch[]
-  enquiriesCreated Enquiry[]    @relation("CreatedBy")
-  enquiriesAssigned Enquiry[]   @relation("AssignedTo")
-  calls            Call[]
+  id                String       @id @default(cuid())
+  name              String
+  mobile            String       @unique
+  passwordHash      String
+  role              Role
+  status            String       @default("Active")
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  userBranches      UserBranch[]
+  enquiriesCreated  Enquiry[]    @relation("CreatedBy")
+  enquiriesAssigned Enquiry[]    @relation("AssignedTo")
+  calls             Call[]
 }
 
 model UserBranch {
@@ -86,14 +86,15 @@ model Vehicle {
   id              String          @id @default(cuid())
   code            String          @unique // CD110, CB650R
   name            String
-  category        String          // MC | Scooter | BigBike (tablet UI filter)
+  category        String // MC | Scooter | BigBike (tablet UI filter)
   modelGroupId    String
   modelGroup      ModelGroup      @relation(fields: [modelGroupId], references: [id])
   exShowroomPrice Decimal
-  onRoadPrice     Decimal         // stored & manually edited, no formula (RESOLVED)
+  onRoadPrice     Decimal // stored & manually edited, no formula (RESOLVED)
   status          String          @default("Active")
   colours         VehicleColour[]
   quotationItems  QuotationItem[]
+  quotations      Quotation[]
 }
 
 model Colour {
@@ -115,18 +116,19 @@ model VehicleColour {
 }
 
 model Accessory {
-  id                  String               @id @default(cuid())
-  name                String               @unique // Ceramic Coating, RSA, etc.
-  defaultPrice        Decimal
-  isPriceEditable     Boolean              @default(false) // false = FIX tag, true = rep can edit amount
-  status              String               @default("Active")
+  id                   String               @id @default(cuid())
+  name                 String               @unique // Ceramic Coating, RSA, etc.
+  defaultPrice         Decimal
+  isPriceEditable      Boolean              @default(false) // false = FIX tag, true = rep can edit amount
+  status               String               @default("Active")
   quotationAccessories QuotationAccessory[]
 }
 
 model Financier {
-  id     String @id @default(cuid())
-  name   String @unique
-  status String @default("Active")
+  id        String    @id @default(cuid())
+  name      String    @unique
+  status    String    @default("Active")
+  enquiries Enquiry[]
 }
 
 model Area {
@@ -144,31 +146,31 @@ model LeadSource {
 }
 
 model Enquiry {
-  id            String                 @id @default(cuid())
-  customerId    String
-  branchId      String
-  createdById   String
-  assignedToId  String?
-  leadSourceId  String?
-  enquiryType   String                 // Walk-in | Tele | Online etc.
-  purchaseMode  String                 // Cash | Finance
-  financierId   String?
-  exchange      String                 @default("No") // No | Yes | Yes & Print
-  buyingWhen    String?
-  remarks       String?
-  status        EnquiryStatus          @default(ACTIVE)
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
-  customer      Customer               @relation(fields: [customerId], references: [id])
-  branch        Branch                 @relation(fields: [branchId], references: [id])
-  createdBy     User                   @relation("CreatedBy", fields: [createdById], references: [id])
-  assignedTo    User?                  @relation("AssignedTo", fields: [assignedToId], references: [id])
-  leadSource    LeadSource?            @relation(fields: [leadSourceId], references: [id])
-  financier     Financier?             @relation(fields: [financierId], references: [id])
-  statusHistory EnquiryStatusHistory[]
-  followUps     FollowUp[]
-  quotations    Quotation[]
-  calls         Call[]
+  id             String                 @id @default(cuid())
+  customerId     String
+  branchId       String
+  createdById    String
+  assignedToId   String?
+  leadSourceId   String?
+  enquiryType    String // Walk-in | Tele | Online etc.
+  purchaseMode   String // Cash | Finance
+  financierId    String?
+  exchange       String                 @default("No") // No | Yes | Yes & Print
+  buyingWhen     String?
+  remarks        String?
+  status         EnquiryStatus          @default(ACTIVE)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  customer       Customer               @relation(fields: [customerId], references: [id])
+  branch         Branch                 @relation(fields: [branchId], references: [id])
+  createdBy      User                   @relation("CreatedBy", fields: [createdById], references: [id])
+  assignedTo     User?                  @relation("AssignedTo", fields: [assignedToId], references: [id])
+  leadSource     LeadSource?            @relation(fields: [leadSourceId], references: [id])
+  financier      Financier?             @relation(fields: [financierId], references: [id])
+  statusHistory  EnquiryStatusHistory[]
+  followUps      FollowUp[]
+  quotations     Quotation[]
+  calls          Call[]
   communications Communication[]
 
   @@index([branchId, status, createdAt])
@@ -198,8 +200,8 @@ model Quotation {
   enquiryId   String
   branchId    String
   vehicleId   String
-  colourName  String               // snapshot, not FK
-  exShowroom  Decimal              // snapshot
+  colourName  String // snapshot, not FK
+  exShowroom  Decimal // snapshot
   roadTax     Decimal
   insurance   Decimal
   grandTotal  Decimal
@@ -219,7 +221,7 @@ model QuotationItem {
   quotationId String
   vehicleId   String
   label       String
-  amount      Decimal   // snapshot — price history preserved even if master price later changes
+  amount      Decimal // snapshot — price history preserved even if master price later changes
   quotation   Quotation @relation(fields: [quotationId], references: [id])
   vehicle     Vehicle   @relation(fields: [vehicleId], references: [id])
 }
@@ -228,7 +230,7 @@ model QuotationAccessory {
   id          String    @id @default(cuid())
   quotationId String
   accessoryId String
-  amount      Decimal   // snapshot, editable at point of sale if isPriceEditable
+  amount      Decimal // snapshot, editable at point of sale if isPriceEditable
   quotation   Quotation @relation(fields: [quotationId], references: [id])
   accessory   Accessory @relation(fields: [accessoryId], references: [id])
 }
@@ -244,7 +246,7 @@ model Call {
   startedAt       DateTime?
   endedAt         DateTime?
   durationSeconds Int?
-  status          String    // initiated|connected|failed|completed
+  status          String // initiated|connected|failed|completed
   recordingStatus String?
   recordingR2Key  String?
   createdAt       DateTime  @default(now())
@@ -258,24 +260,24 @@ model Call {
 model Communication {
   id        String   @id @default(cuid())
   enquiryId String
-  channel   String   // whatsapp | email
-  status    String   // sent|delivered|failed
+  channel   String // whatsapp | email
+  status    String // sent|delivered|failed
   payload   Json?
   createdAt DateTime @default(now())
   enquiry   Enquiry  @relation(fields: [enquiryId], references: [id])
 }
 
 model CompanySettings {
-  id                         String   @id @default(cuid())
-  companyName                String
-  gstNumber                  String?
-  address                    String?
-  bankName                   String?
-  accountNumber              String?
-  ifsc                       String?
-  upiId                      String?
-  hypothecationCharge        Decimal  @default(0)
-  applyHypothecationDefault Boolean  @default(true)
+  id                        String  @id @default(cuid())
+  companyName               String
+  gstNumber                 String?
+  address                   String?
+  bankName                  String?
+  accountNumber             String?
+  ifsc                      String?
+  upiId                     String?
+  hypothecationCharge       Decimal @default(0)
+  applyHypothecationDefault Boolean @default(true)
 }
 
 model AuditLog {
@@ -290,7 +292,7 @@ model AuditLog {
 
 model AiSummaryCache {
   id          String   @id @default(cuid())
-  scopeKey    String   // e.g. "branch:all|range:today" or "branch:RWWKD|range:mtd"
+  scopeKey    String // e.g. "branch:all|range:today" or "branch:RWWKD|range:mtd"
   summaryText String
   generatedAt DateTime @default(now())
 
