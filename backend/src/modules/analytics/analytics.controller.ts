@@ -61,3 +61,4 @@ export class AnalyticsController {
     return this.analyticsService.getMatrixSummary(user, branchId, range);
   }
 }
+

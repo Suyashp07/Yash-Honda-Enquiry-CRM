@@ -8,3 +8,4 @@ import { AreasController } from './areas.controller';
   exports: [AreasService],
 })
 export class AreasModule {}
+

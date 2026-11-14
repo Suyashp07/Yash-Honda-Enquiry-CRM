@@ -51,3 +51,4 @@ export class FloorDashboardGateway implements OnGatewayConnection, OnGatewayDisc
     }
   }
 }
+

@@ -49,3 +49,4 @@ export class CreateQuotationDto extends CalculateQuotationDto {
   @IsNotEmpty()
   enquiryId: string;
 }
+

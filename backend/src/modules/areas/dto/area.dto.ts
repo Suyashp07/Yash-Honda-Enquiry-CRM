@@ -19,3 +19,4 @@ export class UpdateAreaDto {
   @IsOptional()
   status?: string;
 }
+

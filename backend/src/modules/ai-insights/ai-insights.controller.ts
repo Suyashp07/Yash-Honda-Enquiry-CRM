@@ -30,3 +30,4 @@ export class AiInsightsController {
     return this.aiInsightsService.getSummary(user, branch, range, isForce);
   }
 }
+

@@ -47,3 +47,4 @@ export class LeadSourcesController {
     return this.leadSourcesService.remove(id);
   }
 }
+

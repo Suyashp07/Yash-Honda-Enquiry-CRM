@@ -19,3 +19,4 @@ export class UpdateLeadSourceDto {
   @IsOptional()
   status?: string;
 }
+

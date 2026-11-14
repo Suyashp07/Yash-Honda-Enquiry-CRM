@@ -74,3 +74,4 @@ export class VehiclesController {
     return this.vehiclesService.removeVehicle(id);
   }
 }
+

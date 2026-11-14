@@ -57,3 +57,4 @@ export class UpdateUserDto {
   @IsOptional()
   branchIds?: string[];
 }
+

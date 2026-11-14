@@ -132,3 +132,4 @@ export class AssignEnquiryDto {
   @IsNotEmpty()
   assignedToId: string;
 }
+

@@ -8,3 +8,4 @@ import { FollowUpsController } from './follow-ups.controller';
   exports: [FollowUpsService],
 })
 export class FollowUpsModule {}
+

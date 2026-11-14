@@ -8,3 +8,4 @@ import { VehiclesController } from './vehicles.controller';
   exports: [VehiclesService],
 })
 export class VehiclesModule {}
+

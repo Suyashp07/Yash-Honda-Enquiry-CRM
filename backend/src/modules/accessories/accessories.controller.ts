@@ -47,3 +47,4 @@ export class AccessoriesController {
     return this.accessoriesService.remove(id);
   }
 }
+

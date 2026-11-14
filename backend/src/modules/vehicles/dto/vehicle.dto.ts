@@ -91,3 +91,4 @@ export class UpdateVehicleDto {
   @IsOptional()
   colourIds?: string[];
 }
+

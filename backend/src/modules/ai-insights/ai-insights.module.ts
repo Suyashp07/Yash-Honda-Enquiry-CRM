@@ -10,3 +10,4 @@ import { AnalyticsModule } from '../analytics/analytics.module';
   exports: [AiInsightsService],
 })
 export class AiInsightsModule {}
+

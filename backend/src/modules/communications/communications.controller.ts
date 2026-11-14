@@ -29,3 +29,4 @@ export class CommunicationsController {
     return this.communicationsService.findByEnquiry(enquiryId);
   }
 }
+

@@ -65,3 +65,4 @@ export class EnquiriesController {
     return this.enquiriesService.assign(id, dto, user);
   }
 }
+

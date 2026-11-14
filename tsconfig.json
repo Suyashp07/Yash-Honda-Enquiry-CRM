@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "target": "ES2021",
+    "baseUrl": "./backend"
+  },
+  "include": [
+    "backend/src/**/*",
+    "backend/prisma/**/*"
+  ]
+}
+

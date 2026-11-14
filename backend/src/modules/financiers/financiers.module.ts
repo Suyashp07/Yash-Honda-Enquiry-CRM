@@ -8,3 +8,4 @@ import { FinanciersController } from './financiers.controller';
   exports: [FinanciersService],
 })
 export class FinanciersModule {}
+

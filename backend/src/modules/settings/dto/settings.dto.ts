@@ -47,3 +47,4 @@ export class UpdateSettingsDto {
   @IsOptional()
   applyHypothecationDefault?: boolean;
 }
+

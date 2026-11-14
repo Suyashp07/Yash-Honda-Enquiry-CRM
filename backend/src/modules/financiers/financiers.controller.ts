@@ -47,3 +47,4 @@ export class FinanciersController {
     return this.financiersService.remove(id);
   }
 }
+

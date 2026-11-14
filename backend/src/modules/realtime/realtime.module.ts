@@ -7,3 +7,4 @@ import { FloorDashboardGateway } from './floor-dashboard.gateway';
   exports: [FloorDashboardGateway],
 })
 export class RealtimeModule {}
+

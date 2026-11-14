@@ -36,3 +36,4 @@ export class FollowUpsController {
     return this.followUpsService.findAll(user, scope, branchId);
   }
 }
+

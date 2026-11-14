@@ -38,3 +38,4 @@ export class UpdateAccessoryDto {
   @IsOptional()
   status?: string;
 }
+

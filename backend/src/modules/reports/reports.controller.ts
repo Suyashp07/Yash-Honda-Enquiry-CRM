@@ -46,3 +46,4 @@ export class ReportsController {
     return this.reportsService.getExchangeLeads(user, branchId);
   }
 }
+

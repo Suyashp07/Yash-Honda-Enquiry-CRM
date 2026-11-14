@@ -21,3 +21,4 @@ export class AuditController {
     return this.auditService.findAll(limit ? Number(limit) : 50);
   }
 }
+

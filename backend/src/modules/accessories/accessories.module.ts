@@ -8,3 +8,4 @@ import { AccessoriesController } from './accessories.controller';
   exports: [AccessoriesService],
 })
 export class AccessoriesModule {}
+

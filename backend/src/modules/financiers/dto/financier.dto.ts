@@ -19,3 +19,4 @@ export class UpdateFinancierDto {
   @IsOptional()
   status?: string;
 }
+

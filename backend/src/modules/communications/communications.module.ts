@@ -8,3 +8,4 @@ import { CommunicationsController } from './communications.controller';
   exports: [CommunicationsService],
 })
 export class CommunicationsModule {}
+

@@ -39,3 +39,4 @@ export class UpdateBranchDto {
   @IsOptional()
   status?: string;
 }
+

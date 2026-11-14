@@ -24,3 +24,4 @@ export class CompleteFollowUpDto {
   @IsOptional()
   remarks?: string;
 }
+
