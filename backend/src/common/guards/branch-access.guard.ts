@@ -38,3 +38,4 @@ export class BranchAccessGuard implements CanActivate {
     return true;
   }
 }
+
