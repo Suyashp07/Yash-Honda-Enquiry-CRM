@@ -1,0 +1,298 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  BRANCH_MANAGER
+  SALES_EXEC
+}
+
+enum EnquiryStatus {
+  ACTIVE
+  RESOLVED
+  CUSTOMER_BOUGHT
+  CLOSED
+}
+
+model Branch {
+  id           String       @id @default(cuid())
+  code         String       @unique // e.g. BWH, RWPHUR
+  name         String
+  address      String
+  status       String       @default("Active")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  userBranches UserBranch[]
+  enquiries    Enquiry[]
+  quotations   Quotation[]
+  calls        Call[]
+}
+
+model User {
+  id               String       @id @default(cuid())
+  name             String
+  mobile           String       @unique
+  passwordHash     String
+  role             Role
+  status           String       @default("Active")
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  userBranches     UserBranch[]
+  enquiriesCreated Enquiry[]    @relation("CreatedBy")
+  enquiriesAssigned Enquiry[]   @relation("AssignedTo")
+  calls            Call[]
+}
+
+model UserBranch {
+  id       String @id @default(cuid())
+  userId   String
+  branchId String
+  user     User   @relation(fields: [userId], references: [id])
+  branch   Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([userId, branchId])
+}
+
+model Customer {
+  id          String    @id @default(cuid())
+  name        String
+  mobile      String
+  email       String?
+  dob         DateTime?
+  anniversary DateTime?
+  address     String?
+  areaId      String?
+  area        Area?     @relation(fields: [areaId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  enquiries   Enquiry[]
+}
+
+model ModelGroup {
+  id          String    @id @default(cuid())
+  name        String    @unique // BigWing, RedWing
+  quotePrefix String    @unique // BWQ, RWQ
+  status      String    @default("Active")
+  vehicles    Vehicle[]
+}
+
+model Vehicle {
+  id              String          @id @default(cuid())
+  code            String          @unique // CD110, CB650R
+  name            String
+  category        String          // MC | Scooter | BigBike (tablet UI filter)
+  modelGroupId    String
+  modelGroup      ModelGroup      @relation(fields: [modelGroupId], references: [id])
+  exShowroomPrice Decimal
+  onRoadPrice     Decimal         // stored & manually edited, no formula (RESOLVED)
+  status          String          @default("Active")
+  colours         VehicleColour[]
+  quotationItems  QuotationItem[]
+}
+
+model Colour {
+  id       String          @id @default(cuid())
+  name     String          @unique
+  hex      String
+  status   String          @default("Active")
+  vehicles VehicleColour[]
+}
+
+model VehicleColour {
+  id        String  @id @default(cuid())
+  vehicleId String
+  colourId  String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
+  colour    Colour  @relation(fields: [colourId], references: [id])
+
+  @@unique([vehicleId, colourId])
+}
+
+model Accessory {
+  id                  String               @id @default(cuid())
+  name                String               @unique // Ceramic Coating, RSA, etc.
+  defaultPrice        Decimal
+  isPriceEditable     Boolean              @default(false) // false = FIX tag, true = rep can edit amount
+  status              String               @default("Active")
+  quotationAccessories QuotationAccessory[]
+}
+
+model Financier {
+  id     String @id @default(cuid())
+  name   String @unique
+  status String @default("Active")
+}
+
+model Area {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  status    String     @default("Active")
+  customers Customer[]
+}
+
+model LeadSource {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  status    String    @default("Active")
+  enquiries Enquiry[]
+}
+
+model Enquiry {
+  id            String                 @id @default(cuid())
+  customerId    String
+  branchId      String
+  createdById   String
+  assignedToId  String?
+  leadSourceId  String?
+  enquiryType   String                 // Walk-in | Tele | Online etc.
+  purchaseMode  String                 // Cash | Finance
+  financierId   String?
+  exchange      String                 @default("No") // No | Yes | Yes & Print
+  buyingWhen    String?
+  remarks       String?
+  status        EnquiryStatus          @default(ACTIVE)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  customer      Customer               @relation(fields: [customerId], references: [id])
+  branch        Branch                 @relation(fields: [branchId], references: [id])
+  createdBy     User                   @relation("CreatedBy", fields: [createdById], references: [id])
+  assignedTo    User?                  @relation("AssignedTo", fields: [assignedToId], references: [id])
+  leadSource    LeadSource?            @relation(fields: [leadSourceId], references: [id])
+  financier     Financier?             @relation(fields: [financierId], references: [id])
+  statusHistory EnquiryStatusHistory[]
+  followUps     FollowUp[]
+  quotations    Quotation[]
+  calls         Call[]
+  communications Communication[]
+
+  @@index([branchId, status, createdAt])
+}
+
+model EnquiryStatusHistory {
+  id         String   @id @default(cuid())
+  enquiryId  String
+  fromStatus String?
+  toStatus   String
+  changedAt  DateTime @default(now())
+  enquiry    Enquiry  @relation(fields: [enquiryId], references: [id])
+}
+
+model FollowUp {
+  id          String    @id @default(cuid())
+  enquiryId   String
+  scheduledAt DateTime?
+  completedAt DateTime?
+  remarks     String?
+  enquiry     Enquiry   @relation(fields: [enquiryId], references: [id])
+}
+
+model Quotation {
+  id          String               @id @default(cuid())
+  quoteNumber String               @unique // RESOLVED format: {quotePrefix}-{branchCode}-{sequence}, e.g. RWQ-RWWKD-00123
+  enquiryId   String
+  branchId    String
+  vehicleId   String
+  colourName  String               // snapshot, not FK
+  exShowroom  Decimal              // snapshot
+  roadTax     Decimal
+  insurance   Decimal
+  grandTotal  Decimal
+  pdfR2Key    String?
+  createdAt   DateTime             @default(now())
+  enquiry     Enquiry              @relation(fields: [enquiryId], references: [id])
+  branch      Branch               @relation(fields: [branchId], references: [id])
+  vehicle     Vehicle              @relation(fields: [vehicleId], references: [id])
+  items       QuotationItem[]
+  accessories QuotationAccessory[]
+
+  @@index([branchId, createdAt])
+}
+
+model QuotationItem {
+  id          String    @id @default(cuid())
+  quotationId String
+  vehicleId   String
+  label       String
+  amount      Decimal   // snapshot — price history preserved even if master price later changes
+  quotation   Quotation @relation(fields: [quotationId], references: [id])
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id])
+}
+
+model QuotationAccessory {
+  id          String    @id @default(cuid())
+  quotationId String
+  accessoryId String
+  amount      Decimal   // snapshot, editable at point of sale if isPriceEditable
+  quotation   Quotation @relation(fields: [quotationId], references: [id])
+  accessory   Accessory @relation(fields: [accessoryId], references: [id])
+}
+
+model Call {
+  id              String    @id @default(cuid())
+  enquiryId       String
+  employeeId      String
+  branchId        String
+  providerCallId  String?
+  employeePhone   String
+  customerPhone   String
+  startedAt       DateTime?
+  endedAt         DateTime?
+  durationSeconds Int?
+  status          String    // initiated|connected|failed|completed
+  recordingStatus String?
+  recordingR2Key  String?
+  createdAt       DateTime  @default(now())
+  enquiry         Enquiry   @relation(fields: [enquiryId], references: [id])
+  employee        User      @relation(fields: [employeeId], references: [id])
+  branch          Branch    @relation(fields: [branchId], references: [id])
+
+  @@index([branchId, createdAt])
+}
+
+model Communication {
+  id        String   @id @default(cuid())
+  enquiryId String
+  channel   String   // whatsapp | email
+  status    String   // sent|delivered|failed
+  payload   Json?
+  createdAt DateTime @default(now())
+  enquiry   Enquiry  @relation(fields: [enquiryId], references: [id])
+}
+
+model CompanySettings {
+  id                         String   @id @default(cuid())
+  companyName                String
+  gstNumber                  String?
+  address                    String?
+  bankName                   String?
+  accountNumber              String?
+  ifsc                       String?
+  upiId                      String?
+  hypothecationCharge        Decimal  @default(0)
+  applyHypothecationDefault Boolean  @default(true)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model AiSummaryCache {
+  id          String   @id @default(cuid())
+  scopeKey    String   // e.g. "branch:all|range:today" or "branch:RWWKD|range:mtd"
+  summaryText String
+  generatedAt DateTime @default(now())
+
+  @@unique([scopeKey])
+}
