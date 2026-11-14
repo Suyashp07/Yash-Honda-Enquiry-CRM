@@ -241,3 +241,4 @@ class _VehiclePickerScreenState extends ConsumerState<VehiclePickerScreen> {
     );
   }
 }
+

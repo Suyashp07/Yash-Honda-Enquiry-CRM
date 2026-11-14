@@ -104,3 +104,4 @@ final authStateProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final storage = ref.watch(secureStorageProvider);
   return AuthNotifier(dio: dio, storage: storage);
 });
+

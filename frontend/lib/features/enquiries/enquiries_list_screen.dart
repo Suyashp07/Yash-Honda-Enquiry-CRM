@@ -236,3 +236,4 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     );
   }
 }
+

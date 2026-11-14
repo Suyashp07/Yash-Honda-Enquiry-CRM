@@ -84,6 +84,28 @@ class _QuoteActionsScreenState extends ConsumerState<QuoteActionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.quotation.isEmpty || widget.quotation['id'] == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(title: const Text('Quotation Actions')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.receipt_long_outlined, size: 48, color: AppColors.textMuted),
+              const SizedBox(height: 16),
+              const Text('No active quotation in session.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => context.go('/enquiries'),
+                child: const Text('View All Enquiries'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final q = widget.quotation;
     final customer = widget.enquiry['customer'] ?? {};
     final quoteNumber = q['quoteNumber'] ?? 'QUOTE';
@@ -243,3 +265,4 @@ class _QuoteActionsScreenState extends ConsumerState<QuoteActionsScreen> {
     );
   }
 }
+

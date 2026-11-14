@@ -58,3 +58,4 @@ class UserModel {
     'branches': branches.map((b) => b.toJson()).toList(),
   };
 }
+

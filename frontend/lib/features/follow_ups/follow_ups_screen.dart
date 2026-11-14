@@ -163,3 +163,4 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen> {
     );
   }
 }
+

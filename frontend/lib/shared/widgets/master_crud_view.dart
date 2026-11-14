@@ -467,3 +467,4 @@ class _MasterCrudViewState extends State<MasterCrudView> {
     );
   }
 }
+

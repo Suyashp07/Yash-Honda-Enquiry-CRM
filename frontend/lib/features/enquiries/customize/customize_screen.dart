@@ -159,6 +159,29 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.vehicle.isEmpty || widget.vehicle['id'] == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(title: const Text('Customize Enquiry')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.two_wheeler, size: 48, color: AppColors.textMuted),
+              const SizedBox(height: 16),
+              const Text('Please select a vehicle model first to customize quote.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => context.go('/enquiries/vehicle-picker'),
+                icon: const Icon(Icons.arrow_back, size: 18),
+                label: const Text('Go to Vehicle Picker'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final colours = (widget.vehicle['colours'] as List?) ?? [];
     final user = ref.watch(authStateProvider).user;
 
@@ -368,7 +391,10 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                             final id = acc['id'].toString();
                             final isSel = _selectedAccessoryIds.contains(id);
                             final isEditable = acc['isPriceEditable'] == true;
-                            final defaultPrice = (acc['defaultPrice'] as num).toDouble();
+                            final rawPrice = acc['defaultPrice'];
+                            final defaultPrice = rawPrice is num
+                                ? rawPrice.toDouble()
+                                : (double.tryParse(rawPrice?.toString() ?? '') ?? 0.0);
                             final currentPrice = _accessoryPriceOverrides[id] ?? defaultPrice;
 
                             return CheckboxListTile(
@@ -502,3 +528,4 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     );
   }
 }
+

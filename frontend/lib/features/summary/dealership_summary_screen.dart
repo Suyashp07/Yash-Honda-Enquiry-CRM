@@ -303,3 +303,4 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
     );
   }
 }
+

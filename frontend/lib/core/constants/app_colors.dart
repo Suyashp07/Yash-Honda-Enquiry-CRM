@@ -27,3 +27,4 @@ class AppColors {
   static const Color repIdle = Color(0xFF16A34A); // Green
   static const Color repBusy = Color(0xFFEA580C); // Orange
 }
+
