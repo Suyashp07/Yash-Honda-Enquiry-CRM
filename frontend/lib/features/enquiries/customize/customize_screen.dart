@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/networking/api_client.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -947,7 +948,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                 border: Border.all(color: const Color(0xFFE2E8F0)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -991,8 +992,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                           ],
                         ),
                       ),
-                      // Honda Wing Official Dealership Badge
-                      const HondaWingLogo(),
+                      // Honda Wing Official Dealership Badge or Custom Uploaded Logo from Company Profile
+                      _buildQuoteLogo(),
                     ],
                   ),
                   const Divider(height: 20, color: Color(0xFFE2E8F0)),
@@ -1108,39 +1109,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                           ],
                         ),
                       ),
-                      // UPI QR Code Card
-                      Container(
-                        width: 58,
-                        height: 58,
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: const Color(0xFFCBD5E1)),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(width: 14, height: 14, color: const Color(0xFF0F172A)),
-                                Container(width: 14, height: 14, color: const Color(0xFF0F172A)),
-                              ],
-                            ),
-                            const Center(
-                              child: Text('UPI QR', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(width: 14, height: 14, color: const Color(0xFF0F172A)),
-                                Container(width: 14, height: 14, color: AppColors.primary),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
+                      // UPI QR Code Card from Company Profile (or dynamic scan & pay QR)
+                      _buildQuoteQrCode(upiId, grandTotal),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -1161,6 +1131,83 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  String _resolveImageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    final base = ApiConstants.baseUrl.endsWith('/api')
+        ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 4)
+        : ApiConstants.baseUrl;
+    return '$base${path.startsWith('/') ? '' : '/'}$path';
+  }
+
+  Widget _buildQuoteLogo() {
+    final logoUrl = _settings?['logoUrl']?.toString();
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      return Container(
+        constraints: const BoxConstraints(maxHeight: 38, maxWidth: 110),
+        alignment: Alignment.centerRight,
+        child: Image.network(
+          _resolveImageUrl(logoUrl),
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const HondaWingLogo(),
+        ),
+      );
+    }
+    return const HondaWingLogo();
+  }
+
+  Widget _buildQuoteQrCode(String upiId, double grandTotal) {
+    final upiQrUrl = _settings?['upiQrUrl']?.toString();
+    if (upiQrUrl != null && upiQrUrl.isNotEmpty) {
+      return Tooltip(
+        message: 'Official dealership UPI QR code for advance payment',
+        child: Container(
+          width: 58,
+          height: 58,
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: const Color(0xFFCBD5E1)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Image.network(
+            _resolveImageUrl(upiQrUrl),
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => _buildDynamicUpiQr(upiId, grandTotal),
+          ),
+        ),
+      );
+    }
+    return Tooltip(
+      message: 'Scan & Pay via UPI ($upiId)',
+      child: Container(
+        width: 58,
+        height: 58,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: const Color(0xFFCBD5E1)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: _buildDynamicUpiQr(upiId, grandTotal),
+      ),
+    );
+  }
+
+  Widget _buildDynamicUpiQr(String upiId, double grandTotal) {
+    final qrApiUrl =
+        'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=upi://pay?pa=${Uri.encodeComponent(upiId)}%26pn=Yash%20Honda%26am=$grandTotal';
+    return Image.network(
+      qrApiUrl,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const Center(
+        child: Icon(Icons.qr_code_2_rounded, size: 36, color: Color(0xFF0F172A)),
+      ),
     );
   }
 
