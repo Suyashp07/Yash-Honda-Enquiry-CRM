@@ -26,8 +26,36 @@ export class AnalyticsService {
     return { gte: start, lte: now };
   }
 
-  async getFloorDashboard(user: any, branchId?: string) {
-    const todayDates = this.getDates('today');
+  async getFloorDashboard(user: any, branchId?: string, targetDateStr?: string) {
+    let dayDates: { gte: Date; lte: Date };
+    let effectiveDateStr: string;
+
+    if (targetDateStr) {
+      const parts = targetDateStr.split('-');
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const start = new Date(year, month, day, 0, 0, 0, 0);
+        const end = new Date(year, month, day, 23, 59, 59, 999);
+        dayDates = { gte: start, lte: end };
+        effectiveDateStr = targetDateStr;
+      } else {
+        const parsed = new Date(targetDateStr);
+        if (!isNaN(parsed.getTime())) {
+          const start = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
+          const end = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 23, 59, 59, 999);
+          dayDates = { gte: start, lte: end };
+          effectiveDateStr = parsed.toISOString().split('T')[0];
+        } else {
+          dayDates = this.getDates('today');
+          effectiveDateStr = new Date().toISOString().split('T')[0];
+        }
+      }
+    } else {
+      dayDates = this.getDates('today');
+      effectiveDateStr = new Date().toISOString().split('T')[0];
+    }
 
     // Consolidated: all active branches across Pune
     const allBranches = await this.prisma.branch.findMany({
@@ -53,11 +81,11 @@ export class AnalyticsService {
       : allBranches[0];
     const currentBranchName = currentBranchObj?.name || 'Phursungi';
 
-    // All enquiries today across entire dealership network (Consolidated)
+    // All enquiries on this day across entire dealership network (Consolidated)
     const allTodayEnquiries = await this.prisma.enquiry.findMany({
       where: {
         branchId: { in: allBranchIds },
-        createdAt: todayDates,
+        createdAt: dayDates,
       },
       include: {
         customer: {
@@ -150,7 +178,7 @@ export class AnalyticsService {
     const idleRepsCount = repStats.length - busyRepsCount;
 
     return {
-      date: new Date().toISOString().split('T')[0],
+      date: effectiveDateStr,
       currentDealership: {
         name: currentBranchName,
         total: currentTotal,

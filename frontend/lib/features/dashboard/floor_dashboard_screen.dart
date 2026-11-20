@@ -31,11 +31,13 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   String _viewMode = 'rows'; // 'rows' or 'columns'
   int _zoomLevel = 100;
 
-  // 30-min time slots matching prototype showroom floor
+  // 30-min time slots matching showroom floor operating hours
   final List<String> _timeSlots = [
-    '4:30 PM', '5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM',
-    '7:00 PM', '7:30 PM', '8:00 PM', '8:30 PM', '9:00 PM',
-    '9:30 PM', '10:00 PM', '10:30 PM', '11:00 PM', '11:30 PM',
+    '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
+    '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM',
+    '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM',
+    '6:00 PM', '6:30 PM', '7:00 PM', '7:30 PM', '8:00 PM', '8:30 PM',
+    '9:00 PM', '9:30 PM',
   ];
 
   @override
@@ -50,7 +52,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     super.dispose();
   }
 
-  Future<void> _loadDashboard({String? branchId}) async {
+  Future<void> _loadDashboard({String? branchId, DateTime? date}) async {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
@@ -61,10 +63,14 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         query['branchId'] = activeBranch;
       }
 
+      final targetDate = date ?? _currentDate;
+      query['date'] = DateFormat('yyyy-MM-dd').format(targetDate);
+
       final res = await dio.get('/analytics/floor', queryParameters: query);
 
       if (!mounted) return;
       setState(() {
+        _currentDate = targetDate;
         _selectedBranch = activeBranch;
         _dashboardData = res.data;
         _isLoading = false;
@@ -95,7 +101,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           action: SnackBarAction(
             label: 'Retry',
             textColor: const Color(0xFFEF4444),
-            onPressed: _loadDashboard,
+            onPressed: () => _loadDashboard(branchId: _selectedBranch, date: _currentDate),
           ),
         ),
       );
@@ -104,12 +110,65 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
 
   String _getNowSlot() {
     final now = DateTime.now();
-    final hour = now.hour;
+    int hour = now.hour;
     final minute = now.minute;
-    final slotMinute = minute < 30 ? '00' : '30';
+    String slotMinute;
+    if (minute < 15) {
+      slotMinute = '00';
+    } else if (minute < 45) {
+      slotMinute = '30';
+    } else {
+      slotMinute = '00';
+      hour = (hour + 1) % 24;
+    }
     final period = hour >= 12 ? 'PM' : 'AM';
     final formattedHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
     return '$formattedHour:$slotMinute $period';
+  }
+
+  String _getSessionSlot(Map<String, dynamic> session) {
+    final rawDate = session['created_at'];
+    if (rawDate == null) return '';
+    try {
+      final dt = DateTime.parse(rawDate.toString()).toLocal();
+      int hour = dt.hour;
+      final minute = dt.minute;
+      String slotMinute;
+      if (minute < 15) {
+        slotMinute = '00';
+      } else if (minute < 45) {
+        slotMinute = '30';
+      } else {
+        slotMinute = '00';
+        hour = (hour + 1) % 24;
+      }
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final formattedHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+      return '$formattedHour:$slotMinute $period';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _formatSessionTime(dynamic rawDate) {
+    if (rawDate == null) return '';
+    try {
+      final dt = DateTime.parse(rawDate.toString()).toLocal();
+      return DateFormat('HH:mm').format(dt);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Map<String, dynamic>? _findSessionForSlot(List<dynamic> repSessions, String slot) {
+    for (final s in repSessions) {
+      if (s is Map<String, dynamic>) {
+        if (_getSessionSlot(s) == slot) {
+          return s;
+        }
+      }
+    }
+    return null;
   }
 
   Color _getAvatarBg(String name) {
@@ -130,7 +189,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     ref.listen<String>(selectedBranchIdProvider, (prev, next) {
       if (prev != next) {
         _selectedRepId = 'all';
-        _loadDashboard(branchId: next);
+        _loadDashboard(branchId: next, date: _currentDate);
       }
     });
 
@@ -452,7 +511,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             Tooltip(
               message: 'Reset timeline view to today\'s date',
               child: InkWell(
-                onTap: () => setState(() => _currentDate = DateTime.now()),
+                onTap: () => _loadDashboard(date: DateTime.now()),
                 borderRadius: BorderRadius.circular(6),
                 child: Container(
                   height: 32,
@@ -471,7 +530,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             Tooltip(
               message: 'View previous day (${DateFormat('dd MMM').format(_currentDate.subtract(const Duration(days: 1)))})',
               child: InkWell(
-                onTap: () => setState(() => _currentDate = _currentDate.subtract(const Duration(days: 1))),
+                onTap: () => _loadDashboard(date: _currentDate.subtract(const Duration(days: 1))),
                 borderRadius: BorderRadius.circular(6),
                 child: Container(
                   height: 32,
@@ -488,19 +547,45 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             ),
             const SizedBox(width: 6),
             Tooltip(
-              message: 'Selected timeline date: ${DateFormat('EEEE, d MMMM yyyy').format(_currentDate)}',
-              child: Container(
-                height: 32,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  DateFormat('EEE, dd/MM/yyyy').format(_currentDate),
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+              message: 'Selected timeline date: ${DateFormat('EEEE, d MMMM yyyy').format(_currentDate)} (Click to select date)',
+              child: InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _currentDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2030),
+                    builder: (context, child) {
+                      return Theme(
+                        data: Theme.of(context).copyWith(
+                          colorScheme: const ColorScheme.light(
+                            primary: Color(0xFFDC2626),
+                            onPrimary: Colors.white,
+                            onSurface: Color(0xFF0F172A),
+                          ),
+                        ),
+                        child: child!,
+                      );
+                    },
+                  );
+                  if (picked != null) {
+                    _loadDashboard(date: picked);
+                  }
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  height: 32,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    DateFormat('EEE, dd/MM/yyyy').format(_currentDate),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                  ),
                 ),
               ),
             ),
@@ -508,7 +593,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             Tooltip(
               message: 'View next day (${DateFormat('dd MMM').format(_currentDate.add(const Duration(days: 1)))})',
               child: InkWell(
-                onTap: () => setState(() => _currentDate = _currentDate.add(const Duration(days: 1))),
+                onTap: () => _loadDashboard(date: _currentDate.add(const Duration(days: 1))),
                 borderRadius: BorderRadius.circular(6),
                 child: Container(
                   height: 32,
@@ -731,7 +816,10 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
 
     final double cellWidth = 130.0 * (_zoomLevel / 100.0);
     final String currentSlot = _getNowSlot();
-    final String nowSlotTarget = _timeSlots.contains(currentSlot) ? currentSlot : '9:30 PM';
+    final bool isToday = DateFormat('yyyy-MM-dd').format(_currentDate) ==
+        DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final String? nowSlotTarget =
+        isToday && _timeSlots.contains(currentSlot) ? currentSlot : null;
 
     if (_viewMode == 'columns') {
       return _buildColumnsTimelineGrid(reps, sessions, nowSlotTarget);
@@ -744,7 +832,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     List<dynamic> reps,
     List<dynamic> sessions,
     double cellWidth,
-    String nowSlotTarget,
+    String? nowSlotTarget,
   ) {
     return Container(
       decoration: BoxDecoration(
@@ -923,12 +1011,12 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
 
                     // Time Slot Cells for this Rep
                     ..._timeSlots.map((slot) {
-                      final isNow = slot == nowSlotTarget;
+                      final isNow = nowSlotTarget != null && slot == nowSlotTarget;
 
-                      // Display session block if slot matches representative's active session
-                      final bool isAttendingSlot = (slot == '5:30 PM' || slot == '6:00 PM') && isBusy;
-                      final bool isCompletedSlot = (slot == '5:30 PM' || slot == '6:00 PM') && !isBusy && repSessions.isNotEmpty;
-                      final hasSession = isAttendingSlot || isCompletedSlot;
+                      // Display session block if slot matches representative's session
+                      final matchingSession = _findSessionForSlot(repSessions, slot);
+                      final bool isAttendingSlot = matchingSession != null &&
+                          (matchingSession['status'] == 'ACTIVE' || matchingSession['status'] == 'OPEN' || isBusy);
 
                       return Container(
                         width: cellWidth,
@@ -940,8 +1028,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                             right: isNow ? const BorderSide(color: Color(0xFFDC2626), width: 2) : BorderSide.none,
                           ),
                         ),
-                        child: hasSession && currentSession != null
-                            ? _buildSessionBlock(currentSession, repName, isAttending: isAttendingSlot)
+                        child: matchingSession != null
+                            ? _buildSessionBlock(matchingSession, repName, isAttending: isAttendingSlot)
                             : _buildEmptySlot(repId: rep['id']?.toString(), repName: repName, slot: slot),
                       );
                     }),
@@ -959,7 +1047,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   Widget _buildColumnsTimelineGrid(
     List<dynamic> reps,
     List<dynamic> sessions,
-    String nowSlotTarget,
+    String? nowSlotTarget,
   ) {
     final double repColWidth = math.max(170.0, 200.0 * (_zoomLevel / 100.0));
     const double timeColWidth = 110.0;
@@ -1149,12 +1237,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                       final repName = rep['name'] ?? 'Executive';
                       final isBusy = rep['status'] == 'Busy';
                       final repSessions = sessions.where((s) => s['sales_exec_id'] == rep['id']).toList();
-                      final currentSession = repSessions.isNotEmpty ? repSessions.first : null;
-
-                      // Display session block if slot matches representative's active session
-                      final bool isAttendingSlot = (slot == '5:30 PM' || slot == '6:00 PM') && isBusy;
-                      final bool isCompletedSlot = (slot == '5:30 PM' || slot == '6:00 PM') && !isBusy && repSessions.isNotEmpty;
-                      final hasSession = isAttendingSlot || isCompletedSlot;
+                      final matchingSession = _findSessionForSlot(repSessions, slot);
+                      final bool isAttendingSlot = matchingSession != null &&
+                          (matchingSession['status'] == 'ACTIVE' || matchingSession['status'] == 'OPEN' || isBusy);
 
                       return Container(
                         width: repColWidth,
@@ -1165,8 +1250,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                             right: BorderSide(color: Color(0xFFF1F5F9)),
                           ),
                         ),
-                        child: hasSession && currentSession != null
-                            ? _buildSessionBlock(currentSession, repName, isAttending: isAttendingSlot)
+                        child: matchingSession != null
+                            ? _buildSessionBlock(matchingSession, repName, isAttending: isAttendingSlot)
                             : _buildEmptySlot(repId: rep['id']?.toString(), repName: repName, slot: slot),
                       );
                     }),
@@ -1184,18 +1269,29 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   Widget _buildSessionBlock(Map<String, dynamic> session, String repName, {bool isAttending = true}) {
     final customer = session['customer_name'] ?? 'Guest';
     final vehicle = session['vehicle_name'] ?? 'Honda Model';
+    final timeStr = _formatSessionTime(session['created_at']);
+    final isBooked = session['status'] == 'CUSTOMER_BOUGHT';
 
-    // Amber/yellow for Attending Customer (Busy); Mint green for Quotation Sent/Completed
-    final bgColor = isAttending ? const Color(0xFFFEF9C3) : const Color(0xFFECFDF5);
-    final borderColor = isAttending ? const Color(0xFFFDE047) : const Color(0xFFA7F3D0);
-    final accentColor = isAttending ? const Color(0xFFB45309) : const Color(0xFF059669);
+    // Amber/yellow for Attending Customer (Busy); Mint green for Quotation Sent/Completed; Yellow-Amber for Booked
+    final bgColor = isBooked
+        ? const Color(0xFFFEF3C7)
+        : (isAttending ? const Color(0xFFFEF9C3) : const Color(0xFFECFDF5));
+    final borderColor = isBooked
+        ? const Color(0xFFFDE68A)
+        : (isAttending ? const Color(0xFFFDE047) : const Color(0xFFA7F3D0));
+    final accentColor = isBooked
+        ? const Color(0xFFD97706)
+        : (isAttending ? const Color(0xFFB45309) : const Color(0xFF059669));
 
-    final String sessionStatus = isAttending ? 'Attending Customer (Live)' : 'Quotation Sent / Completed';
+    final String sessionStatus = isBooked
+        ? 'Booked'
+        : (isAttending ? 'Attending Customer (Live)' : 'Quotation Sent / Completed');
+    final String timeLabel = timeStr.isNotEmpty ? timeStr : 'Session';
     final String sessionTooltip = 'Customer: $customer\n'
         'Interested Model: $vehicle\n'
         'Showroom Rep: $repName\n'
         'Stage: $sessionStatus\n'
-        'Timeline: 16:30 (Live session)\n'
+        'Time: $timeLabel\n'
         'Click to inspect full quotation & test ride details';
 
     return Tooltip(
@@ -1228,7 +1324,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     ),
                     const SizedBox(height: 1),
                     Text(
-                      '$vehicle • 16:30 (Live)',
+                      '$vehicle • $timeLabel${isAttending ? ' (Live)' : ''}',
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 9.5,

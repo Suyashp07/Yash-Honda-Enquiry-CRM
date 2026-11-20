@@ -18,8 +18,13 @@ export class AnalyticsController {
   @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.SALES_EXEC)
   @ApiOperation({ summary: 'Floor Dashboard live rep workload and today enquiry metrics (RIGID)' })
   @ApiQuery({ name: 'branchId', required: false })
-  getFloorDashboard(@CurrentUser() user: any, @Query('branchId') branchId?: string) {
-    return this.analyticsService.getFloorDashboard(user, branchId);
+  @ApiQuery({ name: 'date', required: false })
+  getFloorDashboard(
+    @CurrentUser() user: any,
+    @Query('branchId') branchId?: string,
+    @Query('date') date?: string,
+  ) {
+    return this.analyticsService.getFloorDashboard(user, branchId, date);
   }
 
   @Get('summary/executive')
