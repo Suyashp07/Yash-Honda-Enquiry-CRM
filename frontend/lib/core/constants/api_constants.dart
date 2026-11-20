@@ -1,8 +1,22 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiConstants {
-  // Configured via compile-time flag: --dart-define=BACKEND_URL=https://your-backend.com
-  static const String _envBackendUrl = String.fromEnvironment('BACKEND_URL');
+  // Reads from frontend/.env file, or build-time flag --dart-define=BACKEND_URL
+  static String get _envBackendUrl {
+    try {
+      final fromDotEnv = dotenv.env['BACKEND_URL'];
+      if (fromDotEnv != null && fromDotEnv.trim().isNotEmpty) {
+        return fromDotEnv.trim();
+      }
+    } catch (_) {}
+
+    const fromDefine = String.fromEnvironment('BACKEND_URL');
+    if (fromDefine.isNotEmpty) {
+      return fromDefine;
+    }
+    return '';
+  }
 
   static String get baseUrl {
     if (_envBackendUrl.isNotEmpty) {
