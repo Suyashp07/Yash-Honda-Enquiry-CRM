@@ -27,5 +27,33 @@ export class SettingsService {
       data: dto,
     });
   }
+
+  async updateBranding(type: string, url: string) {
+    const existing = await this.getSettings();
+    const data: any = {};
+    if (type === 'logo') {
+      data.logoUrl = url;
+    } else {
+      data.upiQrUrl = url;
+    }
+    return this.prisma.companySettings.update({
+      where: { id: existing.id },
+      data,
+    });
+  }
+
+  async removeBranding(type: string) {
+    const existing = await this.getSettings();
+    const data: any = {};
+    if (type === 'logo') {
+      data.logoUrl = null;
+    } else {
+      data.upiQrUrl = null;
+    }
+    return this.prisma.companySettings.update({
+      where: { id: existing.id },
+      data,
+    });
+  }
 }
 

@@ -15,6 +15,12 @@ build/
 .flutter-plugins
 .flutter-plugin-dependencies
 
+# Uploads
+uploads/*
+!uploads/**/.gitkeep
+backend/uploads/*
+!backend/uploads/**/.gitkeep
+
 # IDEs
 .idea/
 .vscode/

@@ -394,8 +394,9 @@ export class QuotationsService {
     <table style="width: 100%; border-bottom: 2px solid ${wingColor}; padding-bottom: 18px; margin-bottom: 22px;">
       <tr>
         <td style="vertical-align: top;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="font-size: 26px; font-weight: 900; color: #CC0000; letter-spacing: -0.5px;">Yash Honda</div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            ${settings.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.companyName || 'Yash Honda'}" style="max-height: 44px; max-width: 140px; object-fit: contain;" />` : ''}
+            <div style="font-size: 26px; font-weight: 900; color: #CC0000; letter-spacing: -0.5px;">${settings.companyName || 'Yash Honda'}</div>
             <span style="background: ${isBigWing ? '#0F172A' : '#FEE2E2'}; color: ${isBigWing ? '#F8FAFC' : '#DC2626'}; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
               ${wing}
             </span>
@@ -521,7 +522,7 @@ export class QuotationsService {
           <div style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; margin-bottom: 6px;">
             Scan & Pay via UPI
           </div>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=upi://pay?pa=${encodeURIComponent(settings.upiId || 'yashhonda@hdfcbank')}%26pn=${encodeURIComponent(settings.companyName || 'Yash Honda')}%26am=${quote.grandTotal}" alt="UPI QR" style="width: 80px; height: 80px; margin: 0 auto; display: block;" />
+          <img src="${settings.upiQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=upi://pay?pa=${encodeURIComponent(settings.upiId || 'yashhonda@hdfcbank')}%26pn=${encodeURIComponent(settings.companyName || 'Yash Honda')}%26am=${quote.grandTotal}`}" alt="UPI QR" style="width: 80px; height: 80px; margin: 0 auto; display: block; object-fit: contain;" />
         </td>
       </tr>
     </table>

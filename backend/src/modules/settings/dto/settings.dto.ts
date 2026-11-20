@@ -37,6 +37,16 @@ export class UpdateSettingsDto {
   @IsOptional()
   upiId?: string;
 
+  @ApiProperty({ example: '/api/uploads/branding/logo.png', required: false })
+  @IsString()
+  @IsOptional()
+  logoUrl?: string;
+
+  @ApiProperty({ example: '/api/uploads/branding/upi-qr.png', required: false })
+  @IsString()
+  @IsOptional()
+  upiQrUrl?: string;
+
   @ApiProperty({ example: 1500, description: 'Bank Hypothecation loan documentation charge' })
   @IsNumber()
   @IsOptional()

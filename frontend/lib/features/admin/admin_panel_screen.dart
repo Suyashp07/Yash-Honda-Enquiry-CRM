@@ -39,6 +39,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   final _upiCtrl = TextEditingController();
   final _hypoCtrl = TextEditingController(text: '500');
   bool _applyHypo = true;
+  String? _logoUrl;
+  String? _upiQrUrl;
+  bool _isUploadingLogo = false;
+  bool _isUploadingUpiQr = false;
   bool _officeHoursEnabled = false;
   final List<Map<String, dynamic>> _officeWindows = [
     {'startTime': '9:00 AM', 'endTime': '1:00 PM', 'enabled': true},
@@ -111,6 +115,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           _upiCtrl.text = data['upiId'] ?? 'yashhonda@hdfcbank';
           _hypoCtrl.text = data['hypothecationCharge']?.toString() ?? '500';
           _applyHypo = data['applyHypothecationDefault'] ?? true;
+          _logoUrl = data['logoUrl']?.toString();
+          _upiQrUrl = data['upiQrUrl']?.toString();
           _isLoading = false;
         });
         return;
@@ -2180,6 +2186,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         'upiId': _upiCtrl.text.trim(),
         'hypothecationCharge': num.tryParse(_hypoCtrl.text.trim()) ?? 0,
         'applyHypothecationDefault': _applyHypo,
+        'logoUrl': _logoUrl,
+        'upiQrUrl': _upiQrUrl,
       });
 
       if (mounted) {
@@ -2193,6 +2201,116 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           SnackBar(content: Text('Error saving company profile: $e')),
         );
       }
+    }
+  }
+
+  String _resolveImageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    final base = ApiConstants.baseUrl.endsWith('/api')
+        ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 4)
+        : ApiConstants.baseUrl;
+    return '$base${path.startsWith('/') ? '' : '/'}$path';
+  }
+
+  Future<void> _pickAndUploadBranding(String type) async {
+    final isLogo = type == 'logo';
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['png', 'jpg', 'jpeg', 'webp', 'svg'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.single;
+
+      setState(() {
+        if (isLogo) {
+          _isUploadingLogo = true;
+        } else {
+          _isUploadingUpiQr = true;
+        }
+      });
+
+      final dio = ref.read(dioProvider);
+      final formData = FormData();
+      if (file.bytes != null) {
+        formData.files.add(MapEntry(
+          'file',
+          MultipartFile.fromBytes(file.bytes!, filename: file.name),
+        ));
+      } else if (file.path != null) {
+        formData.files.add(MapEntry(
+          'file',
+          await MultipartFile.fromFile(file.path!, filename: file.name),
+        ));
+      }
+
+      final res = await dio.post('/settings/upload/$type', data: formData);
+      final newUrl = res.data?['url']?.toString() ??
+          res.data?['settings']?['logoUrl']?.toString() ??
+          res.data?['settings']?['upiQrUrl']?.toString();
+
+      if (!mounted) return;
+      setState(() {
+        if (isLogo) {
+          _logoUrl = newUrl;
+          _isUploadingLogo = false;
+        } else {
+          _upiQrUrl = newUrl;
+          _isUploadingUpiQr = false;
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '${isLogo ? 'Logo' : 'UPI QR code'} uploaded and updated successfully!'),
+          backgroundColor: const Color(0xFF16A34A),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        if (isLogo) {
+          _isUploadingLogo = false;
+        } else {
+          _isUploadingUpiQr = false;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to upload image: $e')),
+      );
+    }
+  }
+
+  Future<void> _removeBranding(String type) async {
+    final isLogo = type == 'logo';
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.delete('/settings/branding/$type');
+
+      if (!mounted) return;
+      setState(() {
+        if (isLogo) {
+          _logoUrl = null;
+        } else {
+          _upiQrUrl = null;
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${isLogo ? 'Logo' : 'UPI QR code'} removed.'),
+          backgroundColor: const Color(0xFF0F172A),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to remove image: $e')),
+      );
     }
   }
 
@@ -4119,6 +4237,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. Logo
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -4133,26 +4252,46 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                   children: [
                     Container(
                       height: 38,
-                      width: 42,
+                      width: 58,
                       decoration: BoxDecoration(
                         color: const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
                       alignment: Alignment.center,
-                      child: const Text('HONDA',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFFDC2626),
-                              fontSize: 9)),
+                      clipBehavior: Clip.antiAlias,
+                      child: (_logoUrl != null && _logoUrl!.isNotEmpty)
+                          ? Image.network(
+                              _resolveImageUrl(_logoUrl),
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Text('HONDA',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFFDC2626),
+                                      fontSize: 9)),
+                            )
+                          : const Text('HONDA',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFFDC2626),
+                                  fontSize: 9)),
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.arrow_upward_rounded,
-                          size: 14, color: Color(0xFF1E293B)),
-                      label: const Text('Replace',
-                          style: TextStyle(
+                      onPressed: _isUploadingLogo
+                          ? null
+                          : () => _pickAndUploadBranding('logo'),
+                      icon: _isUploadingLogo
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Color(0xFFDC2626)))
+                          : const Icon(Icons.arrow_upward_rounded,
+                              size: 14, color: Color(0xFF1E293B)),
+                      label: Text(
+                          _isUploadingLogo ? 'Uploading...' : 'Replace',
+                          style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF1E293B))),
@@ -4169,7 +4308,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                     IconButton(
                       icon: const Icon(Icons.close,
                           size: 16, color: Color(0xFF94A3B8)),
-                      onPressed: () {},
+                      onPressed: (_logoUrl != null && _logoUrl!.isNotEmpty)
+                          ? () => _removeBranding('logo')
+                          : null,
+                      tooltip: 'Remove logo',
                       splashRadius: 16,
                       visualDensity: VisualDensity.compact,
                     ),
@@ -4179,6 +4321,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             ),
           ),
           const SizedBox(width: 14),
+
+          // 2. UPI QR Code
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -4200,16 +4344,35 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
                       alignment: Alignment.center,
-                      child: const Icon(Icons.qr_code_2_rounded,
-                          size: 24, color: Color(0xFF0F172A)),
+                      clipBehavior: Clip.antiAlias,
+                      child: (_upiQrUrl != null && _upiQrUrl!.isNotEmpty)
+                          ? Image.network(
+                              _resolveImageUrl(_upiQrUrl),
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.qr_code_2_rounded,
+                                  size: 24,
+                                  color: Color(0xFF0F172A)),
+                            )
+                          : const Icon(Icons.qr_code_2_rounded,
+                              size: 24, color: Color(0xFF0F172A)),
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.arrow_upward_rounded,
-                          size: 14, color: Color(0xFF1E293B)),
-                      label: const Text('Replace',
-                          style: TextStyle(
+                      onPressed: _isUploadingUpiQr
+                          ? null
+                          : () => _pickAndUploadBranding('upi-qr'),
+                      icon: _isUploadingUpiQr
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Color(0xFFDC2626)))
+                          : const Icon(Icons.arrow_upward_rounded,
+                              size: 14, color: Color(0xFF1E293B)),
+                      label: Text(
+                          _isUploadingUpiQr ? 'Uploading...' : 'Replace',
+                          style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF1E293B))),
@@ -4226,7 +4389,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                     IconButton(
                       icon: const Icon(Icons.close,
                           size: 16, color: Color(0xFF94A3B8)),
-                      onPressed: () {},
+                      onPressed: (_upiQrUrl != null && _upiQrUrl!.isNotEmpty)
+                          ? () => _removeBranding('upi-qr')
+                          : null,
+                      tooltip: 'Remove UPI QR code',
                       splashRadius: 16,
                       visualDensity: VisualDensity.compact,
                     ),

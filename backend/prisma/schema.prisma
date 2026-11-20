@@ -280,6 +280,8 @@ model CompanySettings {
   accountNumber             String?
   ifsc                      String?
   upiId                     String?
+  logoUrl                   String?
+  upiQrUrl                  String?
   hypothecationCharge       Decimal @default(0)
   applyHypothecationDefault Boolean @default(true)
 }
