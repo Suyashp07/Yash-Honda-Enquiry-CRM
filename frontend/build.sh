@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# Cache/Install Flutter SDK on Vercel build container
+# Cache/Install Flutter SDK on Vercel build container (pinned to stable 3.24.5)
 if [ ! -d "$HOME/flutter" ]; then
-  echo "Cloning Flutter stable SDK..."
-  git clone https://github.com/flutter/flutter.git -b stable --depth 1 $HOME/flutter
+  echo "Cloning Flutter SDK (3.24.5)..."
+  git clone https://github.com/flutter/flutter.git -b 3.24.5 --depth 1 $HOME/flutter
 fi
 
 export PATH="$HOME/flutter/bin:$PATH"
@@ -17,9 +17,12 @@ fi
 echo "Configuring Flutter..."
 flutter config --no-analytics
 
+echo "Getting dependencies..."
+flutter pub get
+
 echo "Building Flutter Web application..."
 if [ -n "$BACKEND_URL" ]; then
-  flutter build web --release --dart-define=BACKEND_URL="$BACKEND_URL"
+  flutter build web --release --no-wasm-dry-run --no-tree-shake-icons --dart-define=BACKEND_URL="$BACKEND_URL"
 else
-  flutter build web --release
+  flutter build web --release --no-wasm-dry-run --no-tree-shake-icons
 fi
