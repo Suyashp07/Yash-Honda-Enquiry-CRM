@@ -149,7 +149,7 @@ const branchStaffConfig: BranchStaffDef[] = [
 async function main() {
   console.log('=== Starting Yash Honda Multi-Branch Seeder (1 BM + 3 Reps per Branch & 2-Month Data) ===');
 
-  const passwordHash = await bcrypt.hash('123456', 10);
+  const passwordHash = await bcrypt.hash('YashHonda@2026', 10);
 
   // 1. Fetch Master Branches
   const allBranches = await prisma.branch.findMany({ where: { status: 'Active' } });
