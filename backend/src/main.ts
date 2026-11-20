@@ -4,12 +4,19 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as express from 'express';
 import { join } from 'path';
+import * as fs from 'fs';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors();
-  app.use('/api/uploads', express.static(join(process.cwd(), 'uploads')));
+
+  const uploadDir = join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+  app.use('/api/uploads', express.static(uploadDir));
+
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({
@@ -29,8 +36,8 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
-  console.log(`Yash Honda Backend running on: http://localhost:${port}/api`);
+  await app.listen(port, '0.0.0.0');
+  console.log(`Yash Honda Backend running on: http://0.0.0.0:${port}/api`);
 }
 bootstrap();
 
