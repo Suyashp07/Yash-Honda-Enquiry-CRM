@@ -517,10 +517,10 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
           ),
           const SizedBox(width: 14),
 
-          // AI Insights Sparkle Icon
+          // AI Insights Action (Smart AI Bot Icon)
           IconButton(
-            icon: const Icon(Icons.auto_awesome, size: 19, color: Color(0xFFF59E0B)),
-            tooltip: 'AI Dealership Executive Insights - Real-time analysis powered by Gemini',
+            icon: const Icon(Icons.smart_toy_outlined, size: 20, color: Color(0xFF6366F1)),
+            tooltip: 'AI Dealership Executive Insights - Real-time analysis powered by Gemini AI',
             onPressed: () => _showAiInsightsDialog(context, ref),
           ),
           const SizedBox(width: 4),
@@ -658,10 +658,10 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
+                color: const Color(0xFFEEF2FF),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.auto_awesome, color: Color(0xFFD97706), size: 20),
+              child: const Icon(Icons.smart_toy_outlined, color: Color(0xFF6366F1), size: 20),
             ),
             const SizedBox(width: 12),
             const Expanded(
