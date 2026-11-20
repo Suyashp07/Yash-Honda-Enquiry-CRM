@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/networking/api_client.dart';
+import '../../../core/providers/branch_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../auth/auth_notifier.dart';
 
@@ -34,9 +35,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   List<dynamic> _branches = [];
   List<dynamic> _accessories = [];
   List<dynamic> _financiers = [];
-  List<dynamic> _areas = [];
   List<dynamic> _leadSources = [];
-  List<dynamic> _salesReps = [];
   Map<String, dynamic>? _settings;
 
   // Selected State
@@ -130,11 +129,22 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
 
       // Initial branch selection
       final user = ref.read(authStateProvider).user;
+      final activeBranchId = ref.read(selectedBranchIdProvider);
       String? initialBranchId;
-      if (user != null && user.branches.isNotEmpty) {
+      if (activeBranchId != 'all' && branches.any((b) => b['id'].toString() == activeBranchId)) {
+        initialBranchId = activeBranchId;
+      } else if (user != null && user.branches.isNotEmpty) {
         initialBranchId = user.branches.first.id;
       } else if (branches.isNotEmpty) {
         initialBranchId = branches.first['id'].toString();
+      }
+
+      // Initial sales rep selection: default to logged-in user if available, else first rep
+      String? initialRepId;
+      if (user != null && reps.any((r) => r['id'].toString() == user.id)) {
+        initialRepId = user.id;
+      } else if (reps.isNotEmpty) {
+        initialRepId = reps.first['id'].toString();
       }
 
       if (!mounted) return;
@@ -144,9 +154,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         _settings = settings;
         _accessories = accessories;
         _financiers = financiers;
-        _areas = areas;
         _leadSources = leadSources;
-        _salesReps = reps;
 
         _selectedVehicle = initialVehicle;
         _selectedVehicleId = initialVehicleId;
@@ -155,7 +163,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
 
         if (leadSources.isNotEmpty) _selectedSourceId = leadSources.first['id'].toString();
         if (areas.isNotEmpty) _selectedAreaId = areas.first['id'].toString();
-        if (reps.isNotEmpty) _selectedRepId = reps.first['id'].toString();
+        _selectedRepId = initialRepId ?? (reps.isNotEmpty ? reps.first['id'].toString() : null);
         if (financiers.isNotEmpty) _selectedFinancierId = financiers.first['id'].toString();
 
         _isLoadingMasters = false;
@@ -484,7 +492,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         ),
         const SizedBox(height: 14),
 
-        // Row 2: Type, Source, Area, Sales Executive
+        // Row 2: Type, Source, Buying When
         Row(
           children: [
             Expanded(
@@ -513,23 +521,15 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: _buildDropdownField<String>(
-                label: 'Area',
-                value: _selectedAreaId,
-                items: _areas.map((a) {
-                  return DropdownMenuItem(value: a['id'].toString(), child: Text(a['name']));
-                }).toList(),
-                onChanged: (val) => setState(() => _selectedAreaId = val),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildDropdownField<String>(
-                label: 'Sales Executive',
-                value: _selectedRepId,
-                items: _salesReps.map((r) {
-                  return DropdownMenuItem(value: r['id'].toString(), child: Text(r['name']));
-                }).toList(),
-                onChanged: (val) => setState(() => _selectedRepId = val),
+                label: 'Buying When',
+                value: _buyingWhen,
+                items: const [
+                  DropdownMenuItem(value: 'Immediate', child: Text('Immediate')),
+                  DropdownMenuItem(value: 'Within 7 Days', child: Text('Within 7 Days')),
+                  DropdownMenuItem(value: 'Within 15 Days', child: Text('Within 15 Days')),
+                  DropdownMenuItem(value: 'This Month', child: Text('This Month')),
+                ],
+                onChanged: (val) => setState(() => _buyingWhen = val ?? 'Immediate'),
               ),
             ),
           ],
@@ -600,41 +600,6 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                 onChanged: _purchaseMode == 'Finance'
                     ? (val) => setState(() => _selectedFinancierId = val)
                     : null,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-
-        // Row 4: Buying When & Branch Selector (if multiple)
-        Row(
-          children: [
-            Expanded(
-              child: _buildDropdownField<String>(
-                label: 'Buying When',
-                value: _buyingWhen,
-                items: const [
-                  DropdownMenuItem(value: 'Immediate', child: Text('Immediate')),
-                  DropdownMenuItem(value: 'Within 7 Days', child: Text('Within 7 Days')),
-                  DropdownMenuItem(value: 'Within 15 Days', child: Text('Within 15 Days')),
-                  DropdownMenuItem(value: 'This Month', child: Text('This Month')),
-                ],
-                onChanged: (val) => setState(() => _buyingWhen = val ?? 'Immediate'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildDropdownField<String>(
-                label: 'Showroom Branch',
-                value: _selectedBranchId,
-                items: _branches.map((b) {
-                  final wing = b['wing'] ?? (b['code'].toString().startsWith('BW') ? 'BigWing' : 'RedWing');
-                  return DropdownMenuItem(value: b['id'].toString(), child: Text('[$wing] ${b['name']}'));
-                }).toList(),
-                onChanged: (val) {
-                  setState(() => _selectedBranchId = val);
-                  _calculateQuote();
-                },
               ),
             ),
           ],
