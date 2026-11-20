@@ -345,27 +345,27 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
                 const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
-                // Bottom Help Guide Button
+                // Bottom Exit / Sign Out Button
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Tooltip(
-                    message: 'Help guide: Dealership workflows, role permissions & system guide',
+                    message: 'Sign out of Yash Honda CRM securely',
                     child: InkWell(
-                      onTap: () => _showSystemInfoDialog(context),
+                      onTap: () => ref.read(authStateProvider.notifier).logout(),
                       borderRadius: BorderRadius.circular(6),
                       child: Container(
                         height: 36,
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         child: const Row(
                           children: [
-                            Icon(Icons.help_outline_rounded, size: 16, color: Color(0xFF64748B)),
+                            Icon(Icons.logout_rounded, size: 16, color: Color(0xFFDC2626)),
                             SizedBox(width: 8),
                             Text(
-                              'Help guide',
+                              'Exit / Sign out',
                               style: TextStyle(
                                 fontSize: 12.5,
-                                color: Color(0xFF64748B),
-                                fontWeight: FontWeight.w500,
+                                color: Color(0xFFDC2626),
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -547,31 +547,27 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
           // User Avatar Circle
           Tooltip(
             message: 'Signed in as ${user?.name ?? 'Staff'} (${user?.roleDisplayName ?? 'Staff'} • ${user?.branchDisplayName ?? 'Pune'})',
-            child: Container(
-              width: 30,
-              height: 30,
-              decoration: const BoxDecoration(
-                color: Color(0xFFCC0000),
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                (user != null && user.name.isNotEmpty) ? user.name[0].toUpperCase() : 'S',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+            child: InkWell(
+              onTap: () => _showSystemInfoDialog(context),
+              borderRadius: BorderRadius.circular(15),
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFCC0000),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  (user != null && user.name.isNotEmpty) ? user.name[0].toUpperCase() : 'S',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-
-          // Sign Out Button
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, size: 20, color: Color(0xFF64748B)),
-            tooltip: 'Sign out of Yash Honda CRM securely',
-            onPressed: () => ref.read(authStateProvider.notifier).logout(),
           ),
         ],
       ),
