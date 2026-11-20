@@ -11,8 +11,7 @@ import '../../features/enquiries/quote_actions/quote_actions_screen.dart';
 import '../../features/enquiries/enquiries_list_screen.dart';
 import '../../features/follow_ups/follow_ups_screen.dart';
 import '../../features/reports/reports_screen.dart';
-import '../../features/masters/masters_screen.dart';
-import '../../features/settings/settings_screen.dart';
+import '../../features/admin/admin_panel_screen.dart';
 import '../../shared/widgets/responsive_scaffold.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -28,15 +27,57 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return isLoggingIn ? null : '/login';
       }
 
+      final user = authState.user;
+      final path = state.uri.path;
+
       // If user is authenticated and on login page, route according to role:
       if (isLoggingIn) {
-        final user = authState.user;
         if (user != null && user.isSalesExec) {
           // Landing-screen routing logic (RESOLVED in docs):
           // sales_exec -> lands directly on vehicle_picker (no dashboard)
           return '/enquiries/vehicle-picker';
         }
         return '/dashboard';
+      }
+
+      if (user == null) {
+        return '/login';
+      }
+
+      // --- RBAC ROUTE PROTECTION ---
+
+      // 1. Admin Panel / Masters / Settings Protection:
+      final isAdminRoute = path == '/admin' ||
+          path.startsWith('/admin/') ||
+          path == '/masters' ||
+          path.startsWith('/masters/') ||
+          path == '/settings' ||
+          path.startsWith('/settings/');
+
+      if (isAdminRoute) {
+        // Sales Rep, Tele-caller, Accounts have ZERO access to Admin Panel or Masters
+        if (!user.canAccessAdminPanel) {
+          return user.isSalesExec ? '/enquiries/vehicle-picker' : '/enquiries';
+        }
+
+        // Branch Manager has view access to Masters, but CANNOT access Users or Company Profile
+        if (user.isBranchManager) {
+          if (path == '/admin/users' ||
+              path == '/admin/company-profile' ||
+              path == '/settings' ||
+              path.startsWith('/settings/')) {
+            return '/admin/vehicles';
+          }
+        }
+      }
+
+      // 2. Reports Protection:
+      // Reports accessible by Super Admin, Branch Manager, Accounts.
+      // Sales Exec and Tele Caller have ZERO access to Reports.
+      if (path == '/reports' || path.startsWith('/reports/')) {
+        if (!user.canAccessReports) {
+          return user.isSalesExec ? '/enquiries/vehicle-picker' : '/enquiries';
+        }
       }
 
       return null;
@@ -47,7 +88,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const LoginScreen(),
       ),
 
-      // App Shell with Responsive Navigation
+      // Full-screen Tablet POS & Live Enquiry Customizer (matching prototype)
+      GoRoute(
+        path: '/tablet',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return CustomizeScreen(vehicle: extra['vehicle'] ?? {});
+        },
+      ),
+      GoRoute(
+        path: '/enquiries/customize',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return CustomizeScreen(vehicle: extra['vehicle'] ?? {});
+        },
+      ),
+
+      // App Shell with Responsive Navigation Rail
       ShellRoute(
         builder: (context, state, child) {
           return ResponsiveScaffold(
@@ -73,13 +130,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const VehiclePickerScreen(),
           ),
           GoRoute(
-            path: '/enquiries/customize',
-            builder: (context, state) {
-              final extra = state.extra as Map<String, dynamic>? ?? {};
-              return CustomizeScreen(vehicle: extra['vehicle'] ?? {});
-            },
-          ),
-          GoRoute(
             path: '/enquiries/quote-actions',
             builder: (context, state) {
               final extra = state.extra as Map<String, dynamic>? ?? {};
@@ -98,12 +148,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ReportsScreen(),
           ),
           GoRoute(
+            path: '/admin',
+            redirect: (context, state) => '/admin/vehicles',
+          ),
+          GoRoute(
+            path: '/admin/:section',
+            builder: (context, state) {
+              final section = state.pathParameters['section'] ?? 'vehicles';
+              return AdminPanelScreen(section: section);
+            },
+          ),
+          GoRoute(
             path: '/masters',
-            builder: (context, state) => const MastersScreen(),
+            redirect: (context, state) => '/admin/vehicles',
           ),
           GoRoute(
             path: '/settings',
-            builder: (context, state) => const SettingsScreen(),
+            redirect: (context, state) => '/admin/company-profile',
           ),
         ],
       ),

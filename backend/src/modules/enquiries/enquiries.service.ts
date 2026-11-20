@@ -149,13 +149,25 @@ export class EnquiriesService {
     return this.prisma.enquiry.findMany({
       where,
       include: {
-        customer: true,
+        customer: { include: { area: true } },
         branch: true,
+        createdBy: { select: { id: true, name: true, mobile: true } },
         assignedTo: { select: { id: true, name: true, mobile: true } },
+        leadSource: true,
+        financier: true,
         quotations: {
-          include: { vehicle: true },
-          take: 1,
+          include: {
+            vehicle: true,
+            items: true,
+            accessories: { include: { accessory: true } },
+          },
           orderBy: { createdAt: 'desc' },
+        },
+        followUps: {
+          orderBy: { scheduledAt: 'desc' },
+        },
+        statusHistory: {
+          orderBy: { changedAt: 'desc' },
         },
         _count: {
           select: { followUps: true, calls: true, quotations: true },
@@ -164,6 +176,32 @@ export class EnquiriesService {
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
+  }
+
+  async remove(id: string, user: any) {
+    const enquiry = await this.prisma.enquiry.findUnique({
+      where: { id },
+      include: { branch: true },
+    });
+    if (!enquiry) {
+      throw new NotFoundException(`Enquiry with ID ${id} not found`);
+    }
+    // Delete cascaded records
+    await this.prisma.$transaction(async (tx) => {
+      const quotes = await tx.quotation.findMany({ where: { enquiryId: id }, select: { id: true } });
+      const quoteIds = quotes.map((q) => q.id);
+      if (quoteIds.length > 0) {
+        await tx.quotationItem.deleteMany({ where: { quotationId: { in: quoteIds } } });
+        await tx.quotationAccessory.deleteMany({ where: { quotationId: { in: quoteIds } } });
+        await tx.quotation.deleteMany({ where: { enquiryId: id } });
+      }
+      await tx.call.deleteMany({ where: { enquiryId: id } });
+      await tx.followUp.deleteMany({ where: { enquiryId: id } });
+      await tx.communication.deleteMany({ where: { enquiryId: id } });
+      await tx.enquiryStatusHistory.deleteMany({ where: { enquiryId: id } });
+      await tx.enquiry.delete({ where: { id } });
+    });
+    return { success: true, message: 'Enquiry deleted successfully' };
   }
 
   async findOne(id: string, user: any) {

@@ -48,11 +48,11 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: '1d',
+      expiresIn: '7d',
     });
 
     const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: '7d',
+      expiresIn: '30d',
     });
 
     const activeBranches = user.userBranches
@@ -96,7 +96,7 @@ export class AuthService {
           mobile: user.mobile,
           role: user.role,
         },
-        { expiresIn: '1d' },
+        { expiresIn: '7d' },
       );
 
       return { accessToken: newAccessToken };

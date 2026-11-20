@@ -320,7 +320,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Connecting all 6 branches across Pune: Bhosari, Wakad, Phugewadi, Hadapsar, Sinhagad Road, and SB Road.',
+                      'Connecting all 6 branches across Pune under BigWing (Phursungi) and RedWing (Wadki, Saswad, Uruli Kanchan, BT Kawade, Sasane Nagar).',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.75),
                         fontSize: 16,

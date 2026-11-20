@@ -11,6 +11,8 @@ enum Role {
   SUPER_ADMIN
   BRANCH_MANAGER
   SALES_EXEC
+  ACCOUNTS
+  TELE_CALLER
 }
 
 enum EnquiryStatus {
@@ -22,9 +24,10 @@ enum EnquiryStatus {
 
 model Branch {
   id           String       @id @default(cuid())
-  code         String       @unique // e.g. BWH, RWPHUR
+  code         String       @unique // e.g. BWPHUR, RWWDK
   name         String
   address      String
+  wing         String       @default("RedWing") // "BigWing" | "RedWing"
   status       String       @default("Active")
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -91,6 +94,7 @@ model Vehicle {
   modelGroup      ModelGroup      @relation(fields: [modelGroupId], references: [id])
   exShowroomPrice Decimal
   onRoadPrice     Decimal // stored & manually edited, no formula (RESOLVED)
+  brochureUrl     String?
   status          String          @default("Active")
   colours         VehicleColour[]
   quotationItems  QuotationItem[]
@@ -297,4 +301,12 @@ model AiSummaryCache {
   generatedAt DateTime @default(now())
 
   @@unique([scopeKey])
+}
+
+model RolePermission {
+  id          String   @id @default(cuid())
+  role        String   @unique // Accounts, Branch Manager, Sales Executive, Super Admin, Tele-caller
+  permissions Json     // { "Leads": { "view": true, ... } }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

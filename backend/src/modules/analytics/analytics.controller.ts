@@ -15,7 +15,7 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('floor')
-  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER)
+  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.SALES_EXEC)
   @ApiOperation({ summary: 'Floor Dashboard live rep workload and today enquiry metrics (RIGID)' })
   @ApiQuery({ name: 'branchId', required: false })
   getFloorDashboard(@CurrentUser() user: any, @Query('branchId') branchId?: string) {
@@ -59,6 +59,33 @@ export class AnalyticsController {
     @Query('range') range: string = 'mtd',
   ) {
     return this.analyticsService.getMatrixSummary(user, branchId, range);
+  }
+
+  @Get('summary/dealership')
+  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.SALES_EXEC)
+  @ApiOperation({ summary: 'Comprehensive Dealership As-On-Date & MTD Conversion Matrix with Financials' })
+  @ApiQuery({ name: 'date', required: false, description: 'YYYY-MM-DD' })
+  @ApiQuery({ name: 'period', required: false, enum: ['today', 'week', 'mtd', 'ytd'] })
+  @ApiQuery({ name: 'branchId', required: false })
+  getComprehensiveDealershipSummary(
+    @CurrentUser() user: any,
+    @Query('date') date?: string,
+    @Query('period') period: string = 'today',
+    @Query('branchId') branchId?: string,
+  ) {
+    return this.analyticsService.getComprehensiveDealershipSummary(user, date, period, branchId);
+  }
+
+  @Get('v3/summary')
+  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER)
+  @ApiOperation({ summary: 'Alias matching prototype /api/v3/summary' })
+  getV3Summary(
+    @CurrentUser() user: any,
+    @Query('date') date?: string,
+    @Query('period') period: string = 'today',
+    @Query('branchId') branchId?: string,
+  ) {
+    return this.analyticsService.getComprehensiveDealershipSummary(user, date, period, branchId);
   }
 }
 

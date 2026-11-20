@@ -15,7 +15,7 @@ export class AiInsightsController {
   constructor(private readonly aiInsightsService: AiInsightsService) {}
 
   @Get('summary')
-  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER)
+  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.SALES_EXEC)
   @ApiOperation({ summary: 'AI-generated natural language executive briefing (privacy-safe, cached in AiSummaryCache)' })
   @ApiQuery({ name: 'branch', required: false, example: 'all' })
   @ApiQuery({ name: 'range', required: false, example: 'today' })

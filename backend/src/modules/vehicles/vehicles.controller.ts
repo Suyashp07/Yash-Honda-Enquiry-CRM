@@ -1,7 +1,11 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { VehiclesService } from './vehicles.service';
-import { CreateVehicleDto, UpdateVehicleDto, CreateModelGroupDto, CreateColourDto } from './dto/vehicle.dto';
+import { CreateVehicleDto, UpdateVehicleDto, CreateModelGroupDto, UpdateModelGroupDto, CreateColourDto, UpdateColourDto } from './dto/vehicle.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -34,6 +38,20 @@ export class VehiclesController {
     return this.vehiclesService.createModelGroup(dto);
   }
 
+  @Put('model-groups/:id')
+  @Roles(Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Update model group (Super Admin only)' })
+  updateModelGroup(@Param('id') id: string, @Body() dto: UpdateModelGroupDto) {
+    return this.vehiclesService.updateModelGroup(id, dto);
+  }
+
+  @Delete('model-groups/:id')
+  @Roles(Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Deactivate model group (Super Admin only)' })
+  removeModelGroup(@Param('id') id: string) {
+    return this.vehiclesService.removeModelGroup(id);
+  }
+
   @Get('colours')
   @ApiOperation({ summary: 'List all available colours' })
   findAllColours() {
@@ -45,6 +63,20 @@ export class VehiclesController {
   @ApiOperation({ summary: 'Create new colour (Super Admin only)' })
   createColour(@Body() dto: CreateColourDto) {
     return this.vehiclesService.createColour(dto);
+  }
+
+  @Put('colours/:id')
+  @Roles(Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Update colour (Super Admin only)' })
+  updateColour(@Param('id') id: string, @Body() dto: UpdateColourDto) {
+    return this.vehiclesService.updateColour(id, dto);
+  }
+
+  @Delete('colours/:id')
+  @Roles(Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Deactivate colour (Super Admin only)' })
+  removeColour(@Param('id') id: string) {
+    return this.vehiclesService.removeColour(id);
   }
 
   @Get(':id')
@@ -65,6 +97,41 @@ export class VehiclesController {
   @ApiOperation({ summary: 'Update vehicle master & on-road pricing (Super Admin only)' })
   updateVehicle(@Param('id') id: string, @Body() dto: UpdateVehicleDto) {
     return this.vehiclesService.updateVehicle(id, dto);
+  }
+
+  @Post(':id/brochure')
+  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER)
+  @ApiOperation({ summary: 'Upload or update vehicle brochure PDF / URL' })
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = join(process.cwd(), 'uploads', 'brochures');
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const ext = extname(file.originalname) || '.pdf';
+          const cleanName = `brochure-${req.params.id}-${Date.now()}${ext}`;
+          cb(null, cleanName);
+        },
+      }),
+      limits: { fileSize: 30 * 1024 * 1024 }, // 30MB limit
+    }),
+  )
+  async uploadBrochure(
+    @Param('id') id: string,
+    @UploadedFile() file?: any,
+    @Body('url') manualUrl?: string,
+  ) {
+    const brochureUrl = file ? `/api/uploads/brochures/${file.filename}` : manualUrl;
+    if (!brochureUrl) {
+      throw new BadRequestException('Please provide a file or brochure URL');
+    }
+    return this.vehiclesService.updateVehicle(id, { brochureUrl });
   }
 
   @Delete(':id')

@@ -6,21 +6,59 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('--- Starting Yash Honda Seeding ---');
 
-  // 1. Initial 6 Branches in Pune
+  // 1. Initial 6 Branches in Pune grouped by Wing:
+  // BigWing: Phursungi
+  // RedWing: Wadki, Saswad, Uruli Kanchan, BT Kawade, Sasane Nagar
   const branchesData = [
-    { code: 'BWH', name: 'Bhosari Workshop / Showroom', address: 'Plot 12, Ind Area, Bhosari, Pune' },
-    { code: 'RWPHUR', name: 'RedWing Phugewadi', address: 'Old Mumbai-Pune Hwy, Phugewadi, Pune' },
-    { code: 'RWWKD', name: 'RedWing Wakad', address: 'Dutt Mandir Rd, Wakad, Pune' },
-    { code: 'BWHD', name: 'BigWing Hadapsar', address: 'Magarpatta Road, Hadapsar, Pune' },
-    { code: 'BWSNR', name: 'BigWing Sinhagad Road', address: 'Near Bramha Hotel, Sinhagad Rd, Pune' },
-    { code: 'BWSB', name: 'BigWing Senapati Bapat Rd', address: 'ICC Trade Tower, SB Road, Pune' },
+    // 1 BigWing Branch
+    {
+      code: 'BWPHUR',
+      name: 'Phursungi',
+      wing: 'BigWing',
+      address: 'Near Phursungi IT Park, Pune - Saswad Road, Phursungi, Pune 412308',
+    },
+    // 5 RedWing Branches
+    {
+      code: 'RWWDK',
+      name: 'Wadki',
+      wing: 'RedWing',
+      address: 'Saswad Road, Wadki, Pune 412308',
+    },
+    {
+      code: 'RWSAS',
+      name: 'Saswad',
+      wing: 'RedWing',
+      address: 'Main Chowk, Pune - Saswad Road, Saswad, Pune 412301',
+    },
+    {
+      code: 'RWURL',
+      name: 'Uruli Kanchan',
+      wing: 'RedWing',
+      address: 'Pune - Solapur Highway, Uruli Kanchan, Pune 412202',
+    },
+    {
+      code: 'RWBTK',
+      name: 'BT Kawade',
+      wing: 'RedWing',
+      address: 'BT Kawade Road, Ghorpadi, Pune 411001',
+    },
+    {
+      code: 'RWSSN',
+      name: 'Sasane Nagar',
+      wing: 'RedWing',
+      address: 'Sasane Nagar, Hadapsar, Pune 411028',
+    },
   ];
 
   const branches: Record<string, any> = {};
   for (const b of branchesData) {
     branches[b.code] = await prisma.branch.upsert({
       where: { code: b.code },
-      update: {},
+      update: {
+        name: b.name,
+        wing: b.wing,
+        address: b.address,
+      },
       create: b,
     });
   }
@@ -42,6 +80,7 @@ async function main() {
 
   // 3. Colours
   const coloursData = [
+    { name: 'Black', hex: '#000000' },
     { name: 'Pearl Siren Blue', hex: '#1E3A8A' },
     { name: 'Decent Blue Metallic', hex: '#2563EB' },
     { name: 'Rebel Red Metallic', hex: '#DC2626' },
@@ -62,6 +101,15 @@ async function main() {
 
   // 4. Vehicles
   const vehiclesData = [
+    {
+      code: 'ACT110DLX',
+      name: 'Activa 110 Dlx',
+      category: 'Scooter',
+      modelGroupId: mgRedWing.id,
+      exShowroomPrice: 82450,
+      onRoadPrice: 100380,
+      colours: ['Black', 'Pearl Siren Blue', 'Rebel Red Metallic', 'Pearl Night White'],
+    },
     {
       code: 'ACT6G',
       name: 'Activa 6G DLX',
@@ -140,6 +188,13 @@ async function main() {
 
   // 5. Accessories (fixed vs. editable prices)
   const accessoriesData = [
+    { name: 'Ceramic Coating', defaultPrice: 3500, isPriceEditable: true },
+    { name: 'Extended Warranty', defaultPrice: 2200, isPriceEditable: true },
+    { name: 'Helmet', defaultPrice: 1250, isPriceEditable: false },
+    { name: 'Optional Accessories', defaultPrice: 1500, isPriceEditable: true },
+    { name: 'PDI Charges', defaultPrice: 850, isPriceEditable: false },
+    { name: 'RSA', defaultPrice: 1499, isPriceEditable: false },
+    { name: 'TESTONE', defaultPrice: 500, isPriceEditable: true },
     { name: 'Helmet (Studds/Honda ISI)', defaultPrice: 1250, isPriceEditable: false },
     { name: 'Ceramic Coating (2-Year)', defaultPrice: 3500, isPriceEditable: true },
     { name: 'RSA (Roadside Assistance - 1 Yr)', defaultPrice: 1499, isPriceEditable: false },
@@ -170,7 +225,7 @@ async function main() {
   console.log(`✓ Seeded ${financiers.length} financiers`);
 
   // 7. Lead Sources
-  const leadSources = ['Walk-in Showroom', 'Telephonic Enquiry', 'BikeDekho / CarDekho', 'Meta Ads (Facebook/Instagram)', 'Google Search / Maps', 'Customer Referral'];
+  const leadSources = ['BikeWale', 'Walk-in Showroom', 'Telephonic Enquiry', 'BikeDekho / CarDekho', 'Meta Ads (Facebook/Instagram)', 'Google Search / Maps', 'Customer Referral'];
   for (const ls of leadSources) {
     await prisma.leadSource.upsert({
       where: { name: ls },
@@ -181,7 +236,7 @@ async function main() {
   console.log(`✓ Seeded ${leadSources.length} lead sources`);
 
   // 8. Areas (Pune Localities)
-  const areas = ['Wakad', 'Hinjewadi', 'Bhosari', 'Pimpri-Chinchwad', 'Baner', 'Kothrud', 'Hadapsar', 'Sinhagad Road', 'Shivajinagar'];
+  const areas = ['PHURSUNGI', 'Wakad', 'Hinjewadi', 'Bhosari', 'Pimpri-Chinchwad', 'Baner', 'Kothrud', 'Hadapsar', 'Sinhagad Road', 'Shivajinagar'];
   for (const a of areas) {
     await prisma.area.upsert({
       where: { name: a },
@@ -214,12 +269,12 @@ async function main() {
     });
   }
 
-  // Branch Manager (Wakad + Phugewadi)
+  // Branch Manager (Phursungi BigWing + Wadki RedWing)
   const branchManager = await prisma.user.upsert({
     where: { mobile: '9888888888' },
     update: {},
     create: {
-      name: 'Wakad Branch Manager',
+      name: 'Branch Manager',
       mobile: '9888888888',
       passwordHash: defaultPassword,
       role: Role.BRANCH_MANAGER,
@@ -227,22 +282,22 @@ async function main() {
   });
 
   await prisma.userBranch.upsert({
-    where: { userId_branchId: { userId: branchManager.id, branchId: branches['RWWKD'].id } },
+    where: { userId_branchId: { userId: branchManager.id, branchId: branches['BWPHUR'].id } },
     update: {},
-    create: { userId: branchManager.id, branchId: branches['RWWKD'].id },
+    create: { userId: branchManager.id, branchId: branches['BWPHUR'].id },
   });
   await prisma.userBranch.upsert({
-    where: { userId_branchId: { userId: branchManager.id, branchId: branches['RWPHUR'].id } },
+    where: { userId_branchId: { userId: branchManager.id, branchId: branches['RWWDK'].id } },
     update: {},
-    create: { userId: branchManager.id, branchId: branches['RWPHUR'].id },
+    create: { userId: branchManager.id, branchId: branches['RWWDK'].id },
   });
 
-  // Sales Executive (Wakad only)
+  // Sales Executive (Wadki)
   const salesExec = await prisma.user.upsert({
     where: { mobile: '9777777777' },
     update: {},
     create: {
-      name: 'Rahul Sharma (Sales Exec)',
+      name: 'Rahul Sharma',
       mobile: '9777777777',
       passwordHash: defaultPassword,
       role: Role.SALES_EXEC,
@@ -250,10 +305,129 @@ async function main() {
   });
 
   await prisma.userBranch.upsert({
-    where: { userId_branchId: { userId: salesExec.id, branchId: branches['RWWKD'].id } },
+    where: { userId_branchId: { userId: salesExec.id, branchId: branches['RWWDK'].id } },
     update: {},
-    create: { userId: salesExec.id, branchId: branches['RWWKD'].id },
+    create: { userId: salesExec.id, branchId: branches['RWWDK'].id },
   });
+
+  // Additional Sales Executives across Pune Showrooms
+  const moreReps = [
+    { name: 'Aditya Deshmukh', mobile: '9765432100', branchCode: 'BWPHUR' }, // BigWing Phursungi
+    { name: 'Ajay Shinde', mobile: '9777777771', branchCode: 'RWWDK' },     // RedWing Wadki
+    { name: 'Sneha Kulkarni', mobile: '9777777772', branchCode: 'RWSAS' },  // RedWing Saswad
+    { name: 'Vikram Jadhav', mobile: '9777777773', branchCode: 'RWURL' },   // RedWing Uruli Kanchan
+    { name: 'Priya Joshi', mobile: '9777777774', branchCode: 'RWBTK' },     // RedWing BT Kawade
+    { name: 'Sachin Rep', mobile: '9777777775', branchCode: 'RWSSN' },      // RedWing Sasane Nagar
+  ];
+
+  for (const rep of moreReps) {
+    const u = await prisma.user.upsert({
+      where: { mobile: rep.mobile },
+      update: {},
+      create: {
+        name: rep.name,
+        mobile: rep.mobile,
+        passwordHash: defaultPassword,
+        role: Role.SALES_EXEC,
+      },
+    });
+
+    const targetBranch = branches[rep.branchCode] || branches['RWWDK'];
+    await prisma.userBranch.upsert({
+      where: { userId_branchId: { userId: u.id, branchId: targetBranch.id } },
+      update: {},
+      create: { userId: u.id, branchId: targetBranch.id },
+    });
+  }
+
+  // Create sample active floor customer sessions for today
+  let sampleCustomer1 = await prisma.customer.findFirst({ where: { mobile: '9822011223' } });
+  if (!sampleCustomer1) {
+    sampleCustomer1 = await prisma.customer.create({
+      data: {
+        name: 'Sachin Patil',
+        mobile: '9822011223',
+        email: 'sachin.patil@gmail.com',
+        address: 'Wakad, Pune',
+      },
+    });
+  }
+
+  let sampleCustomer2 = await prisma.customer.findFirst({ where: { mobile: '9822099887' } });
+  if (!sampleCustomer2) {
+    sampleCustomer2 = await prisma.customer.create({
+      data: {
+        name: 'Amit Deshmukh',
+        mobile: '9822099887',
+        email: 'amit.d@gmail.com',
+        address: 'Pimple Nilakh, Pune',
+      },
+    });
+  }
+
+  const activa = await prisma.vehicle.findFirst({ where: { code: 'ACT6G' } });
+  const sp125 = await prisma.vehicle.findFirst({ where: { code: 'SP125' } });
+
+  const enq1Count = await prisma.enquiry.count({ where: { customerId: sampleCustomer1.id } });
+  if (enq1Count === 0 && activa) {
+    const enq = await prisma.enquiry.create({
+      data: {
+        branchId: branches['RWWKD'].id,
+        customerId: sampleCustomer1.id,
+        createdById: salesExec.id,
+        assignedToId: salesExec.id,
+        enquiryType: 'Walk-in',
+        purchaseMode: 'Finance',
+        status: 'ACTIVE',
+      },
+    });
+
+    await prisma.quotation.create({
+      data: {
+        branchId: branches['RWWKD'].id,
+        enquiryId: enq.id,
+        vehicleId: activa.id,
+        quoteNumber: 'RWQ-RWWKD-00101',
+        colourName: 'Pearl Siren Blue',
+        exShowroom: activa.exShowroomPrice,
+        roadTax: 9480,
+        insurance: 6020,
+        grandTotal: 94500,
+        pdfR2Key: '',
+      },
+    });
+  }
+
+  const enq2Count = await prisma.enquiry.count({ where: { customerId: sampleCustomer2.id } });
+  const ajayUser = await prisma.user.findUnique({ where: { mobile: '9777777771' } });
+  if (enq2Count === 0 && sp125 && ajayUser) {
+    const enq = await prisma.enquiry.create({
+      data: {
+        branchId: branches['RWWKD'].id,
+        customerId: sampleCustomer2.id,
+        createdById: ajayUser.id,
+        assignedToId: ajayUser.id,
+        enquiryType: 'Walk-in',
+        purchaseMode: 'Cash',
+        status: 'CUSTOMER_BOUGHT',
+      },
+    });
+
+    await prisma.quotation.create({
+      data: {
+        branchId: branches['RWWKD'].id,
+        enquiryId: enq.id,
+        vehicleId: sp125.id,
+        quoteNumber: 'RWQ-RWWKD-00102',
+        colourName: 'Matte Axis Grey Metallic',
+        exShowroom: sp125.exShowroomPrice,
+        roadTax: 10600,
+        insurance: 5400,
+        grandTotal: 106000,
+        pdfR2Key: '',
+      },
+    });
+  }
 
   console.log('✓ Seeded initial staff accounts:');
   console.log('  - Super Admin: 9999999999 (mapped to all 6 branches)');
@@ -262,15 +436,15 @@ async function main() {
   console.log('  - Default password for all: YashHonda@2026');
 
   // 10. Company Settings
-  const settingsCount = await prisma.companySettings.count();
-  if (settingsCount === 0) {
+  const settingsFirst = await prisma.companySettings.findFirst();
+  if (!settingsFirst) {
     await prisma.companySettings.create({
       data: {
-        companyName: 'Yash Honda Two-Wheelers Pvt Ltd',
-        gstNumber: '27AABCY1234F1Z5',
-        address: 'Plot 12, Pimpri-Chinchwad Ind Area, Pune - 411019',
-        bankName: 'HDFC Bank Ltd',
-        accountNumber: '50200012345678',
+        companyName: 'Yash Honda',
+        gstNumber: '24XXXXXXXXXXZ5',
+        address: 'Suryaloknagri Society Pune Hadapsar Pune 411013',
+        bankName: 'HDFC Bank',
+        accountNumber: '50200098765432',
         ifsc: 'HDFC0001234',
         upiId: 'yashhonda@hdfcbank',
         hypothecationCharge: 1500,
@@ -278,6 +452,20 @@ async function main() {
       },
     });
     console.log('✓ Seeded Company Settings default profile');
+  } else {
+    await prisma.companySettings.update({
+      where: { id: settingsFirst.id },
+      data: {
+        companyName: 'Yash Honda',
+        gstNumber: '24XXXXXXXXXXZ5',
+        address: 'Suryaloknagri Society Pune Hadapsar Pune 411013',
+        bankName: 'HDFC Bank',
+        accountNumber: '50200098765432',
+        ifsc: 'HDFC0001234',
+        upiId: 'yashhonda@hdfcbank',
+      },
+    });
+    console.log('✓ Updated Company Settings matching dealership profile');
   }
 
   console.log('--- Yash Honda Seeding Completed Successfully ---');

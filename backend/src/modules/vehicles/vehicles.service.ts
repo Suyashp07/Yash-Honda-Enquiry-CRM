@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateVehicleDto, UpdateVehicleDto, CreateModelGroupDto, CreateColourDto } from './dto/vehicle.dto';
+import { CreateVehicleDto, UpdateVehicleDto, CreateModelGroupDto, UpdateModelGroupDto, CreateColourDto, UpdateColourDto } from './dto/vehicle.dto';
 
 @Injectable()
 export class VehiclesService {
@@ -123,6 +123,20 @@ export class VehiclesService {
     });
   }
 
+  async updateModelGroup(id: string, dto: UpdateModelGroupDto) {
+    return this.prisma.modelGroup.update({
+      where: { id },
+      data: dto,
+    });
+  }
+
+  async removeModelGroup(id: string) {
+    return this.prisma.modelGroup.update({
+      where: { id },
+      data: { status: 'Inactive' },
+    });
+  }
+
   // Colours
   async findAllColours() {
     return this.prisma.colour.findMany({
@@ -133,6 +147,20 @@ export class VehiclesService {
   async createColour(dto: CreateColourDto) {
     return this.prisma.colour.create({
       data: dto,
+    });
+  }
+
+  async updateColour(id: string, dto: UpdateColourDto) {
+    return this.prisma.colour.update({
+      where: { id },
+      data: dto,
+    });
+  }
+
+  async removeColour(id: string) {
+    return this.prisma.colour.update({
+      where: { id },
+      data: { status: 'Inactive' },
     });
   }
 }

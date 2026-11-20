@@ -17,6 +17,11 @@ export class CreateBranchDto {
   @IsNotEmpty()
   address: string;
 
+  @ApiProperty({ example: 'BigWing | RedWing', required: false, default: 'RedWing' })
+  @IsString()
+  @IsOptional()
+  wing?: string;
+
   @ApiProperty({ example: 'Active', required: false })
   @IsString()
   @IsOptional()
@@ -33,6 +38,11 @@ export class UpdateBranchDto {
   @IsString()
   @IsOptional()
   address?: string;
+
+  @ApiProperty({ example: 'BigWing | RedWing', required: false })
+  @IsString()
+  @IsOptional()
+  wing?: string;
 
   @ApiProperty({ example: 'Active | Inactive', required: false })
   @IsString()

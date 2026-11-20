@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/utils/date_formatter.dart';
+import '../../core/utils/mask_util.dart';
 
 class FollowUpsScreen extends ConsumerStatefulWidget {
   const FollowUpsScreen({super.key});
@@ -15,6 +16,7 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen> {
   String _scope = 'today';
   List<dynamic> _followUps = [];
   bool _isLoading = true;
+  final Set<String> _revealedMobiles = {};
 
   @override
   void initState() {
@@ -125,7 +127,37 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(customer['name'] ?? 'Customer', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                          Text(customer['mobile'] ?? '', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                          Builder(
+                                            builder: (context) {
+                                              final rawMobile = customer['mobile']?.toString() ?? '';
+                                              final fuId = fu['id']?.toString() ?? '';
+                                              final isRev = _revealedMobiles.contains(fuId);
+                                              final displayMobile = isRev ? rawMobile : MaskUtil.maskMobile(rawMobile);
+                                              return InkWell(
+                                                onTap: () {
+                                                  setState(() {
+                                                    if (isRev) {
+                                                      _revealedMobiles.remove(fuId);
+                                                    } else {
+                                                      _revealedMobiles.add(fuId);
+                                                    }
+                                                  });
+                                                },
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Text(displayMobile, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                                    const SizedBox(width: 4),
+                                                    Icon(
+                                                      isRev ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                                      size: 12,
+                                                      color: isRev ? const Color(0xFFDC2626) : Colors.grey,
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
                                         ],
                                       ),
                                     ),

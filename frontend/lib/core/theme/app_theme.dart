@@ -63,6 +63,30 @@ class AppTheme {
         thickness: 1,
         space: 1,
       ),
+      tooltipTheme: TooltipThemeData(
+        waitDuration: const Duration(milliseconds: 150),
+        showDuration: const Duration(seconds: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F172A),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFF334155), width: 1),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 8,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        textStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 11.5,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.2,
+        ),
+      ),
     );
   }
 }

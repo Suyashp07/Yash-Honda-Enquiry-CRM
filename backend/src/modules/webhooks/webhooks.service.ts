@@ -28,6 +28,41 @@ export class WebhooksService {
 
   async handleWhatsApp(payload: any) {
     this.logger.log(`Inbound WhatsApp Webhook: ${JSON.stringify(payload)}`);
+    try {
+      const entry = payload?.entry?.[0];
+      const change = entry?.changes?.[0];
+      const value = change?.value;
+      const statusObj = value?.statuses?.[0];
+
+      if (statusObj) {
+        const messageId = statusObj.id;
+        const status = statusObj.status; // sent, delivered, read, failed
+
+        const communications = await this.prisma.communication.findMany({
+          where: { channel: 'whatsapp' },
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        });
+
+        for (const comm of communications) {
+          const p: any = comm.payload;
+          if (p?.metaMessageId === messageId) {
+            await this.prisma.communication.update({
+              where: { id: comm.id },
+              data: {
+                status,
+                payload: { ...p, lastMetaStatus: status, updatedAt: new Date().toISOString() },
+              },
+            });
+            this.logger.log(`Updated WhatsApp communication ${comm.id} to status: ${status}`);
+            break;
+          }
+        }
+      }
+    } catch (e: any) {
+      this.logger.error(`Error processing WhatsApp webhook: ${e.message}`);
+    }
+
     return { received: true };
   }
 

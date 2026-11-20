@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, HttpCode, HttpStatus, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { WebhooksService } from './webhooks.service';
 
@@ -6,6 +6,20 @@ import { WebhooksService } from './webhooks.service';
 @Controller('webhooks')
 export class WebhooksController {
   constructor(private readonly webhooksService: WebhooksService) {}
+
+  @Get('whatsapp')
+  @ApiOperation({ summary: 'Meta WhatsApp Webhook Verification Handshake (hub.challenge)' })
+  verifyWhatsApp(
+    @Query('hub.mode') mode: string,
+    @Query('hub.verify_token') token: string,
+    @Query('hub.challenge') challenge: string,
+  ) {
+    const verifyToken = process.env.META_WA_WEBHOOK_VERIFY_TOKEN || 'yash_honda_whatsapp_webhook_token';
+    if (mode === 'subscribe' && token === verifyToken) {
+      return challenge;
+    }
+    throw new ForbiddenException('Invalid verification token');
+  }
 
   @Post('exotel')
   @HttpCode(HttpStatus.OK)

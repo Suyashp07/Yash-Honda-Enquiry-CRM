@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { EnquiriesService } from './enquiries.service';
 import { CreateEnquiryDto, UpdateEnquiryStatusDto, AssignEnquiryDto } from './dto/enquiry.dto';
@@ -63,6 +63,12 @@ export class EnquiriesController {
     @CurrentUser() user: any,
   ) {
     return this.enquiriesService.assign(id, dto, user);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete enquiry and related records' })
+  remove(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.enquiriesService.remove(id, user);
   }
 }
 

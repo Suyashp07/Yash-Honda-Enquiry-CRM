@@ -32,6 +32,29 @@ final dioProvider = Provider<Dio>((ref) {
         return handler.next(options);
       },
       onError: (DioException error, handler) async {
+        if (error.response?.statusCode == 401 &&
+            !error.requestOptions.path.contains('/auth/login') &&
+            !error.requestOptions.path.contains('/auth/refresh')) {
+          try {
+            final refreshToken = await storage.read(key: 'refreshToken');
+            if (refreshToken != null && refreshToken.isNotEmpty) {
+              final refreshDio = Dio(BaseOptions(baseUrl: ApiConstants.baseUrl));
+              final refreshRes = await refreshDio.post(
+                '/auth/refresh',
+                data: {'refreshToken': refreshToken},
+              );
+              final newAccessToken = refreshRes.data['accessToken'] as String?;
+              if (newAccessToken != null && newAccessToken.isNotEmpty) {
+                await storage.write(key: 'accessToken', value: newAccessToken);
+                error.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+                final response = await dio.fetch(error.requestOptions);
+                return handler.resolve(response);
+              }
+            }
+          } catch (_) {
+            await storage.deleteAll();
+          }
+        }
         return handler.next(error);
       },
     ),

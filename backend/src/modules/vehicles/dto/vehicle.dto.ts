@@ -13,6 +13,23 @@ export class CreateModelGroupDto {
   quotePrefix: string;
 }
 
+export class UpdateModelGroupDto {
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  quotePrefix?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  status?: string;
+}
+
 export class CreateColourDto {
   @ApiProperty({ example: 'Pearl Siren Blue' })
   @IsString()
@@ -23,6 +40,23 @@ export class CreateColourDto {
   @IsString()
   @IsNotEmpty()
   hex: string;
+}
+
+export class UpdateColourDto {
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  hex?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  status?: string;
 }
 
 export class CreateVehicleDto {
@@ -58,6 +92,11 @@ export class CreateVehicleDto {
   @IsArray()
   @IsOptional()
   colourIds?: string[];
+
+  @ApiProperty({ example: 'https://example.com/activa-brochure.pdf', required: false })
+  @IsString()
+  @IsOptional()
+  brochureUrl?: string;
 }
 
 export class UpdateVehicleDto {
@@ -80,6 +119,11 @@ export class UpdateVehicleDto {
   @IsNumber()
   @IsOptional()
   onRoadPrice?: number;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  brochureUrl?: string;
 
   @ApiProperty({ required: false })
   @IsString()

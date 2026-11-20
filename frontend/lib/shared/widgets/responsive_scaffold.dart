@@ -1,27 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/breakpoints.dart';
+import '../../core/providers/branch_provider.dart';
+import '../../core/networking/api_client.dart';
 import '../../features/auth/auth_notifier.dart';
+import '../models/user_model.dart';
+import 'ai_summary/ai_summary_card.dart';
 
 class NavItem {
   final String title;
+  final String short;
   final IconData icon;
   final String route;
   final bool superAdminOnly;
   final bool hideFromSalesExec;
+  final String? tooltip;
 
   const NavItem({
     required this.title,
+    required this.short,
     required this.icon,
     required this.route,
     this.superAdminOnly = false,
     this.hideFromSalesExec = false,
+    this.tooltip,
   });
 }
 
-class ResponsiveScaffold extends ConsumerWidget {
+class AdminSubItem {
+  final String title;
+  final String route;
+  final IconData icon;
+  final String? tooltip;
+
+  const AdminSubItem({required this.title, required this.route, required this.icon, this.tooltip});
+}
+
+class ResponsiveScaffold extends ConsumerStatefulWidget {
   final Widget body;
   final String currentRoute;
 
@@ -31,69 +47,99 @@ class ResponsiveScaffold extends ConsumerWidget {
     required this.currentRoute,
   });
 
+  @override
+  ConsumerState<ResponsiveScaffold> createState() => _ResponsiveScaffoldState();
+}
+
+class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
+  bool _isAdminExpanded = true;
+  List<Map<String, dynamic>> _branches = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBranches();
+  }
+
+  Future<void> _loadBranches() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/branches');
+      if (mounted) {
+        setState(() {
+          _branches = List<Map<String, dynamic>>.from(res.data);
+        });
+      }
+    } catch (_) {}
+  }
+
+  static const List<AdminSubItem> adminSubItems = [
+    AdminSubItem(title: 'Vehicle Masters', route: '/admin/vehicles', icon: Icons.two_wheeler_outlined, tooltip: 'Manage Honda two-wheelers, variants, prices & brochures'),
+    AdminSubItem(title: 'Model Groups', route: '/admin/model-groups', icon: Icons.layers_outlined, tooltip: 'Scooters, Commuters, Premium & BigWing categories'),
+    AdminSubItem(title: 'Colours', route: '/admin/colours', icon: Icons.palette_outlined, tooltip: 'Palette shades, paint codes & vehicle swatches'),
+    AdminSubItem(title: 'Add-ons', route: '/admin/accessories', icon: Icons.inventory_2_outlined, tooltip: 'Accessories, AMC, extended warranties & helmet kits'),
+    AdminSubItem(title: 'Finance Providers', route: '/admin/financiers', icon: Icons.account_balance_outlined, tooltip: 'Banking partners, interest rates & hypothecation fee'),
+    AdminSubItem(title: 'Areas', route: '/admin/areas', icon: Icons.location_on_outlined, tooltip: 'Pune delivery areas, pin codes & territorial boundaries'),
+    AdminSubItem(title: 'Lead Sources', route: '/admin/lead-sources', icon: Icons.campaign_outlined, tooltip: 'Walk-ins, telephonic, BikeWale, ads & digital leads'),
+    AdminSubItem(title: 'Branches', route: '/admin/branches', icon: Icons.storefront_outlined, tooltip: 'Yash Honda showroom network (BigWing & RedWing)'),
+    AdminSubItem(title: 'Users', route: '/admin/users', icon: Icons.people_outline, tooltip: 'Staff logins, branch allocations & role-based permissions'),
+    AdminSubItem(title: 'Company Profile', route: '/admin/company-profile', icon: Icons.business_outlined, tooltip: 'Letterhead, bank details, GSTIN & quotation branding'),
+  ];
+
   static const List<NavItem> navItems = [
     NavItem(
-      title: 'Floor Dashboard',
-      icon: Icons.speed_outlined,
+      title: 'Dashboard',
+      short: 'Dashboard',
+      icon: Icons.grid_view_rounded,
       route: '/dashboard',
-      hideFromSalesExec: true,
+      tooltip: 'Floor Dashboard: Live showroom timeline & rep attendance',
     ),
     NavItem(
-      title: 'Vehicle POS (Enquiry)',
-      icon: Icons.two_wheeler_outlined,
-      route: '/enquiries/vehicle-picker',
-    ),
-    NavItem(
-      title: 'Enquiries List',
-      icon: Icons.list_alt_outlined,
+      title: 'Enquiries',
+      short: 'Enquiries',
+      icon: Icons.receipt_long_outlined,
       route: '/enquiries',
+      tooltip: 'Enquiries: Walk-in & phone leads, quotes & customer pipeline',
     ),
     NavItem(
       title: 'Follow-ups',
-      icon: Icons.event_note_outlined,
+      short: 'Follow-ups',
+      icon: Icons.group_outlined,
       route: '/follow-ups',
-    ),
-    NavItem(
-      title: 'Dealership Summary',
-      icon: Icons.analytics_outlined,
-      route: '/summary',
-      hideFromSalesExec: true,
+      tooltip: 'Follow-ups: Scheduled callbacks, test rides & prospect history',
     ),
     NavItem(
       title: 'Reports',
-      icon: Icons.bar_chart_outlined,
+      short: 'Reports',
+      icon: Icons.insert_chart_outlined_rounded,
       route: '/reports',
       hideFromSalesExec: true,
-    ),
-    NavItem(
-      title: 'Masters Catalog',
-      icon: Icons.inventory_2_outlined,
-      route: '/masters',
-      superAdminOnly: true,
-    ),
-    NavItem(
-      title: 'Settings',
-      icon: Icons.settings_outlined,
-      route: '/settings',
-      superAdminOnly: true,
+      tooltip: 'Reports: Sales analytics, conversions & financial metrics',
     ),
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final user = authState.user;
 
+    if (!authState.isAuthenticated || user == null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: widget.body,
+      );
+    }
+
     final filteredItems = navItems.where((item) {
-      if (user == null) return false;
       if (item.superAdminOnly && !user.isSuperAdmin) return false;
+      if (item.route == '/reports' && !user.canAccessReports) return false;
       if (item.hideFromSalesExec && user.isSalesExec) return false;
       return true;
     }).toList();
 
     return ResponsiveLayout(
       phone: _buildMobileLayout(context, ref, filteredItems),
-      tablet: _buildTabletLayout(context, ref, filteredItems),
+      tablet: _buildDesktopLayout(context, ref, filteredItems),
       desktop: _buildDesktopLayout(context, ref, filteredItems),
     );
   }
@@ -102,194 +148,583 @@ class ResponsiveScaffold extends ConsumerWidget {
     final user = ref.watch(authStateProvider).user;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Row(
         children: [
-          // Persistent Sidebar
+          // Expanded 230px Navigation Sidebar matching Prototype Screenshots
           Container(
-            width: 250,
+            width: 230,
             decoration: const BoxDecoration(
-              color: Color(0xFF0F172A), // Dark slate sidebar
-              border: Border(right: BorderSide(color: Color(0xFF1E293B))),
+              color: Colors.white,
+              border: Border(
+                right: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+              ),
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Brand Header
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'H',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20),
-                          ),
+                // Top Brand Mark: "Yash Honda"
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                  child: Tooltip(
+                    message: 'Yash Honda Dealership CRM • Official Pune Network',
+                    child: InkWell(
+                      onTap: () => context.go('/dashboard'),
+                      child: const Text(
+                        'Yash Honda',
+                        style: TextStyle(
+                          color: Color(0xFFCC0000),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'YASH HONDA',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 15,
-                              letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // Main Navigation Links
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    children: [
+                      ...items.map((item) {
+                        final isSelected = widget.currentRoute == item.route ||
+                            (item.route != '/dashboard' && widget.currentRoute.startsWith(item.route));
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Tooltip(
+                            message: item.tooltip ?? item.short,
+                            child: InkWell(
+                              onTap: () => context.go(item.route),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                height: 38,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? const Color(0xFFFFF0F0) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      item.icon,
+                                      size: 18,
+                                      color: isSelected ? const Color(0xFFCC0000) : const Color(0xFF64748B),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      item.short,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                        color: isSelected ? const Color(0xFFCC0000) : const Color(0xFF334155),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                          Text(
-                            'Pune Dealership CRM',
-                            style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                        );
+                      }),
+
+                      const SizedBox(height: 10),
+
+                      // Collapsible Admin Panel Accordion (Super Admin & Branch Manager ONLY)
+                      if (user?.canAccessAdminPanel == true) ...[
+                        Tooltip(
+                          message: _isAdminExpanded
+                              ? 'Click to collapse Admin Panel configuration sub-menus'
+                              : 'Click to expand Admin Panel master records & configurations',
+                          child: InkWell(
+                            onTap: () => setState(() => _isAdminExpanded = !_isAdminExpanded),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              height: 38,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.settings_outlined,
+                                    size: 18,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Expanded(
+                                    child: Text(
+                                      'Admin Panel',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF334155),
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    _isAdminExpanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+                                    size: 20,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        if (_isAdminExpanded) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10),
+                            child: Column(
+                              children: adminSubItems.where((subItem) {
+                                if (user?.isBranchManager == true &&
+                                    (subItem.route == '/admin/users' ||
+                                        subItem.route == '/admin/company-profile')) {
+                                  return false;
+                                }
+                                return true;
+                              }).map((subItem) {
+                                final isSubSelected = widget.currentRoute == subItem.route ||
+                                    (widget.currentRoute.startsWith('/admin') &&
+                                        widget.currentRoute == subItem.route);
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: Tooltip(
+                                    message: subItem.tooltip ?? subItem.title,
+                                    child: InkWell(
+                                      onTap: () => context.go(subItem.route),
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Container(
+                                        height: 34,
+                                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                                        decoration: BoxDecoration(
+                                          color: isSubSelected ? const Color(0xFFFFF1F2) : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: isSubSelected
+                                              ? const Border(
+                                                  left: BorderSide(color: Color(0xFFDC2626), width: 3),
+                                                )
+                                              : null,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              subItem.icon,
+                                              size: 15,
+                                              color: isSubSelected ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                subItem.title,
+                                                style: TextStyle(
+                                                  fontSize: 12.5,
+                                                  fontWeight: isSubSelected ? FontWeight.w700 : FontWeight.w500,
+                                                  color: isSubSelected ? const Color(0xFFDC2626) : const Color(0xFF475569),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
                           ),
                         ],
-                      ),
+                      ],
                     ],
                   ),
                 ),
-                const Divider(color: Color(0xFF1E293B), height: 1),
 
-                // Navigation Items List
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-                    children: items.map((item) {
-                      final isSelected = currentRoute == item.route || currentRoute.startsWith('${item.route}/');
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 4),
-                        child: ListTile(
-                          dense: true,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          tileColor: isSelected ? AppColors.primary : Colors.transparent,
-                          leading: Icon(
-                            item.icon,
-                            size: 19,
-                            color: isSelected ? Colors.white : const Color(0xFF94A3B8),
-                          ),
-                          title: Text(
-                            item.title,
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
-                              fontSize: 13,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                            ),
-                          ),
-                          onTap: () => context.go(item.route),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
-                // Bottom User Profile & Logout
-                const Divider(color: Color(0xFF1E293B), height: 1),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: AppColors.primaryLight,
-                        child: Text(
-                          user?.name.isNotEmpty == true ? user!.name[0] : 'U',
-                          style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                // Bottom Help Guide Button
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Tooltip(
+                    message: 'Help guide: Dealership workflows, role permissions & system guide',
+                    child: InkWell(
+                      onTap: () => _showSystemInfoDialog(context),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: const Row(
                           children: [
+                            Icon(Icons.help_outline_rounded, size: 16, color: Color(0xFF64748B)),
+                            SizedBox(width: 8),
                             Text(
-                              user?.name ?? 'Staff User',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                            ),
-                            Text(
-                              user?.role.replaceAll('_', ' ') ?? '',
-                              style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
+                              'Help guide',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.logout, size: 17, color: Color(0xFF94A3B8)),
-                        onPressed: () => ref.read(authStateProvider.notifier).logout(),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
 
-          // Main View Body
-          Expanded(child: body),
+          // Main Screen Area with Top Header Bar + Content
+          Expanded(
+            child: Column(
+              children: [
+                // Top Header Bar matching Prototype
+                _buildTopHeaderBar(context, ref, user),
+
+                // Main Page Content
+                Expanded(child: widget.body),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTabletLayout(BuildContext context, WidgetRef ref, List<NavItem> items) {
-    return _buildDesktopLayout(context, ref, items);
-  }
-
-  Widget _buildMobileLayout(BuildContext context, WidgetRef ref, List<NavItem> items) {
-    final user = ref.watch(authStateProvider).user;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Yash Honda CRM', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-        centerTitle: false,
+  Widget _buildTopHeaderBar(BuildContext context, WidgetRef ref, UserModel? user) {
+    return Container(
+      height: 58,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+        ),
       ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            UserAccountsDrawerHeader(
-              decoration: const BoxDecoration(color: Color(0xFF0F172A)),
-              accountName: Text(user?.name ?? 'Staff'),
-              accountEmail: Text('${user?.role.replaceAll('_', ' ')} • ${user?.mobile ?? ''}'),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: AppColors.primary,
-                child: Text(
-                  user?.name.isNotEmpty == true ? user!.name[0] : 'U',
-                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // "+ New Enquiry [N]" Red Pill Button
+          Tooltip(
+            message: 'Create a new customer walk-in or telephonic enquiry (Shortcut: N)',
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFCC0000),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              ),
+              onPressed: () => context.go('/tablet'),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.add, size: 15),
+                  const SizedBox(width: 4),
+                  const Text('New Enquiry', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: const Text('N', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Branch Selector Dropdown
+          Consumer(
+            builder: (context, ref, child) {
+              final activeBranchId = ref.watch(selectedBranchIdProvider);
+              final validValue = (_branches.any((b) => b['id'].toString() == activeBranchId) || activeBranchId == 'all')
+                  ? activeBranchId
+                  : 'all';
+
+              return Tooltip(
+                message: 'Switch between BigWing (Phursungi) and RedWing showrooms, or view All Branches',
+                child: Container(
+                  height: 34,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: validValue,
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
+                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: Color(0xFF1E293B)),
+                      items: [
+                        const DropdownMenuItem(value: 'all', child: Text('All Branches (Pune)')),
+                        ..._branches.map((b) {
+                          final wing = b['wing'] ?? (b['name'].toString().contains('BigWing') || b['code'].toString().startsWith('BW') ? 'BigWing' : 'RedWing');
+                          final name = b['name']?.toString() ?? 'Branch';
+                          return DropdownMenuItem(
+                            value: b['id'].toString(),
+                            child: Text('$name ($wing)'),
+                          );
+                        }),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          ref.read(selectedBranchIdProvider.notifier).state = val;
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 14),
+
+          // AI Insights Sparkle Icon
+          IconButton(
+            icon: const Icon(Icons.auto_awesome, size: 19, color: Color(0xFFF59E0B)),
+            tooltip: 'AI Dealership Executive Insights - Real-time analysis powered by Gemini',
+            onPressed: () => _showAiInsightsDialog(context, ref),
+          ),
+          const SizedBox(width: 4),
+
+          // Dark Mode Icon (Moon)
+          IconButton(
+            icon: const Icon(Icons.dark_mode_outlined, size: 19, color: Color(0xFF64748B)),
+            tooltip: 'Toggle dark mode appearance',
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Theme toggled')),
+              );
+            },
+          ),
+
+          // Notifications Bell
+          IconButton(
+            icon: const Icon(Icons.notifications_none_rounded, size: 20, color: Color(0xFF64748B)),
+            tooltip: 'Urgent follow-ups & recent enquiry notifications',
+            onPressed: () {},
+          ),
+          const SizedBox(width: 4),
+
+          // User Avatar Circle
+          Tooltip(
+            message: 'Signed in as ${user?.name ?? 'Staff'} (${user?.roleDisplayName ?? 'Staff'} • ${user?.branchDisplayName ?? 'Pune'})',
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: const BoxDecoration(
+                color: Color(0xFFCC0000),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                (user != null && user.name.isNotEmpty) ? user.name[0].toUpperCase() : 'S',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
                 ),
               ),
             ),
-            Expanded(
-              child: ListView(
-                children: items.map((item) {
-                  final isSelected = currentRoute == item.route;
-                  return ListTile(
-                    leading: Icon(item.icon, color: isSelected ? AppColors.primary : AppColors.textSecondary),
-                    title: Text(item.title, style: TextStyle(color: isSelected ? AppColors.primary : AppColors.textPrimary)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go(item.route);
-                    },
-                  );
-                }).toList(),
+          ),
+          const SizedBox(width: 8),
+
+          // Sign Out Button
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, size: 20, color: Color(0xFF64748B)),
+            tooltip: 'Sign out of Yash Honda CRM securely',
+            onPressed: () => ref.read(authStateProvider.notifier).logout(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(BuildContext context, WidgetRef ref, List<NavItem> items) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        titleSpacing: 16,
+        leadingWidth: 46,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Center(
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFFCC0000),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              alignment: Alignment.center,
+              child: const Text('YH', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+            ),
+          ),
+        ),
+        title: const Text('Yash Honda', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFFCC0000))),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle, color: Color(0xFFCC0000)),
+            tooltip: 'New Enquiry',
+            onPressed: () => context.go('/tablet'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, size: 20),
+            onPressed: () => ref.read(authStateProvider.notifier).logout(),
+          ),
+        ],
+      ),
+      body: widget.body,
+      bottomNavigationBar: items.length >= 2
+          ? BottomNavigationBar(
+              currentIndex: _getBottomNavIndex(items),
+              type: BottomNavigationBarType.fixed,
+              selectedItemColor: const Color(0xFFCC0000),
+              unselectedItemColor: const Color(0xFF64748B),
+              selectedFontSize: 11,
+              unselectedFontSize: 10,
+              backgroundColor: Colors.white,
+              onTap: (index) {
+                if (index < items.length) {
+                  context.go(items[index].route);
+                }
+              },
+              items: items.take(4).map((item) {
+                return BottomNavigationBarItem(
+                  icon: Icon(item.icon),
+                  label: item.short,
+                );
+              }).toList(),
+            )
+          : null,
+    );
+  }
+
+  int _getBottomNavIndex(List<NavItem> items) {
+    for (int i = 0; i < items.length && i < 4; i++) {
+      if (widget.currentRoute == items[i].route ||
+          (items[i].route != '/dashboard' && widget.currentRoute.startsWith(items[i].route))) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  void _showAiInsightsDialog(BuildContext context, WidgetRef ref) {
+    final activeBranchId = ref.read(selectedBranchIdProvider);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
+        contentPadding: const EdgeInsets.fromLTRB(24, 10, 24, 20),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.auto_awesome, color: Color(0xFFD97706), size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'AI Dealership Executive Briefing',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                  ),
+                  Text(
+                    'Real-time automated floor & enquiry intelligence',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                ],
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.logout, color: AppColors.statusClosed),
-              title: const Text('Sign Out', style: TextStyle(color: AppColors.statusClosed)),
-              onTap: () => ref.read(authStateProvider.notifier).logout(),
-            ),
-            const SizedBox(height: 12),
           ],
         ),
+        content: SizedBox(
+          width: 580,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AiSummaryCard(
+                branchCode: activeBranchId,
+                range: 'today',
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.key_outlined, size: 16, color: Color(0xFF64748B)),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Gemini API key can be configured in Admin Settings for automated predictive intelligence.',
+                        style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
       ),
-      body: body,
+    );
+  }
+
+  void _showSystemInfoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: Color(0xFFCC0000)),
+            SizedBox(width: 8),
+            Text('Yash Honda Dealership System', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Network of 6 Authorized Honda Branches in Pune, MH:'),
+            SizedBox(height: 8),
+            Text('• BigWing: Phursungi\n• RedWing: Wadki, Saswad, Uruli Kanchan, BT Kawade Road, Sasane Nagar', style: TextStyle(fontSize: 13, height: 1.5, fontWeight: FontWeight.w500)),
+            SizedBox(height: 12),
+            Text('Features Live Floor rep tracking, interactive quotation calculation, and WhatsApp/Email delivery.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
     );
   }
 }
-
