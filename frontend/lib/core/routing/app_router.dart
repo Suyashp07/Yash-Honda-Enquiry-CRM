@@ -33,9 +33,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // If user is authenticated and on login page, route according to role:
       if (isLoggingIn) {
         if (user != null && user.isSalesExec) {
-          // Landing-screen routing logic (RESOLVED in docs):
-          // sales_exec -> lands directly on vehicle_picker (no dashboard)
-          return '/enquiries/vehicle-picker';
+          return '/enquiries';
         }
         return '/dashboard';
       }
@@ -45,6 +43,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // --- RBAC ROUTE PROTECTION ---
+
+      // 0. Floor Dashboard & Dealership Summary Protection:
+      // Floor Dashboard (/dashboard) is accessible ONLY to Super Admin / Owner and Branch Manager.
+      // Sales Execs have NO access to dashboard and are redirected to /enquiries.
+      if (path == '/dashboard' || path == '/summary') {
+        if (!user.canAccessDashboard) {
+          return '/enquiries';
+        }
+      }
 
       // 1. Admin Panel / Masters / Settings Protection:
       final isAdminRoute = path == '/admin' ||

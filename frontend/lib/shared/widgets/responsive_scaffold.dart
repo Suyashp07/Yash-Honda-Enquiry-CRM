@@ -92,6 +92,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
       short: 'Dashboard',
       icon: Icons.grid_view_rounded,
       route: '/dashboard',
+      hideFromSalesExec: true,
       tooltip: 'Floor Dashboard: Live showroom timeline & rep attendance',
     ),
     NavItem(
@@ -169,7 +170,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                   child: Tooltip(
                     message: 'Yash Honda Dealership CRM • Official Pune Network',
                     child: InkWell(
-                      onTap: () => context.go('/dashboard'),
+                      onTap: () => context.go(user?.canAccessDashboard == true ? '/dashboard' : '/enquiries'),
                       child: const Text(
                         'Yash Honda',
                         style: TextStyle(
@@ -444,12 +445,40 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
           Consumer(
             builder: (context, ref, child) {
               final activeBranchId = ref.watch(selectedBranchIdProvider);
-              final validValue = (_branches.any((b) => b['id'].toString() == activeBranchId) || activeBranchId == 'all')
-                  ? activeBranchId
-                  : 'all';
+              final isSuperAdmin = user?.isSuperAdmin == true;
+              final userBranchIds = user?.branches.map((b) => b.id).toSet() ?? {};
+
+              // If not super admin, only allow assigned branches
+              final visibleBranches = isSuperAdmin || userBranchIds.isEmpty
+                  ? _branches
+                  : _branches.where((b) => userBranchIds.contains(b['id'].toString())).toList();
+
+              // For branch manager / sales exec, 'all' is invalid; must select their branch
+              String validValue;
+              if (isSuperAdmin) {
+                validValue = (visibleBranches.any((b) => b['id'].toString() == activeBranchId) || activeBranchId == 'all')
+                    ? activeBranchId
+                    : 'all';
+              } else {
+                if (visibleBranches.any((b) => b['id'].toString() == activeBranchId)) {
+                  validValue = activeBranchId;
+                } else if (visibleBranches.isNotEmpty) {
+                  validValue = visibleBranches.first['id'].toString();
+                  // Schedule state sync to their assigned branch
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (ref.read(selectedBranchIdProvider) != validValue) {
+                      ref.read(selectedBranchIdProvider.notifier).state = validValue;
+                    }
+                  });
+                } else {
+                  validValue = 'all';
+                }
+              }
 
               return Tooltip(
-                message: 'Switch between BigWing (Phursungi) and RedWing showrooms, or view All Branches',
+                message: isSuperAdmin
+                    ? 'Switch between BigWing (Phursungi) and RedWing showrooms, or view All Branches'
+                    : 'Showroom branch scope: ${user?.branchDisplayName ?? 'Assigned Branch'}',
                 child: Container(
                   height: 34,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -464,8 +493,9 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                       icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
                       style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: Color(0xFF1E293B)),
                       items: [
-                        const DropdownMenuItem(value: 'all', child: Text('All Branches (Pune)')),
-                        ..._branches.map((b) {
+                        if (isSuperAdmin)
+                          const DropdownMenuItem(value: 'all', child: Text('All Branches (Pune)')),
+                        ...visibleBranches.map((b) {
                           final wing = b['wing'] ?? (b['name'].toString().contains('BigWing') || b['code'].toString().startsWith('BW') ? 'BigWing' : 'RedWing');
                           final name = b['name']?.toString() ?? 'Branch';
                           return DropdownMenuItem(

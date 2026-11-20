@@ -69,22 +69,33 @@ export class AnalyticsService {
     });
     const allBranchIds = allBranches.map((b) => b.id);
 
+    // Enforce branch scope based on user role
+    const isSuperAdmin = user.role === Role.SUPER_ADMIN;
+    const userAssignedBranchIds: string[] = user.assignedBranchIds || [];
+    const accessibleBranchIds = isSuperAdmin
+      ? allBranchIds
+      : userAssignedBranchIds.length > 0
+        ? userAssignedBranchIds
+        : (allBranchIds.length > 0 ? [allBranchIds[0]] : []);
+
     // Current Dealership filter
     let currentBranchFilter = branchId && branchId !== 'all' ? branchId : undefined;
-    if (!currentBranchFilter && user.role !== Role.SUPER_ADMIN && user.assignedBranchIds?.length > 0) {
-      currentBranchFilter = user.assignedBranchIds[0];
+    if (!isSuperAdmin) {
+      if (!currentBranchFilter || !accessibleBranchIds.includes(currentBranchFilter)) {
+        currentBranchFilter = accessibleBranchIds[0];
+      }
     }
 
-    const currentBranchIds = currentBranchFilter ? [currentBranchFilter] : allBranchIds;
+    const currentBranchIds = currentBranchFilter ? [currentBranchFilter] : accessibleBranchIds;
     const currentBranchObj = currentBranchFilter
       ? allBranches.find((b) => b.id === currentBranchFilter)
-      : allBranches[0];
+      : allBranches.find((b) => accessibleBranchIds.includes(b.id)) || allBranches[0];
     const currentBranchName = currentBranchObj?.name || 'Phursungi';
 
-    // All enquiries on this day across entire dealership network (Consolidated)
+    // Enquiries on this day within accessible branch scope
     const allTodayEnquiries = await this.prisma.enquiry.findMany({
       where: {
-        branchId: { in: allBranchIds },
+        branchId: { in: accessibleBranchIds },
         createdAt: dayDates,
       },
       include: {
@@ -205,7 +216,9 @@ export class AnalyticsService {
           booked: bookedToday,
         },
       },
-      branches: allBranches,
+      branches: isSuperAdmin
+        ? allBranches
+        : allBranches.filter((b) => accessibleBranchIds.includes(b.id)),
       reps: repStats,
       sessions: currentTodayEnquiries.map((e) => {
         const q = e.quotations?.[0];

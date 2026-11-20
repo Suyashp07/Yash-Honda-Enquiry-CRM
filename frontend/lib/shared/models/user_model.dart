@@ -67,6 +67,9 @@ class UserModel {
   bool get canAccessUsersMaster => isSuperAdmin;
   bool get canAccessCompanyProfile => isSuperAdmin;
   bool get canAccessReports => isSuperAdmin || isBranchManager || isAccounts;
+  bool get canAccessDashboard => isSuperAdmin || isBranchManager;
+
+  String get displayName => roleDisplayName;
 
   String get roleDisplayName {
     if (isSuperAdmin) return 'Super Admin';
@@ -101,4 +104,28 @@ class UserModel {
     'branches': branches.map((b) => b.toJson()).toList(),
   };
 }
+
+extension StringRoleDisplayNameExtension on String {
+  String get displayName {
+    switch (trim().toUpperCase().replaceAll(' ', '_').replaceAll('-', '_')) {
+      case 'SUPER_ADMIN':
+      case 'OWNER':
+        return 'Super Admin';
+      case 'BRANCH_MANAGER':
+        return 'Branch Manager';
+      case 'SALES_EXEC':
+      case 'SALES':
+      case 'SALES_EXECUTIVE':
+        return 'Sales Executive';
+      case 'ACCOUNTS':
+        return 'Accounts';
+      case 'TELE_CALLER':
+      case 'TELECALLER':
+        return 'Tele-caller';
+      default:
+        return replaceAll('_', ' ');
+    }
+  }
+}
+
 

@@ -15,7 +15,7 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('floor')
-  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.SALES_EXEC)
+  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER)
   @ApiOperation({ summary: 'Floor Dashboard live rep workload and today enquiry metrics (RIGID)' })
   @ApiQuery({ name: 'branchId', required: false })
   @ApiQuery({ name: 'date', required: false })
