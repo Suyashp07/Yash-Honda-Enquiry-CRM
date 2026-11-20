@@ -96,6 +96,14 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
       tooltip: 'Floor Dashboard: Live showroom timeline & rep attendance',
     ),
     NavItem(
+      title: 'Summary',
+      short: 'Summary',
+      icon: Icons.bar_chart_rounded,
+      route: '/summary',
+      hideFromSalesExec: true,
+      tooltip: 'Dealership Summary: Location-wise As-On-Date & MTD Leads, Bookings & Conversion',
+    ),
+    NavItem(
       title: 'Enquiries',
       short: 'Enquiries',
       icon: Icons.receipt_long_outlined,
@@ -623,7 +631,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                   context.go(items[index].route);
                 }
               },
-              items: items.take(4).map((item) {
+              items: items.take(5).map((item) {
                 return BottomNavigationBarItem(
                   icon: Icon(item.icon),
                   label: item.short,
@@ -635,7 +643,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
   }
 
   int _getBottomNavIndex(List<NavItem> items) {
-    for (int i = 0; i < items.length && i < 4; i++) {
+    for (int i = 0; i < items.length && i < 5; i++) {
       if (widget.currentRoute == items[i].route ||
           (items[i].route != '/dashboard' && widget.currentRoute.startsWith(items[i].route))) {
         return i;

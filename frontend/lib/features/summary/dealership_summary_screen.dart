@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../core/constants/app_colors.dart';
@@ -58,86 +57,110 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
       if (e is DioException) {
         if (e.response?.statusCode == 401) {
           ref.read(authStateProvider.notifier).logout();
-          if (mounted) {
-            ScaffoldMessenger.of(context).clearSnackBars();
-            context.go('/login');
-          }
           return;
-        } else if (e.response?.data?['message'] != null) {
-          msg = e.response!.data['message'].toString();
-        } else {
-          msg = e.message ?? msg;
         }
+        msg = e.response?.data?['message'] ?? e.message ?? msg;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: const Color(0xFF0F172A),
-          behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: 'Retry',
-            textColor: const Color(0xFFEF4444),
-            onPressed: _loadSummary,
-          ),
-        ),
+        SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700),
       );
     }
   }
 
-  void _stepDate(int days) {
+  void _stepDate(int deltaDays) {
     setState(() {
-      _selectedDate = _selectedDate.add(Duration(days: days));
+      _selectedDate = _selectedDate.add(Duration(days: deltaDays));
     });
     _loadSummary();
   }
 
+  void _handlePrint() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Dealership Summary Report formatted for printing.')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Top Controls Bar (Views, Swap, Periods, Date Stepper, Branch)
-        _buildTopControls(),
-        const SizedBox(height: 16),
-
-        if (_isLoading)
-          const Padding(
-            padding: EdgeInsets.all(60),
-            child: Center(
-              child: Column(
-                children: [
-                  CircularProgressIndicator(color: AppColors.primary),
-                  SizedBox(height: 12),
-                  Text('Computing Real Dealership Analytics...', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                ],
-              ),
-            ),
-          )
-        else if (_summaryData == null)
-          Container(
-            padding: const EdgeInsets.all(40),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-            child: const Center(child: Text('No summary data available for this range.')),
-          )
-        else ...[
-          if (_activeView == 'matrix') _buildMatrixView(),
-          if (_activeView == 'summary2') _buildSummary2View(),
-          if (_activeView == 'financial') _buildFinancialView(),
-        ],
-        const SizedBox(height: 40),
-      ],
-    );
-
-    if (widget.isEmbedded) {
-      return content;
-    }
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        child: content,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Screen Title & Subtitle Header
+            _buildScreenHeader(),
+            const SizedBox(height: 16),
+
+            // Top Toolbar Controls
+            _buildTopControls(),
+            const SizedBox(height: 16),
+
+            // Active View Content
+            if (_isLoading)
+              Container(
+                height: 400,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(color: AppColors.primary),
+                      SizedBox(height: 16),
+                      Text('Calculating dealership analytics...', style: TextStyle(color: Color(0xFF64748B))),
+                    ],
+                  ),
+                ),
+              )
+            else if (_summaryData == null)
+              Container(
+                height: 300,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Center(child: Text('No summary data available for this range.')),
+              )
+            else ...[
+              if (_activeView == 'matrix') _buildMatrixView(),
+              if (_activeView == 'summary2') _buildSummary2View(),
+              if (_activeView == 'financial') _buildFinancialView(),
+            ],
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildScreenHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Dealership Summary View',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F172A),
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Location-wise As-On-Date & Month-To-Date (MTD) Leads, Bookings & Conversion',
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 
@@ -149,7 +172,7 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
       child: Wrap(
@@ -321,11 +344,40 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
             ],
           ),
 
-          // Refresh Button
-          IconButton(
-            icon: const Icon(Icons.refresh, size: 20, color: Color(0xFF64748B)),
-            tooltip: 'Reload latest dealership metrics from database',
-            onPressed: _loadSummary,
+          // Print & Refresh
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Tooltip(
+                message: 'Print summary view',
+                child: InkWell(
+                  onTap: _handlePrint,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.print_outlined, size: 16, color: Color(0xFF475569)),
+                        SizedBox(width: 6),
+                        Text('Print', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 20, color: Color(0xFF64748B)),
+                tooltip: 'Reload latest dealership metrics from database',
+                onPressed: _loadSummary,
+              ),
+            ],
           ),
         ],
       ),
@@ -351,9 +403,9 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: isSel ? Colors.white : const Color(0xFF475569),
+                color: isSel ? Colors.white : const Color(0xFF334155),
               ),
             ),
           ],
@@ -394,13 +446,17 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
     // Branch columns list
     final branchIds = [...branches.map((b) => b['id'].toString()), 'all'];
 
+    if (_swapRowsCols) {
+      return _buildTransposedMatrix(branches, branchIds, totalLeads, totalBk, conversion, modeBreakup, sourceBreakup);
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
         ],
       ),
       child: SingleChildScrollView(
@@ -455,7 +511,7 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text('CONSOLIDATED', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFFB45309))),
-                        Text('All 6 Dealerships', style: TextStyle(fontSize: 10, color: Color(0xFF92400E))),
+                        Text('All Dealerships', style: TextStyle(fontSize: 10, color: Color(0xFF92400E))),
                       ],
                     ),
                   ),
@@ -465,54 +521,137 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
 
             // Section 1: AS ON DATE
             _buildSectionHeader('AS ON DATE ($date)'),
-            _buildMatrixDataRow('TOTAL LEADS', branchIds, (id) => (totalLeads[id] ?? 0).toString(), isBold: true, highlightColor: const Color(0xFF2563EB)),
-            _buildMatrixDataRow('TOTAL BK (BOOKED)', branchIds, (id) => (totalBk[id] ?? 0).toString(), isBold: true, highlightColor: const Color(0xFF16A34A)),
-            _buildMatrixDataRow('CONVERSION', branchIds, (id) => (conversion[id] ?? '0.00%').toString(), isBold: true, highlightColor: AppColors.primary),
+            _buildMatrixDataRow('TOTAL LEADS', branches, branchIds, (id) => (totalLeads[id] ?? 0).toString(), isBold: true, highlightColor: const Color(0xFF2563EB)),
+            _buildMatrixDataRow('TOTAL BK', branches, branchIds, (id) => (totalBk[id] ?? 0).toString(), isBold: true, highlightColor: const Color(0xFF16A34A)),
+            _buildMatrixDataRow('CONVERSION', branches, branchIds, (id) => (conversion[id] ?? '0.00%').toString(), isBold: true, highlightColor: const Color(0xFFDC2626)),
 
             // Section 2: MODE BREAK UP
             _buildSectionHeader('MODE BREAK UP'),
-            ...modeBreakup.map((row) => _buildMatrixDataRow(row['label'] ?? '', branchIds, (id) => (row['values']?[id] ?? 0).toString())),
+            ...modeBreakup.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? 0).toString())),
 
             // Section 3: SOURCE
-            _buildSectionHeader('SOURCE BREAKUP'),
-            ...sourceBreakup.map((row) => _buildMatrixDataRow(row['label'] ?? '', branchIds, (id) => (row['values']?[id] ?? 0).toString())),
+            _buildSectionHeader('SOURCE'),
+            ...sourceBreakup.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? 0).toString())),
 
             // Section 4: MODEL WISE LEADS
             _buildSectionHeader('MODEL WISE LEADS'),
-            ...modelWiseLeads.map((row) => _buildMatrixDataRow(row['label'] ?? '', branchIds, (id) => (row['values']?[id] ?? 0).toString())),
+            ...modelWiseLeads.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? 0).toString())),
 
             // Section 5: MODEL WISE BK
             _buildSectionHeader('MODEL WISE BK'),
-            ...modelWiseBk.map((row) => _buildMatrixDataRow(row['label'] ?? '', branchIds, (id) => (row['values']?[id] ?? 0).toString(), highlightColor: const Color(0xFF16A34A))),
+            ...modelWiseBk.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? 0).toString(), highlightColor: const Color(0xFF16A34A))),
 
             // Section 6: SALES EX WISE BK
             _buildSectionHeader('SALES EX WISE BK'),
-            ...salesExWiseBk.map((row) => _buildMatrixDataRow(row['label'] ?? '', branchIds, (id) => (row['values']?[id] ?? 0).toString())),
+            ...salesExWiseBk.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? 0).toString())),
 
-            // Section 7: MTD LEADS TO CONVERSION ("X LEADS / Y BK / Z% CONV")
-            _buildSectionHeader('MTD LEADS TO CONVERSION ($monthStart to $date)'),
-            ...mtdModelConv.map((row) => _buildMatrixDataRow(row['label'] ?? '', branchIds, (id) => (row['values']?[id] ?? '-').toString(), isConvFormat: true)),
+            // Section 7: MTD LEADS TO CONVERSION
+            _buildSectionHeader('MTD LEADS TO CONVERSION ($monthStart TO $date)'),
+            ...mtdModelConv.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? '-').toString(), isConvFormat: true)),
 
             // Section 8: MTD SALES EX WISE CONV
             _buildSectionHeader('MTD SALES EX WISE CONV'),
-            ...mtdSalesExConv.map((row) => _buildMatrixDataRow(row['label'] ?? '', branchIds, (id) => (row['values']?[id] ?? '-').toString(), isConvFormat: true)),
+            ...mtdSalesExConv.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? '-').toString(), isConvFormat: true)),
 
             // Section 9: SOURCE WISE CONVERSION (MTD)
             _buildSectionHeader('SOURCE WISE CONVERSION (MTD)'),
-            ...mtdSourceConv.map((row) => _buildMatrixDataRow(row['label'] ?? '', branchIds, (id) => (row['values']?[id] ?? '-').toString(), isConvFormat: true)),
+            ...mtdSourceConv.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? '-').toString(), isConvFormat: true)),
 
             // Section 10: MODE WISE BREAKUP (MTD)
             _buildSectionHeader('MODE WISE BREAKUP (MTD)'),
-            ...mtdModeConv.map((row) => _buildMatrixDataRow(row['label'] ?? '', branchIds, (id) => (row['values']?[id] ?? '-').toString(), isConvFormat: true)),
+            ...mtdModeConv.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? '-').toString(), isConvFormat: true)),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildTransposedMatrix(
+    List branches,
+    List<String> branchIds,
+    Map totalLeads,
+    Map totalBk,
+    Map conversion,
+    List modeBreakup,
+    List sourceBreakup,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Transposed Header
+            Container(
+              height: 44,
+              color: const Color(0xFFF1F5F9),
+              child: const Row(
+                children: [
+                  SizedBox(width: 220, child: Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('LOCATION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155))))),
+                  SizedBox(width: 120, child: Center(child: Text('TOTAL LEADS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF2563EB))))),
+                  SizedBox(width: 120, child: Center(child: Text('TOTAL BK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF16A34A))))),
+                  SizedBox(width: 120, child: Center(child: Text('CONVERSION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFFDC2626))))),
+                  SizedBox(width: 100, child: Center(child: Text('CASH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155))))),
+                  SizedBox(width: 100, child: Center(child: Text('FINANCE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155))))),
+                  SizedBox(width: 100, child: Center(child: Text('EXCHANGE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155))))),
+                  SizedBox(width: 100, child: Center(child: Text('WALK IN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155))))),
+                  SizedBox(width: 100, child: Center(child: Text('TELE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155))))),
+                ],
+              ),
+            ),
+            ...branchIds.map((bId) {
+              final isAll = bId == 'all';
+              final b = branches.firstWhere((element) => element['id'].toString() == bId, orElse: () => {'name': 'Consolidated Dealerships'});
+              return Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isAll ? const Color(0xFFFEF3C7) : Colors.white,
+                  border: const Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 220,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          isAll ? 'CONSOLIDATED (All Dealerships)' : (b['name'] ?? ''),
+                          style: TextStyle(fontSize: 12, fontWeight: isAll ? FontWeight.w900 : FontWeight.w600, color: isAll ? const Color(0xFFB45309) : const Color(0xFF0F172A)),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 120, child: Center(child: Text('${totalLeads[bId] ?? 0}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))))),
+                    SizedBox(width: 120, child: Center(child: Text('${totalBk[bId] ?? 0}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))))),
+                    SizedBox(width: 120, child: Center(child: Text('${conversion[bId] ?? "0.00%"}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFFDC2626))))),
+                    SizedBox(width: 100, child: Center(child: Text('${_findBreakupVal(modeBreakup, "CASH", bId)}', style: const TextStyle(fontSize: 12)))),
+                    SizedBox(width: 100, child: Center(child: Text('${_findBreakupVal(modeBreakup, "FINANCE", bId)}', style: const TextStyle(fontSize: 12)))),
+                    SizedBox(width: 100, child: Center(child: Text('${_findBreakupVal(modeBreakup, "EXCHANGE", bId)}', style: const TextStyle(fontSize: 12)))),
+                    SizedBox(width: 100, child: Center(child: Text('${_findBreakupVal(sourceBreakup, "WALK IN", bId)}', style: const TextStyle(fontSize: 12)))),
+                    SizedBox(width: 100, child: Center(child: Text('${_findBreakupVal(sourceBreakup, "TELE", bId)}', style: const TextStyle(fontSize: 12)))),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _findBreakupVal(List list, String label, String bId) {
+    final item = list.firstWhere((e) => (e['label'] ?? '').toString().toUpperCase() == label.toUpperCase(), orElse: () => null);
+    if (item == null) return 0;
+    return (item['values']?[bId] ?? 0) as int;
+  }
+
   Widget _buildSectionHeader(String title) {
     return Container(
-      width: 1475,
+      width: 1515,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: const BoxDecoration(
         color: Color(0xFFF8FAFC),
@@ -530,6 +669,7 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
 
   Widget _buildMatrixDataRow(
     String label,
+    List branches,
     List<String> branchIds,
     String Function(String) valueGetter, {
     bool isBold = false,
@@ -560,6 +700,9 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
           ...branchIds.map((bId) {
             final val = valueGetter(bId);
             final isAll = bId == 'all';
+            final bName = isAll
+                ? 'All Dealerships'
+                : (branches.firstWhere((b) => b['id'].toString() == bId, orElse: () => {'name': ''})['name'] ?? '');
 
             return Container(
               width: isAll ? 185 : 175,
@@ -569,19 +712,67 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                 border: const Border(left: BorderSide(color: Color(0xFFF1F5F9))),
               ),
               alignment: Alignment.center,
-              child: Text(
-                val,
-                style: TextStyle(
-                  fontSize: isConvFormat ? 10 : (isBold ? 13 : 11.5),
-                  fontWeight: isBold || isAll ? FontWeight.w800 : FontWeight.w600,
-                  color: isAll
-                      ? (highlightColor ?? const Color(0xFFB45309))
-                      : (highlightColor ?? const Color(0xFF1E293B)),
-                ),
-              ),
+              child: isConvFormat
+                  ? _buildConvPillCell(bName, label, val)
+                  : Text(
+                      val,
+                      style: TextStyle(
+                        fontSize: isBold ? 13 : 11.5,
+                        fontWeight: isBold || isAll ? FontWeight.w800 : FontWeight.w600,
+                        color: isAll
+                            ? (highlightColor ?? const Color(0xFFB45309))
+                            : (highlightColor ?? const Color(0xFF1E293B)),
+                      ),
+                    ),
             );
           }),
         ],
+      ),
+    );
+  }
+
+  Widget _buildConvPillCell(String branchName, String rowLabel, String val) {
+    // Expected formats: "X LEADS / Y BK / Z% CONV" or "XL / YBK / Z%"
+    final parts = val.split('/');
+    if (parts.length >= 3) {
+      final leadsStr = parts[0].replaceAll(RegExp(r'[^0-9]'), '');
+      final bkStr = parts[1].replaceAll(RegExp(r'[^0-9]'), '');
+      final convStr = parts[2].replaceAll(RegExp(r'[^0-9]'), '');
+
+      final tooltipMsg = '$branchName • $rowLabel: $val';
+
+      return Tooltip(
+        message: tooltipMsg,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildBadge('${leadsStr.padLeft(2, '0')}L', const Color(0xFFEFF6FF), const Color(0xFF2563EB)),
+            const SizedBox(width: 4),
+            _buildBadge('${bkStr.padLeft(2, '0')}BK', const Color(0xFFF0FDF4), const Color(0xFF16A34A)),
+            const SizedBox(width: 4),
+            _buildBadge('${convStr.padLeft(2, '0')}%', const Color(0xFFFEF2F2), const Color(0xFFDC2626)),
+          ],
+        ),
+      );
+    }
+
+    return Text(val, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)));
+  }
+
+  Widget _buildBadge(String text, Color bg, Color fg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 9.5,
+          fontWeight: FontWeight.w700,
+          color: fg,
+        ),
       ),
     );
   }
@@ -595,44 +786,82 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
     final totalLeads = asOnDate['totalLeads'] ?? {};
     final totalBk = asOnDate['totalBk'] ?? {};
     final conversion = asOnDate['conversion'] ?? {};
-    final sourceBreakup = (_summaryData?['sourceBreakup'] as List?) ?? [];
 
-    final leadsAll = totalLeads['all'] ?? 0;
-    final bkAll = totalBk['all'] ?? 0;
-    final convAll = conversion['all'] ?? '0.00%';
+    final sourceBreakup = (_summaryData?['sourceBreakup'] as List?) ?? [];
+    final modeBreakup = (_summaryData?['modeBreakup'] as List?) ?? [];
+    final modelWiseLeads = (_summaryData?['modelWiseLeads'] as List?) ?? [];
+    final modelWiseBk = (_summaryData?['modelWiseBk'] as List?) ?? [];
+    final mtdModelConv = (_summaryData?['mtdModelConv'] as List?) ?? [];
+    final salesExWiseBk = (_summaryData?['salesExWiseBk'] as List?) ?? [];
+    final mtdSalesExConv = (_summaryData?['mtdSalesExConv'] as List?) ?? [];
+
+    final leadsAll = (totalLeads['all'] ?? 0) as int;
+    final bkAll = (totalBk['all'] ?? 0) as int;
+    final convAll = (conversion['all'] ?? '0.00%').toString();
+
+    // Calculate source breakdowns for today
+    final walkIns = _findBreakupVal(sourceBreakup, 'WALK IN', 'all');
+    final calls = _findBreakupVal(sourceBreakup, 'TELE', 'all');
+    final online = _findBreakupVal(sourceBreakup, 'ONLINE', 'all');
+    final referrals = _findBreakupVal(sourceBreakup, 'REFERRAL', 'all');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Consolidated Dealership Banner
+        // 1. Consolidated Dealership Top Card (matching Screenshot 5)
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            color: const Color(0xFFFEF2F2).withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFFCA5A5), width: 1.5),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'CONSOLIDATED · ALL ${branches.length} DEALERSHIPS (${_selectedPeriod.toUpperCase()})',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppColors.primary),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'CONSOLIDATED · ALL ${branches.length} DEALERSHIPS (${_selectedPeriod.toUpperCase()})',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFFDC2626),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      const Text(
+                        'Click any location card below to drill down, or click here for all locations',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  const Text('Click any location card below to drill down, or select All Dealerships', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                  Text(
+                    '$convAll Conv',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFFDC2626),
+                    ),
+                  ),
                 ],
               ),
+              const SizedBox(height: 20),
+              // Metrics Row: Total Leads | Walk-ins | Calls | Online | Referrals | Booked / Sold
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildStatBubble('TOTAL LEADS', leadsAll.toString(), const Color(0xFF2563EB)),
-                  const SizedBox(width: 12),
-                  _buildStatBubble('BOOKINGS', bkAll.toString(), const Color(0xFF16A34A)),
-                  const SizedBox(width: 12),
-                  _buildStatBubble('CONVERSION', convAll.toString(), AppColors.primary),
+                  _buildLargeKpi('Total Leads', leadsAll.toString(), const Color(0xFF0F172A)),
+                  _buildLargeKpi('Walk-ins', walkIns.toString(), const Color(0xFF2563EB)),
+                  _buildLargeKpi('Calls', calls.toString(), const Color(0xFF0D9488)),
+                  _buildLargeKpi('Online', online.toString(), const Color(0xFFF59E0B)),
+                  _buildLargeKpi('Referrals', referrals.toString(), const Color(0xFF8B5CF6)),
+                  _buildLargeKpi('Booked / Sold', bkAll.toString(), const Color(0xFF16A34A)),
                 ],
               ),
             ],
@@ -640,128 +869,515 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
         ),
         const SizedBox(height: 16),
 
-        // Location Cards 6-Grid
-        const Text('SHOWROOM LOCATIONS (PUNE)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
-        const SizedBox(height: 10),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisExtent: 110,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
-          ),
-          itemCount: branches.length,
-          itemBuilder: (context, i) {
-            final b = branches[i];
-            final bId = b['id'].toString();
-            final isSel = _selectedBranch == bId;
-            final leads = totalLeads[bId] ?? 0;
-            final bk = totalBk[bId] ?? 0;
-            final conv = conversion[bId] ?? '0.00%';
+        // 2. 6 Location Cards Row (matching Screenshot 5)
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return Row(
+              children: List.generate(branches.length, (i) {
+                final b = branches[i];
+                final bId = b['id'].toString();
+                final isSel = _selectedBranch == bId;
+                final leads = totalLeads[bId] ?? 0;
+                final conv = conversion[bId] ?? '0.00%';
+                final bWalk = _findBreakupVal(sourceBreakup, 'WALK IN', bId);
+                final bCalls = _findBreakupVal(sourceBreakup, 'TELE', bId);
+                final bRef = _findBreakupVal(sourceBreakup, 'REFERRAL', bId);
 
-            return InkWell(
-              onTap: () {
-                setState(() => _selectedBranch = isSel ? 'all' : bId);
-                _loadSummary();
-              },
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: isSel ? const Color(0xFFFEF2F2) : Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isSel ? AppColors.primary : const Color(0xFFE2E8F0),
-                    width: isSel ? 1.5 : 1,
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: i < branches.length - 1 ? 12 : 0),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() => _selectedBranch = isSel ? 'all' : bId);
+                        _loadSummary();
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isSel ? const Color(0xFFFEF2F2) : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSel ? AppColors.primary : const Color(0xFFE2E8F0),
+                            width: isSel ? 1.5 : 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('LOCATION ${i + 1}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))),
+                                Text(conv, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFFDC2626))),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              b['name'] ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _buildMiniSubKpi('$leads', 'Total'),
+                                _buildMiniSubKpi('$bWalk', 'Walk'),
+                                _buildMiniSubKpi('$bCalls', 'Calls'),
+                                _buildMiniSubKpi('$bRef', 'Ref'),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('LOCATION ${i + 1}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))),
-                        Text(b['code'] ?? '', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                      ],
-                    ),
-                    Text(b['name'] ?? '', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('$leads Leads', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF2563EB))),
-                        Text('$bk Booked', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF16A34A))),
-                        Text(conv, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primary)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+                );
+              }),
             );
           },
         ),
         const SizedBox(height: 20),
 
-        // Lead Channel Funnel
-        const Text('CHANNEL & ATTRIBUTION BREAKDOWN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE2E8F0))),
-          child: Column(
-            children: sourceBreakup.map((s) {
-              final label = s['label'] ?? '';
-              final count = (s['values']?['all'] ?? 0) as int;
-              final maxLeads = leadsAll > 0 ? leadsAll : 1;
-              final pct = (count / maxLeads);
-
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+        // 3. Middle Dual Charts Row: Leads vs Bookings & Source/Payment Mix
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left Card: Dealership Leads vs Bookings
+            Expanded(
+              flex: 5,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
-                        Text('$count enquiries (${(pct * 100).toStringAsFixed(1)}%)', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                        const Text('DEALERSHIP LEADS VS BOOKINGS (TODAY)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                        Row(
+                          children: [
+                            _buildLegendItem('Leads', const Color(0xFF2563EB)),
+                            const SizedBox(width: 10),
+                            _buildLegendItem('Booked', const Color(0xFF16A34A)),
+                          ],
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    LinearProgressIndicator(
-                      value: pct,
-                      color: AppColors.primary,
-                      backgroundColor: const Color(0xFFF1F5F9),
-                      minHeight: 6,
-                      borderRadius: BorderRadius.circular(3),
+                    const SizedBox(height: 18),
+                    ...branches.map((b) {
+                      final bId = b['id'].toString();
+                      final index = branches.indexOf(b) + 1;
+                      final l = (totalLeads[bId] ?? 0) as int;
+                      final bk = (totalBk[bId] ?? 0) as int;
+                      final c = conversion[bId] ?? '0.00%';
+                      const maxVal = 12.0;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('LOC $index · ${b['name']}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1E293B))),
+                                Text('${l}L / ${bk}BK ($c)', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFFDC2626))),
+                              ],
+                            ),
+                            const SizedBox(height: 5),
+                            Stack(
+                              children: [
+                                Container(
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                ),
+                                // Leads bar
+                                FractionallySizedBox(
+                                  widthFactor: (l / maxVal).clamp(0.05, 1.0),
+                                  child: Container(
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF2563EB),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  ),
+                                ),
+                                // Bookings bar
+                                FractionallySizedBox(
+                                  widthFactor: (bk / maxVal).clamp(0.02, 1.0),
+                                  child: Container(
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF16A34A),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 20),
+
+            // Right Card: Source & Payment Mix
+            Expanded(
+              flex: 5,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('SOURCE & PAYMENT MIX (TODAY)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                        Text('All Locations', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Enquiry Sources Bar
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Enquiry Sources', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
+                        Text('$leadsAll total leads', style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    _buildSegmentedBar([
+                      {'val': walkIns, 'color': const Color(0xFF2563EB)},
+                      {'val': calls, 'color': const Color(0xFF0D9488)},
+                      {'val': online, 'color': const Color(0xFFF59E0B)},
+                      {'val': referrals, 'color': const Color(0xFF8B5CF6)},
+                    ], leadsAll),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      children: [
+                        _buildLegendItem('WALK IN $walkIns (${leadsAll > 0 ? ((walkIns / leadsAll) * 100).round() : 0}%)', const Color(0xFF2563EB)),
+                        _buildLegendItem('TELE $calls (${leadsAll > 0 ? ((calls / leadsAll) * 100).round() : 0}%)', const Color(0xFF0D9488)),
+                        _buildLegendItem('ONLINE $online (${leadsAll > 0 ? ((online / leadsAll) * 100).round() : 0}%)', const Color(0xFFF59E0B)),
+                        _buildLegendItem('REFERRAL $referrals (${leadsAll > 0 ? ((referrals / leadsAll) * 100).round() : 0}%)', const Color(0xFF8B5CF6)),
+                      ],
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Payment Modes Bar
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Payment Modes', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
+                        Text('$leadsAll total leads', style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    _buildSegmentedBar([
+                      {'val': _findBreakupVal(modeBreakup, 'CASH', 'all'), 'color': const Color(0xFF16A34A)},
+                      {'val': _findBreakupVal(modeBreakup, 'FINANCE', 'all'), 'color': const Color(0xFF2563EB)},
+                      {'val': _findBreakupVal(modeBreakup, 'EXCHANGE', 'all'), 'color': const Color(0xFFEA580C)},
+                    ], leadsAll),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      children: [
+                        _buildLegendItem('CASH ${_findBreakupVal(modeBreakup, "CASH", "all")} (${leadsAll > 0 ? ((_findBreakupVal(modeBreakup, "CASH", "all") / leadsAll) * 100).round() : 0}%)', const Color(0xFF16A34A)),
+                        _buildLegendItem('FINANCE ${_findBreakupVal(modeBreakup, "FINANCE", "all")} (${leadsAll > 0 ? ((_findBreakupVal(modeBreakup, "FINANCE", "all") / leadsAll) * 100).round() : 0}%)', const Color(0xFF2563EB)),
+                        _buildLegendItem('EXCHANGE ${_findBreakupVal(modeBreakup, "EXCHANGE", "all")} (${leadsAll > 0 ? ((_findBreakupVal(modeBreakup, "EXCHANGE", "all") / leadsAll) * 100).round() : 0}%)', const Color(0xFFEA580C)),
+                      ],
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // 3 KPI Highlights at bottom of Card
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMixHighlightCard(
+                            'TOP SOURCE',
+                            'WALK IN (${leadsAll > 0 ? ((walkIns / leadsAll) * 100).round() : 0}%)',
+                            const Color(0xFFEFF6FF),
+                            const Color(0xFF1D4ED8),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildMixHighlightCard(
+                            'FINANCE PENETRATION',
+                            '${leadsAll > 0 ? ((_findBreakupVal(modeBreakup, "FINANCE", "all") / leadsAll) * 100).round() : 0}% (${_findBreakupVal(modeBreakup, "FINANCE", "all")})',
+                            const Color(0xFFEFF6FF),
+                            const Color(0xFF1D4ED8),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildMixHighlightCard(
+                            'EXCHANGE RATE',
+                            '${leadsAll > 0 ? ((_findBreakupVal(modeBreakup, "EXCHANGE", "all") / leadsAll) * 100).round() : 0}% (${_findBreakupVal(modeBreakup, "EXCHANGE", "all")})',
+                            const Color(0xFFFFF7ED),
+                            const Color(0xFFC2410C),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              );
-            }).toList(),
-          ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // 4. Bottom Dual Tables Row: Model Performance & Sales Exec Performance (Image 6)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left Table: Model-Wise Performance
+            Expanded(
+              flex: 5,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('MODEL-WISE PERFORMANCE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                        Text('TODAY & MTD', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Table(
+                      columnWidths: const {
+                        0: FlexColumnWidth(3),
+                        1: FlexColumnWidth(1.5),
+                        2: FlexColumnWidth(1.5),
+                        3: FlexColumnWidth(2.2),
+                      },
+                      children: [
+                        const TableRow(
+                          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0)))),
+                          children: [
+                            Padding(padding: EdgeInsets.only(bottom: 8), child: Text('MODEL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B)))),
+                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('TODAY LEADS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
+                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('TODAY BK', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
+                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('MTD (L / BK / CONV)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
+                          ],
+                        ),
+                        ...modelWiseLeads.map((m) {
+                          final label = m['label'] ?? '';
+                          final tLeads = (m['values']?['all'] ?? 0) as int;
+                          final bkItem = modelWiseBk.firstWhere((e) => e['label'] == label, orElse: () => null);
+                          final tBk = (bkItem?['values']?['all'] ?? 0) as int;
+
+                          final mtdItem = mtdModelConv.firstWhere((e) => e['label'] == label, orElse: () => null);
+                          final mtdVal = (mtdItem?['values']?['all'] ?? '-').toString();
+
+                          return TableRow(
+                            decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9)))),
+                            children: [
+                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)))),
+                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Text('$tLeads', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF2563EB))))),
+                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Text('$tBk', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF16A34A))))),
+                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: _buildMtdShortText(mtdVal))),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 20),
+
+            // Right Table: Sales Executive Performance
+            Expanded(
+              flex: 5,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('SALES EXECUTIVE PERFORMANCE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                        Text('TODAY BK & MTD Conv', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Table(
+                      columnWidths: const {
+                        0: FlexColumnWidth(2.5),
+                        1: FlexColumnWidth(1.2),
+                        2: FlexColumnWidth(1.4),
+                        3: FlexColumnWidth(1.2),
+                        4: FlexColumnWidth(1.2),
+                      },
+                      children: [
+                        const TableRow(
+                          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0)))),
+                          children: [
+                            Padding(padding: EdgeInsets.only(bottom: 8), child: Text('SALES REP', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B)))),
+                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('TODAY BK', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
+                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('MTD LEADS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
+                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('MTD BK', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
+                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('CONV %', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
+                          ],
+                        ),
+                        ...salesExWiseBk.map((rep) {
+                          final label = rep['label'] ?? '';
+                          final todayBk = (rep['values']?['all'] ?? 0) as int;
+
+                          final mtdItem = mtdSalesExConv.firstWhere((e) => e['label'] == label, orElse: () => null);
+                          final mtdRaw = (mtdItem?['values']?['all'] ?? '').toString();
+                          final parts = mtdRaw.split('/');
+                          final mtdL = parts.isNotEmpty ? parts[0].replaceAll(RegExp(r'[^0-9]'), '') : '0';
+                          final mtdB = parts.length > 1 ? parts[1].replaceAll(RegExp(r'[^0-9]'), '') : '0';
+                          final mtdC = parts.length > 2 ? parts[2].replaceAll(RegExp(r'[^0-9]'), '') : '0';
+
+                          return TableRow(
+                            decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9)))),
+                            children: [
+                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)))),
+                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Text('$todayBk', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))))),
+                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Text(mtdL, style: const TextStyle(fontSize: 11.5, color: Color(0xFF475569))))),
+                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Text(mtdB, style: const TextStyle(fontSize: 11.5, color: Color(0xFF475569))))),
+                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Text('$mtdC%', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Color(0xFFDC2626))))),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildStatBubble(String label, String value, Color color) {
+  Widget _buildMtdShortText(String raw) {
+    final parts = raw.split('/');
+    if (parts.length >= 3) {
+      final l = parts[0].replaceAll(RegExp(r'[^0-9]'), '');
+      final b = parts[1].replaceAll(RegExp(r'[^0-9]'), '');
+      final c = parts[2].replaceAll(RegExp(r'[^0-9]'), '');
+      return Text(
+        '$l / $b  $c%',
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFDC2626)),
+      );
+    }
+    return Text(raw, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)));
+  }
+
+  Widget _buildSegmentedBar(List<Map<String, dynamic>> segments, int total) {
+    final safeTotal = total > 0 ? total : 1;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        height: 10,
+        color: const Color(0xFFF1F5F9),
+        child: Row(
+          children: segments.map((seg) {
+            final val = (seg['val'] as int?) ?? 0;
+            final flex = (val / safeTotal * 1000).round();
+            if (flex <= 0) return const SizedBox.shrink();
+            return Expanded(
+              flex: flex,
+              child: Container(color: seg['color'] as Color),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMixHighlightCard(String title, String val, Color bg, Color fg) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color)),
-          Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+          Text(title, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: fg.withValues(alpha: 0.8))),
+          const SizedBox(height: 2),
+          Text(val, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: fg)),
         ],
       ),
+    );
+  }
+
+  Widget _buildLargeKpi(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(value, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: color)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+      ],
+    );
+  }
+
+  Widget _buildMiniSubKpi(String val, String label) {
+    return Column(
+      children: [
+        Text(val, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+        Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8))),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+      ],
     );
   }
 
