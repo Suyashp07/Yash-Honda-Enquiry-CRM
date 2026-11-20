@@ -22,8 +22,6 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   final _nameController = TextEditingController();
   final _mobileController = TextEditingController();
   final _emailController = TextEditingController();
-  final _dobController = TextEditingController();
-  final _anniversaryController = TextEditingController();
   final _remarksController = TextEditingController();
 
   // Exchange Controllers
@@ -81,8 +79,6 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     _nameController.dispose();
     _mobileController.dispose();
     _emailController.dispose();
-    _dobController.dispose();
-    _anniversaryController.dispose();
     _remarksController.dispose();
     _exchangeMakeModelController.dispose();
     _exchangeYearController.dispose();
@@ -221,18 +217,6 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         _selectedColour = newColour;
       });
       _calculateQuote();
-    }
-  }
-
-  Future<void> _selectDate(TextEditingController controller) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
-      firstDate: DateTime(1940),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      controller.text = DateFormat('dd/MM/yyyy').format(picked);
     }
   }
 
@@ -467,21 +451,19 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Row 1: Customer Name, Mobile, Email, DOB, Anniversary
+        // Row 1: Customer Name, Mobile, Email
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              flex: 3,
               child: _buildInputField(
                 label: 'Customer Name *',
                 controller: _nameController,
                 hint: 'e.g. Rahul Patil',
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
-              flex: 3,
               child: _buildInputField(
                 label: 'Mobile Number *',
                 controller: _mobileController,
@@ -489,25 +471,14 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                 keyboardType: TextInputType.phone,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
-              flex: 3,
               child: _buildInputField(
                 label: 'Email',
                 controller: _emailController,
                 hint: 'name@email.com',
                 keyboardType: TextInputType.emailAddress,
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 2,
-              child: _buildDateField('DOB', _dobController),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 2,
-              child: _buildDateField('Anniversary', _anniversaryController),
             ),
           ],
         ),
@@ -1349,47 +1320,6 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
                 borderSide: const BorderSide(color: AppColors.primary),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDateField(String label, TextEditingController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
-        ),
-        const SizedBox(height: 4),
-        SizedBox(
-          height: 38,
-          child: InkWell(
-            onTap: () => _selectDate(controller),
-            child: IgnorePointer(
-              child: TextField(
-                controller: controller,
-                style: const TextStyle(fontSize: 11),
-                decoration: InputDecoration(
-                  hintText: 'dd/mm/yyyy',
-                  hintStyle: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  suffixIcon: const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF64748B)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                ),
               ),
             ),
           ),
