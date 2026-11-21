@@ -476,8 +476,11 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     final booked = outcomes['booked'] ?? (summary['bookingsToday'] ?? 4);
 
     final authUser = ref.watch(authStateProvider).user;
+    final isManager = authUser?.isBranchManager == true ||
+        authUser?.role.toLowerCase().contains('manager') == true;
     final showAllDealerships =
-        authUser?.isSuperAdmin == true || authUser?.isOwner == true;
+        (authUser?.isSuperAdmin == true || authUser?.isOwner == true) &&
+        !isManager;
 
     return Row(
       children: [
