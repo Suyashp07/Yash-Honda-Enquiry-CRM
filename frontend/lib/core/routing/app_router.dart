@@ -12,6 +12,7 @@ import '../../features/enquiries/enquiries_list_screen.dart';
 import '../../features/follow_ups/follow_ups_screen.dart';
 import '../../features/reports/reports_screen.dart';
 import '../../features/admin/admin_panel_screen.dart';
+import '../../features/tablet_configurator/build_my_honda_screen.dart';
 import '../../shared/widgets/responsive_scaffold.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -105,6 +106,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             vehicle: extra['vehicle'] ?? {},
             initialRepId: repId,
           );
+        },
+      ),
+      // Full-screen "Build My Honda" Showroom Tablet Configurator (7-step visual wizard)
+      GoRoute(
+        path: '/build-my-honda',
+        builder: (context, state) {
+          final repId = state.uri.queryParameters['repId'];
+          return BuildMyHondaScreen(initialRepId: repId);
+        },
+      ),
+      GoRoute(
+        path: '/tablet-configurator',
+        builder: (context, state) {
+          final repId = state.uri.queryParameters['repId'];
+          return BuildMyHondaScreen(initialRepId: repId);
         },
       ),
       GoRoute(
