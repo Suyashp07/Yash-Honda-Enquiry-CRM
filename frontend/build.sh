@@ -1,24 +1,27 @@
 #!/bin/bash
 set -e
 
-FLUTTER_VERSION="3.24.5"
-FLUTTER_DIR="$HOME/flutter-$FLUTTER_VERSION"
+# Configure git safe directory for root/container environments
+git config --global --add safe.directory '*' 2>/dev/null || true
 
-# Cache/Install Flutter SDK on Vercel build container
+FLUTTER_DIR="$HOME/flutter-stable"
+
+# Cache/Install Flutter stable SDK on Vercel build container
 if [ ! -d "$FLUTTER_DIR" ]; then
-  echo "Cloning Flutter SDK ($FLUTTER_VERSION)..."
-  git clone https://github.com/flutter/flutter.git -b $FLUTTER_VERSION --depth 1 "$FLUTTER_DIR"
+  echo "Cloning Flutter stable SDK..."
+  git clone https://github.com/flutter/flutter.git -b stable --depth 1 "$FLUTTER_DIR"
 fi
 
 export PATH="$FLUTTER_DIR/bin:$PATH"
+
+echo "Configuring Flutter..."
+flutter config --no-analytics
+flutter precache --web
 
 # Navigate into frontend folder if running from repository root
 if [ -d "frontend" ]; then
   cd frontend
 fi
-
-echo "Configuring Flutter..."
-flutter config --no-analytics
 
 echo "Resolving dependencies..."
 flutter pub get
@@ -29,3 +32,11 @@ if [ -n "$BACKEND_URL" ]; then
 else
   flutter build web --release --no-tree-shake-icons
 fi
+
+# Ensure output exists at both paths so Vercel can find it regardless of root setting
+if [ -d "build/web" ]; then
+  mkdir -p ../frontend/build/web 2>/dev/null || true
+  cp -rf build/web/* ../frontend/build/web/ 2>/dev/null || true
+fi
+
+echo "Flutter web build completed successfully!"
