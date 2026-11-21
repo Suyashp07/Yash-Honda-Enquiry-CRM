@@ -172,21 +172,56 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Brand Mark: "Yash Honda"
+                // Top Brand Mark: Red H box + "Yash Honda" + Role subtitle matching prototype
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
                   child: Tooltip(
                     message: 'Yash Honda Dealership CRM • Official Pune Network',
                     child: InkWell(
                       onTap: () => context.go(user?.canAccessDashboard == true ? '/dashboard' : '/enquiries'),
-                      child: const Text(
-                        'Yash Honda',
-                        style: TextStyle(
-                          color: Color(0xFFCC0000),
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
-                        ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDC2626),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              'H',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 19,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Yash Honda',
+                                style: TextStyle(
+                                  color: Color(0xFF0F172A),
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              Text(
+                                user?.displayName ?? 'Super Admin',
+                                style: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -366,14 +401,14 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         child: const Row(
                           children: [
-                            Icon(Icons.logout_rounded, size: 16, color: Color(0xFFDC2626)),
+                            Icon(Icons.arrow_back_rounded, size: 16, color: Color(0xFF64748B)),
                             SizedBox(width: 8),
                             Text(
-                              'Exit / Sign out',
+                              'Sign out',
                               style: TextStyle(
-                                fontSize: 12.5,
-                                color: Color(0xFFDC2626),
-                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],

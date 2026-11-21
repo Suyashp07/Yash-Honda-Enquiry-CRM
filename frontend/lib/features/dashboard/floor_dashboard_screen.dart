@@ -171,18 +171,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     return null;
   }
 
-  Color _getAvatarBg(String name) {
-    final colors = [
-      const Color(0xFF8B5CF6), // Purple
-      const Color(0xFF2563EB), // Blue
-      const Color(0xFFD97706), // Amber
-      const Color(0xFF0D9488), // Teal
-      const Color(0xFF9333EA), // Violet
-      const Color(0xFF991B1B), // Burgundy
-      const Color(0xFF0284C7), // Sky
-    ];
-    return colors[name.hashCode.abs() % colors.length];
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -233,16 +222,46 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Top 4-KPI Row (CURRENT DEALERSHIP, CONSOLIDATED, SALES REP STATUS, SESSION OUTCOMES)
-            _buildKpiCards(_dashboardData),
-            const SizedBox(height: 18),
+            // Page Title matching prototype
+            const Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Live floor',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Updated just now',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
 
-            // 2. Filter Pills Row + Date Selector
-            _buildFilterChipsAndDateRow(reps),
+            // 1. Top 4-KPI Row (CURRENT DEALERSHIP, ALL DEALERSHIPS, SALES REPS · LIVE, SESSION OUTCOMES)
+            _buildKpiCards(_dashboardData),
+            const SizedBox(height: 16),
+
+            // 2. Search Box + Date Selector + [Rows]/Columns + Zoom Bar matching prototype
+            _buildSearchAndControlsBar(),
             const SizedBox(height: 12),
 
-            // 3. Search Box + [Rows]/Columns Toggle + Zoom Controls Bar
-            _buildSearchAndViewBar(),
+            // 3. Filter Chips Row (All reps · 20 + colored status dots)
+            _buildFilterChipsRow(reps),
             const SizedBox(height: 14),
 
             // 4. Showroom Floor Timeline Table Grid
@@ -278,48 +297,48 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     final busyReps = reps.where((r) => r['status'] == 'Busy').length;
     final idleReps = totalReps - busyReps;
 
-    final inProgress = outcomes['inProgress'] ?? 2;
-    final quoted = outcomes['quoted'] ?? 5;
-    final booked = outcomes['booked'] ?? (summary['bookingsToday'] ?? 3);
+    final inProgress = outcomes['inProgress'] ?? (busyReps > 0 ? busyReps : 1);
+    final quoted = outcomes['quoted'] ?? 14;
+    final booked = outcomes['booked'] ?? (summary['bookingsToday'] ?? 4);
 
     return Row(
       children: [
         // Card 1: CURRENT DEALERSHIP
         Expanded(
           child: _buildMetricCard(
-            title: _selectedBranch == 'all' ? 'CURRENT DEALERSHIP (ALL)' : 'CURRENT DEALERSHIP',
+            title: 'CURRENT DEALERSHIP',
             tooltip: 'Live inquiries logged today for the actively selected showroom',
             columns: [
               _MetricCol(label: 'Total', value: currentTotal.toString(), color: const Color(0xFF0F172A), tooltip: 'Total customer leads recorded today at this branch'),
-              _MetricCol(label: 'Walk-ins', value: currentWalkIns.toString(), color: const Color(0xFF2563EB), tooltip: 'Physical customer visits to the showroom floor today'),
-              _MetricCol(label: 'Calls Recd', value: currentCalls.toString(), color: const Color(0xFF16A34A), tooltip: 'Inbound telephonic customer inquiries handled today'),
+              _MetricCol(label: 'Walk-ins', value: currentWalkIns.toString(), color: const Color(0xFF0F172A), tooltip: 'Physical customer visits to the showroom floor today'),
+              _MetricCol(label: 'Calls', value: currentCalls.toString(), color: const Color(0xFF0F172A), tooltip: 'Inbound telephonic customer inquiries handled today'),
             ],
           ),
         ),
         const SizedBox(width: 14),
 
-        // Card 2: CONSOLIDATED (ALL DEALERSHIPS)
+        // Card 2: ALL DEALERSHIPS
         Expanded(
           child: _buildMetricCard(
-            title: 'CONSOLIDATED (ALL DEALERSHIPS)',
+            title: 'ALL DEALERSHIPS',
             tooltip: 'Aggregated totals across all 6 Yash Honda showrooms in Pune (Phursungi BigWing, Wadki, Saswad, Uruli Kanchan, BT Kawade, Sasane Nagar)',
             columns: [
               _MetricCol(label: 'Total', value: consolidatedTotal.toString(), color: const Color(0xFF0F172A), tooltip: 'Consolidated network-wide enquiries received today across Pune'),
-              _MetricCol(label: 'Walk-ins', value: consolidatedWalkIns.toString(), color: const Color(0xFF2563EB), tooltip: 'Combined walk-in footfalls across all 6 Pune showrooms'),
-              _MetricCol(label: 'Calls Recd', value: consolidatedCalls.toString(), color: const Color(0xFF16A34A), tooltip: 'Combined inbound telephone inquiries handled network-wide'),
+              _MetricCol(label: 'Walk-ins', value: consolidatedWalkIns.toString(), color: const Color(0xFF0F172A), tooltip: 'Combined walk-in footfalls across all 6 Pune showrooms'),
+              _MetricCol(label: 'Calls', value: consolidatedCalls.toString(), color: const Color(0xFF0F172A), tooltip: 'Combined inbound telephone inquiries handled network-wide'),
             ],
           ),
         ),
         const SizedBox(width: 14),
 
-        // Card 3: SALES REP STATUS (LIVE)
+        // Card 3: SALES REPS · LIVE
         Expanded(
           child: _buildMetricCard(
-            title: 'SALES REP STATUS (LIVE)',
+            title: 'SALES REPS · LIVE',
             tooltip: 'Live on-duty sales executive occupancy & availability status',
             columns: [
-              _MetricCol(label: 'Total Reps', value: totalReps.toString(), color: const Color(0xFF0F172A), tooltip: 'Total sales executives assigned to this showroom floor'),
-              _MetricCol(label: 'Busy', value: busyReps.toString(), color: const Color(0xFF0D9488), tooltip: 'Sales executives currently attending customers or conducting test rides'),
+              _MetricCol(label: 'Total', value: totalReps.toString(), color: const Color(0xFF0F172A), tooltip: 'Total sales executives assigned to this showroom floor'),
+              _MetricCol(label: 'Busy', value: busyReps.toString(), color: const Color(0xFFDC2626), tooltip: 'Sales executives currently attending customers or conducting test rides'),
               _MetricCol(label: 'Idle', value: idleReps.toString(), color: const Color(0xFF16A34A), tooltip: 'Sales executives currently idle and available for the next walk-in'),
             ],
           ),
@@ -332,9 +351,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             title: 'SESSION OUTCOMES',
             tooltip: 'Daily sales pipeline progression and conversion status of consultations initiated today',
             columns: [
-              _MetricCol(label: 'In Progress', value: inProgress.toString(), color: const Color(0xFFD97706), tooltip: 'Customer consultations actively underway right now'),
-              _MetricCol(label: 'Quoted', value: quoted.toString(), color: const Color(0xFF16A34A), tooltip: 'Official quotations calculated and delivered to customers today'),
-              _MetricCol(label: 'Booked', value: booked.toString(), color: const Color(0xFFDC2626), tooltip: 'Enquiries successfully converted to confirmed bookings with advance token today'),
+              _MetricCol(label: 'In progress', value: inProgress.toString(), color: const Color(0xFFDC2626), tooltip: 'Customer consultations actively underway right now'),
+              _MetricCol(label: 'Quoted', value: quoted.toString(), color: const Color(0xFFD97706), tooltip: 'Official quotations calculated and delivered to customers today'),
+              _MetricCol(label: 'Booked', value: booked.toString(), color: const Color(0xFF16A34A), tooltip: 'Enquiries successfully converted to confirmed bookings with advance token today'),
             ],
           ),
         ),
@@ -412,263 +431,122 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     );
   }
 
-  // --- 2. Filter Pills Row + Date Selector ---
-  Widget _buildFilterChipsAndDateRow(List<dynamic> reps) {
-    return Row(
-      children: [
-        // Left: Filter pills
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                // All Reps Pill (Red/Orange solid when selected)
-                Tooltip(
-                  message: 'Display timeline for all ${reps.length} showroom sales representatives',
-                  child: InkWell(
-                    onTap: () => setState(() => _selectedRepId = 'all'),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _selectedRepId == 'all' ? const Color(0xFFEA580C) : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: _selectedRepId == 'all' ? const Color(0xFFEA580C) : const Color(0xFFE2E8F0),
-                        ),
-                      ),
-                      child: Text(
-                        'All Reps (${reps.length})',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: _selectedRepId == 'all' ? Colors.white : const Color(0xFF334155),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-
-                // Individual Rep Pills
-                ...reps.map((rep) {
-                  final isSel = _selectedRepId == rep['id'];
-                  final isBusy = rep['status'] == 'Busy';
-
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Tooltip(
-                      message: '${rep['name'] ?? 'Executive'}: ${isBusy ? 'Busy with customer' : 'Available (Idle)'} • Filter to this rep only',
-                      child: InkWell(
-                        onTap: () => setState(() => _selectedRepId = rep['id']),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isSel ? const Color(0xFFEA580C) : Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSel ? const Color(0xFFEA580C) : const Color(0xFFE2E8F0),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: isBusy ? const Color(0xFF0D9488) : const Color(0xFF16A34A),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                rep['name'] ?? '',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: isSel ? Colors.white : const Color(0xFF334155),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 14),
-
-        // Right: Date Navigator
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Tooltip(
-              message: 'Reset timeline view to today\'s date',
-              child: InkWell(
-                onTap: () => _loadDashboard(date: DateTime.now()),
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  height: 32,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text('Today', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFFEA580C))),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Tooltip(
-              message: 'View previous day (${DateFormat('dd MMM').format(_currentDate.subtract(const Duration(days: 1)))})',
-              child: InkWell(
-                onTap: () => _loadDashboard(date: _currentDate.subtract(const Duration(days: 1))),
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  height: 32,
-                  width: 32,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.chevron_left, size: 18, color: Color(0xFF64748B)),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Tooltip(
-              message: 'Selected timeline date: ${DateFormat('EEEE, d MMMM yyyy').format(_currentDate)} (Click to select date)',
-              child: InkWell(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _currentDate,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2030),
-                    builder: (context, child) {
-                      return Theme(
-                        data: Theme.of(context).copyWith(
-                          colorScheme: const ColorScheme.light(
-                            primary: Color(0xFFDC2626),
-                            onPrimary: Colors.white,
-                            onSurface: Color(0xFF0F172A),
-                          ),
-                        ),
-                        child: child!,
-                      );
-                    },
-                  );
-                  if (picked != null) {
-                    _loadDashboard(date: picked);
-                  }
-                },
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  height: 32,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    DateFormat('EEE, dd/MM/yyyy').format(_currentDate),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Tooltip(
-              message: 'View next day (${DateFormat('dd MMM').format(_currentDate.add(const Duration(days: 1)))})',
-              child: InkWell(
-                onTap: () => _loadDashboard(date: _currentDate.add(const Duration(days: 1))),
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  height: 32,
-                  width: 32,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.chevron_right, size: 18, color: Color(0xFF64748B)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // --- 3. Search Box + [Rows]/Columns Toggle + Zoom Controls Bar ---
-  Widget _buildSearchAndViewBar() {
+  // --- 2. Search Box + Date Selector + [Rows]/Columns + Zoom Bar matching prototype ---
+  Widget _buildSearchAndControlsBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x03000000),
+            blurRadius: 4,
+            offset: Offset(0, 1),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          // Search box
+          // Search box matching prototype: Search rep or customer
           Expanded(
             child: SizedBox(
               height: 32,
-              child: Tooltip(
-                message: 'Quick filter timeline by customer name or phone number',
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-                  style: const TextStyle(fontSize: 12),
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
-                    prefixIcon: const Icon(Icons.search, size: 16, color: Color(0xFF94A3B8)),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 14),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                    hintText: 'Search phone or name...',
-                    hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                  ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                style: const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+                  prefixIcon: const Icon(Icons.search, size: 16, color: Color(0xFF94A3B8)),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 14),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  hintText: 'Search rep or customer',
+                  hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                 ),
               ),
             ),
           ),
           const SizedBox(width: 14),
 
+          // Date Navigator: <  Sat, 21 Nov, 2026  >  Today
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left, size: 18, color: Color(0xFF64748B)),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                splashRadius: 13,
+                onPressed: () => _loadDashboard(date: _currentDate.subtract(const Duration(days: 1))),
+              ),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _currentDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2030),
+                  );
+                  if (picked != null) _loadDashboard(date: picked);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    DateFormat('EEE, d MMM, yyyy').format(_currentDate),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right, size: 18, color: Color(0xFF64748B)),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                splashRadius: 13,
+                onPressed: () => _loadDashboard(date: _currentDate.add(const Duration(days: 1))),
+              ),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: () => _loadDashboard(date: DateTime.now()),
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  height: 26,
+                  padding: const EdgeInsets.symmetric(horizontal: 9),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'Today',
+                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 12),
+
           // View Mode Switch: Rows vs Columns
           Container(
-            height: 32,
+            height: 28,
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
@@ -677,112 +555,177 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Tooltip(
-                  message: 'Display showroom floor in horizontal representative rows',
-                  child: InkWell(
-                    onTap: () => setState(() => _viewMode = 'rows'),
-                    borderRadius: BorderRadius.circular(4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _viewMode == 'rows' ? const Color(0xFFDC2626) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.view_headline, size: 14, color: _viewMode == 'rows' ? Colors.white : const Color(0xFF64748B)),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Rows',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              color: _viewMode == 'rows' ? Colors.white : const Color(0xFF64748B),
-                            ),
+                InkWell(
+                  onTap: () => setState(() => _viewMode = 'rows'),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _viewMode == 'rows' ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(4),
+                      boxShadow: _viewMode == 'rows'
+                          ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 2, offset: Offset(0, 1))]
+                          : null,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.table_rows_outlined, size: 13, color: _viewMode == 'rows' ? const Color(0xFF0F172A) : const Color(0xFF64748B)),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Rows',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _viewMode == 'rows' ? const Color(0xFF0F172A) : const Color(0xFF64748B),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                Tooltip(
-                  message: 'Display showroom floor in vertical time columns',
-                  child: InkWell(
-                    onTap: () => setState(() => _viewMode = 'columns'),
-                    borderRadius: BorderRadius.circular(4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _viewMode == 'columns' ? const Color(0xFFDC2626) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.view_column, size: 14, color: _viewMode == 'columns' ? Colors.white : const Color(0xFF64748B)),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Columns',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              color: _viewMode == 'columns' ? Colors.white : const Color(0xFF64748B),
-                            ),
+                InkWell(
+                  onTap: () => setState(() => _viewMode = 'columns'),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _viewMode == 'columns' ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(4),
+                      boxShadow: _viewMode == 'columns'
+                          ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 2, offset: Offset(0, 1))]
+                          : null,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.view_week_outlined, size: 13, color: _viewMode == 'columns' ? const Color(0xFF0F172A) : const Color(0xFF64748B)),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Columns',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _viewMode == 'columns' ? const Color(0xFF0F172A) : const Color(0xFF64748B),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
 
-          // Zoom Controls: [-] 100% [+]
-          Container(
-            height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Tooltip(
-                  message: 'Zoom out timeline grid (reduce slot width)',
-                  child: IconButton(
-                    icon: const Icon(Icons.zoom_out, size: 15, color: Color(0xFF64748B)),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    splashRadius: 14,
-                    onPressed: () {
-                      if (_zoomLevel > 70) setState(() => _zoomLevel -= 15);
-                    },
+          // Zoom Controls
+          InkWell(
+            onTap: () {
+              setState(() {
+                _zoomLevel = _zoomLevel == 100 ? 120 : (_zoomLevel == 120 ? 85 : 100);
+              });
+            },
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              height: 28,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.zoom_in, size: 14, color: Color(0xFF64748B)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$_zoomLevel%',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
                   ),
-                ),
-                const SizedBox(width: 6),
-                Tooltip(
-                  message: 'Current horizontal zoom scale: $_zoomLevel%',
-                  child: Text('$_zoomLevel%', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF334155))),
-                ),
-                const SizedBox(width: 6),
-                Tooltip(
-                  message: 'Zoom in timeline grid (increase slot width)',
-                  child: IconButton(
-                    icon: const Icon(Icons.zoom_in, size: 15, color: Color(0xFF64748B)),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    splashRadius: 14,
-                    onPressed: () {
-                      if (_zoomLevel < 150) setState(() => _zoomLevel += 15);
-                    },
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // --- 3. Filter Chips Row (All reps · 20 + Colored status dots) ---
+  Widget _buildFilterChipsRow(List<dynamic> reps) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          // All Reps Pill
+          InkWell(
+            onTap: () => setState(() => _selectedRepId = 'all'),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: _selectedRepId == 'all' ? const Color(0xFF0F172A) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _selectedRepId == 'all' ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: Text(
+                'All reps · ${reps.length}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: _selectedRepId == 'all' ? Colors.white : const Color(0xFF334155),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Individual Rep Pills with Red/Green status dot
+          ...reps.map((rep) {
+            final isSel = _selectedRepId == rep['id'];
+            final isBusy = rep['status'] == 'Busy';
+
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: InkWell(
+                onTap: () => setState(() => _selectedRepId = isSel ? 'all' : rep['id']),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isSel ? const Color(0xFF0F172A) : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isSel ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isBusy ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        rep['name'] ?? '',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isSel ? Colors.white : const Color(0xFF334155),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -863,8 +806,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     alignment: Alignment.centerLeft,
                     child: const Text(
-                      'Sales Rep',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                      'SALES REP',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
                     ),
                   ),
 
@@ -885,11 +828,11 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            slot,
+                            slot.replaceAll(' AM', '').replaceAll(' PM', ''),
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 11.5,
                               fontWeight: isNow ? FontWeight.w800 : FontWeight.w500,
-                              color: isNow ? const Color(0xFFDC2626) : const Color(0xFF475569),
+                              color: isNow ? const Color(0xFFDC2626) : const Color(0xFF64748B),
                             ),
                           ),
                           if (isNow) ...[
@@ -916,8 +859,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
               final repName = rep['name'] ?? 'Executive';
               final isBusy = rep['status'] == 'Busy';
               final avatarLetter = repName.isNotEmpty ? repName[0].toUpperCase() : 'R';
-              final avatarBg = _getAvatarBg(repName);
-
+              
               // Associated active sessions for this rep
               final repSessions = sessions.where((s) => s['sales_exec_id'] == rep['id']).toList();
               final currentSession = repSessions.isNotEmpty ? repSessions.first : null;
@@ -930,11 +872,11 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                 ),
                 child: Row(
                   children: [
-                    // Rep Info Tile (Left Pinned)
+                    // Rep Info Tile (Left Pinned) matching prototype
                     Tooltip(
-                      message: 'Sales Rep: $repName\nStatus: ${isBusy ? 'Attending $customerName' : 'Available (Idle)'}\nActive Sessions: ${repSessions.length}',
+                      message: 'Sales Rep: $repName\nStatus: ${isBusy ? 'With $customerName' : 'Available'}\nActive Sessions: ${repSessions.length}',
                       child: Container(
-                        width: 220,
+                        width: 200,
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: const BoxDecoration(
                           color: Colors.white,
@@ -943,14 +885,14 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                         child: Row(
                           children: [
                             CircleAvatar(
-                              radius: 17,
-                              backgroundColor: avatarBg,
+                              radius: 15,
+                              backgroundColor: const Color(0xFFF1F5F9),
                               child: Text(
                                 avatarLetter,
                                 style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF475569),
                                 ),
                               ),
                             ),
@@ -963,44 +905,32 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                                   Text(
                                     repName,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF0F172A),
+                                    ),
                                   ),
-                                  const SizedBox(height: 3),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: isBusy ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: isBusy ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
+                                  const SizedBox(height: 2),
+                                  if (isBusy)
+                                    Text(
+                                      'With $customerName',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFFDC2626),
+                                      ),
+                                    )
+                                  else
+                                    const Text(
+                                      'Available',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF16A34A),
                                       ),
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(
-                                          width: 5.5,
-                                          height: 5.5,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: isBusy ? const Color(0xFF16A34A) : const Color(0xFF22C55E),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Flexible(
-                                          child: Text(
-                                            isBusy ? 'Busy: $customerName' : 'Idle',
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 9.5,
-                                              fontWeight: FontWeight.w600,
-                                              color: isBusy ? const Color(0xFF15803D) : const Color(0xFF64748B),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -1095,8 +1025,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     final repName = rep['name'] ?? 'Executive';
                     final isBusy = rep['status'] == 'Busy';
                     final avatarLetter = repName.isNotEmpty ? repName[0].toUpperCase() : 'R';
-                    final avatarBg = _getAvatarBg(repName);
-
+                    
                     final repSessions = sessions.where((s) => s['sales_exec_id'] == rep['id']).toList();
                     final currentSession = repSessions.isNotEmpty ? repSessions.first : null;
                     final customerName = currentSession?['customer_name'] ?? 'Guest';
@@ -1113,10 +1042,10 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                           children: [
                             CircleAvatar(
                               radius: 14,
-                              backgroundColor: avatarBg,
+                              backgroundColor: const Color(0xFFF1F5F9),
                               child: Text(
                                 avatarLetter,
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -1269,33 +1198,31 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   Widget _buildSessionBlock(Map<String, dynamic> session, String repName, {bool isAttending = true}) {
     final customer = session['customer_name'] ?? 'Guest';
     final vehicle = session['vehicle_name'] ?? 'Honda Model';
-    final timeStr = _formatSessionTime(session['created_at']);
-    final isBooked = session['status'] == 'CUSTOMER_BOUGHT';
+    final isBooked = session['status'] == 'CUSTOMER_BOUGHT' || session['status'] == 'BOOKED';
+    final isInProgress = !isBooked && (isAttending || session['status'] == 'ACTIVE' || session['status'] == 'IN_PROGRESS');
 
-    // Amber/yellow for Attending Customer (Busy); Mint green for Quotation Sent/Completed; Yellow-Amber for Booked
-    final bgColor = isBooked
-        ? const Color(0xFFFEF3C7)
-        : (isAttending ? const Color(0xFFFEF9C3) : const Color(0xFFECFDF5));
-    final borderColor = isBooked
-        ? const Color(0xFFFDE68A)
-        : (isAttending ? const Color(0xFFFDE047) : const Color(0xFFA7F3D0));
-    final accentColor = isBooked
-        ? const Color(0xFFD97706)
-        : (isAttending ? const Color(0xFFB45309) : const Color(0xFF059669));
+    // 1. Quoted: Amber (#FEF3C7 / #FDE68A)
+    // 2. In progress: Rose/Red (#FEE2E2 / #FECACA)
+    // 3. Booked: Mint Green (#D1FAE5 / #A7F3D0)
+    final Color bgColor = isBooked
+        ? const Color(0xFFD1FAE5)
+        : (isInProgress ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7));
+    final Color borderColor = isBooked
+        ? const Color(0xFFA7F3D0)
+        : (isInProgress ? const Color(0xFFFECACA) : const Color(0xFFFDE68A));
+    final Color titleColor = isBooked
+        ? const Color(0xFF065F46)
+        : (isInProgress ? const Color(0xFF991B1B) : const Color(0xFF78350F));
+    final Color subColor = isBooked
+        ? const Color(0xFF059669)
+        : (isInProgress ? const Color(0xFFDC2626) : const Color(0xFFB45309));
 
-    final String sessionStatus = isBooked
+    final String statusLabel = isBooked
         ? 'Booked'
-        : (isAttending ? 'Attending Customer (Live)' : 'Quotation Sent / Completed');
-    final String timeLabel = timeStr.isNotEmpty ? timeStr : 'Session';
-    final String sessionTooltip = 'Customer: $customer\n'
-        'Interested Model: $vehicle\n'
-        'Showroom Rep: $repName\n'
-        'Stage: $sessionStatus\n'
-        'Time: $timeLabel\n'
-        'Click to inspect full quotation & test ride details';
+        : (isInProgress ? 'In progress' : 'Quote');
 
     return Tooltip(
-      message: sessionTooltip,
+      message: 'Customer: $customer\nInterested Model: $vehicle\nShowroom Rep: $repName\nStage: $statusLabel\nTime: ${_formatSessionTime(session["created_at"])}\nClick to inspect details',
       child: InkWell(
         onTap: () => _showSessionDetails(session, repName),
         borderRadius: BorderRadius.circular(6),
@@ -1316,26 +1243,27 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     Text(
                       customer,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: titleColor,
                       ),
                     ),
                     const SizedBox(height: 1),
                     Text(
-                      '$vehicle • $timeLabel${isAttending ? ' (Live)' : ''}',
+                      '$vehicle · $statusLabel',
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 9.5,
-                        color: accentColor,
+                        color: subColor,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.access_time_rounded, size: 13, color: accentColor),
+              if (isInProgress)
+                Icon(Icons.access_time_rounded, size: 12, color: subColor),
             ],
           ),
         ),
@@ -1372,21 +1300,21 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     return Row(
       children: [
         _buildLegendItem(
-          'Attending Customer (Busy)',
-          const Color(0xFF38BDF8),
-          tooltip: 'Sales representative is actively engaged with a customer on the showroom floor',
+          'In progress',
+          const Color(0xFFDC2626),
+          tooltip: 'Customer consultation or test ride actively underway on showroom floor',
         ),
         const SizedBox(width: 16),
         _buildLegendItem(
-          'Quotation Sent / Completed',
-          const Color(0xFF34D399),
-          tooltip: 'Official quotation breakdown has been calculated and delivered to the customer',
+          'Quoted',
+          const Color(0xFFD97706),
+          tooltip: 'Official price quotation delivered to customer',
         ),
         const SizedBox(width: 16),
         _buildLegendItem(
           'Booked',
-          const Color(0xFFFBBF24),
-          tooltip: 'Customer confirmed purchase and paid the vehicle booking advance',
+          const Color(0xFF16A34A),
+          tooltip: 'Vehicle booking confirmed with advance payment',
         ),
         const SizedBox(width: 16),
         Tooltip(
