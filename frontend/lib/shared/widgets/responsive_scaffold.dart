@@ -157,7 +157,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
     final user = ref.watch(authStateProvider).user;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFFAF9F6),
       body: Row(
         children: [
           // Expanded 230px Navigation Sidebar matching Prototype Screenshots
@@ -248,15 +248,15 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                                 height: 38,
                                 padding: const EdgeInsets.symmetric(horizontal: 12),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFFFFF0F0) : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(6),
+                                  color: isSelected ? const Color(0xFFFEE2E2) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Row(
                                   children: [
                                     Icon(
                                       item.icon,
                                       size: 18,
-                                      color: isSelected ? const Color(0xFFCC0000) : const Color(0xFF64748B),
+                                      color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF64748B),
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
@@ -264,7 +264,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                        color: isSelected ? const Color(0xFFCC0000) : const Color(0xFF334155),
+                                        color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF334155),
                                       ),
                                     ),
                                   ],
@@ -438,65 +438,94 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
     );
   }
 
+  String _getPageTitle(String route) {
+    if (route.startsWith('/dashboard')) return 'Live floor';
+    if (route.startsWith('/summary')) return 'Dealership Summary';
+    if (route.startsWith('/enquiries')) return 'Enquiries';
+    if (route.startsWith('/follow-ups')) return 'Follow-ups';
+    if (route.startsWith('/reports')) return 'Reports';
+    if (route.startsWith('/admin')) return 'Admin Panel';
+    return 'Yash Honda';
+  }
+
   Widget _buildTopHeaderBar(BuildContext context, WidgetRef ref, UserModel? user) {
+    final isDashboard = widget.currentRoute == '/dashboard';
+
     return Container(
-      height: 58,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-        ),
+        color: Color(0xFFFAF9F6),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // "+ New Enquiry [N]" Red Pill Button
-          Tooltip(
-            message: 'Create a new customer walk-in or telephonic enquiry (Shortcut: N)',
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFCC0000),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-              ),
-              onPressed: () => context.go('/tablet'),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.add, size: 15),
-                  const SizedBox(width: 4),
-                  const Text('New Enquiry', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(3),
+          // Left: Page Title directly opposite right action buttons
+          if (isDashboard)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Live floor',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                        letterSpacing: -0.4,
+                      ),
                     ),
-                    child: const Text('N', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFF10B981),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 1),
+                const Text(
+                  'Updated just now',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w400,
                   ),
-                ],
+                ),
+              ],
+            )
+          else
+            Text(
+              _getPageTitle(widget.currentRoute),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF0F172A),
+                letterSpacing: -0.3,
               ),
             ),
-          ),
-          const SizedBox(width: 14),
 
-          // Branch Selector Dropdown
+          const Spacer(),
+
+          // Right side controls matching prototype:
+          // [All branches (Pune) v] [Robot] [Bell with red dot] [+ New enquiry [N]]
+
+          // 1. Branch Selector Dropdown
           Consumer(
             builder: (context, ref, child) {
               final activeBranchId = ref.watch(selectedBranchIdProvider);
-              final isSuperAdmin = user?.isSuperAdmin == true;
+              final isSuperAdmin = user?.isSuperAdmin == true || user?.isOwner == true;
               final userBranchIds = user?.branches.map((b) => b.id).toSet() ?? {};
 
-              // If not super admin, only allow assigned branches
               final visibleBranches = isSuperAdmin || userBranchIds.isEmpty
                   ? _branches
                   : _branches.where((b) => userBranchIds.contains(b['id'].toString())).toList();
 
-              // For branch manager / sales exec, 'all' is invalid; must select their branch
               String validValue;
               if (isSuperAdmin) {
                 validValue = (visibleBranches.any((b) => b['id'].toString() == activeBranchId) || activeBranchId == 'all')
@@ -507,7 +536,6 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                   validValue = activeBranchId;
                 } else if (visibleBranches.isNotEmpty) {
                   validValue = visibleBranches.first['id'].toString();
-                  // Schedule state sync to their assigned branch
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (ref.read(selectedBranchIdProvider) != validValue) {
                       ref.read(selectedBranchIdProvider.notifier).state = validValue;
@@ -518,97 +546,124 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                 }
               }
 
-              return Tooltip(
-                message: isSuperAdmin
-                    ? 'Switch between BigWing (Phursungi) and RedWing showrooms, or view All Branches'
-                    : 'Showroom branch scope: ${user?.branchDisplayName ?? 'Assigned Branch'}',
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+              return Container(
+                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: validValue,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
+                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                    items: [
+                      if (isSuperAdmin)
+                        const DropdownMenuItem(value: 'all', child: Text('All branches (Pune)')),
+                      ...visibleBranches.map((b) {
+                        final wing = b['wing'] ?? (b['name'].toString().contains('BigWing') || b['code'].toString().startsWith('BW') ? 'BigWing' : 'RedWing');
+                        final name = b['name']?.toString() ?? 'Branch';
+                        return DropdownMenuItem(
+                          value: b['id'].toString(),
+                          child: Text('$name ($wing)'),
+                        );
+                      }),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        ref.read(selectedBranchIdProvider.notifier).state = val;
+                      }
+                    },
                   ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: validValue,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
-                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: Color(0xFF1E293B)),
-                      items: [
-                        if (isSuperAdmin)
-                          const DropdownMenuItem(value: 'all', child: Text('All Branches (Pune)')),
-                        ...visibleBranches.map((b) {
-                          final wing = b['wing'] ?? (b['name'].toString().contains('BigWing') || b['code'].toString().startsWith('BW') ? 'BigWing' : 'RedWing');
-                          final name = b['name']?.toString() ?? 'Branch';
-                          return DropdownMenuItem(
-                            value: b['id'].toString(),
-                            child: Text('$name ($wing)'),
-                          );
-                        }),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          ref.read(selectedBranchIdProvider.notifier).state = val;
-                        }
-                      },
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+
+          // 2. Robot / AI Insights Icon Button (in soft rounded white container)
+          Tooltip(
+            message: 'AI Dealership Executive Insights - Real-time analysis powered by Gemini AI',
+            child: InkWell(
+              onTap: () => _showAiInsightsDialog(context, ref),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: const Icon(Icons.smart_toy_outlined, size: 18, color: Color(0xFF64748B)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // 3. Notification Bell with red dot
+          Tooltip(
+            message: 'Urgent follow-ups & notifications',
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Icon(Icons.notifications_none_rounded, size: 18, color: Color(0xFF64748B)),
+                  Positioned(
+                    top: 8,
+                    right: 9,
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFDC2626),
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                ],
+              ),
+            ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
 
-          // AI Insights Action (Smart AI Bot Icon)
-          IconButton(
-            icon: const Icon(Icons.smart_toy_outlined, size: 20, color: Color(0xFF6366F1)),
-            tooltip: 'AI Dealership Executive Insights - Real-time analysis powered by Gemini AI',
-            onPressed: () => _showAiInsightsDialog(context, ref),
-          ),
-          const SizedBox(width: 4),
-
-          // Dark Mode Icon (Moon)
-          IconButton(
-            icon: const Icon(Icons.dark_mode_outlined, size: 19, color: Color(0xFF64748B)),
-            tooltip: 'Toggle dark mode appearance',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Theme toggled')),
-              );
-            },
-          ),
-
-          // Notifications Bell
-          IconButton(
-            icon: const Icon(Icons.notifications_none_rounded, size: 20, color: Color(0xFF64748B)),
-            tooltip: 'Urgent follow-ups & recent enquiry notifications',
-            onPressed: () {},
-          ),
-          const SizedBox(width: 4),
-
-          // User Avatar Circle
+          // 4. "+ New enquiry [N]" Red Button matching prototype
           Tooltip(
-            message: 'Signed in as ${user?.name ?? 'Staff'} (${user?.roleDisplayName ?? 'Staff'} • ${user?.branchDisplayName ?? 'Pune'})',
-            child: InkWell(
-              onTap: () => _showSystemInfoDialog(context),
-              borderRadius: BorderRadius.circular(15),
-              child: Container(
-                width: 30,
-                height: 30,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFCC0000),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  (user != null && user.name.isNotEmpty) ? user.name[0].toUpperCase() : 'S',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
+            message: 'Create a new customer walk-in or telephonic enquiry (Shortcut: N)',
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => context.go('/tablet'),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.add, size: 16),
+                  const SizedBox(width: 4),
+                  const Text('New enquiry', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFB91C1C),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: const Text('N', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
-                ),
+                ],
               ),
             ),
           ),
@@ -619,7 +674,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
   Widget _buildMobileLayout(BuildContext context, WidgetRef ref, List<NavItem> items) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFFAF9F6),
       appBar: AppBar(
         titleSpacing: 16,
         leadingWidth: 46,
