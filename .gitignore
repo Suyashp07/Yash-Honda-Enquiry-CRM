@@ -12,6 +12,8 @@ npm-debug.log*
 .dart_tool/
 .packages
 build/
+!frontend/build/web/
+!build/web/
 .flutter-plugins
 .flutter-plugin-dependencies
 
