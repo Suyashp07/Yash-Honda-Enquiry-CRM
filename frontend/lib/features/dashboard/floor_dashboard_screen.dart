@@ -35,6 +35,11 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   String _viewMode = 'rows'; // 'rows' or 'columns'
   int _zoomLevel = 100;
 
+  // Zoom bounds matching the prototype's step control
+  static const int _zoomMin = 70;
+  static const int _zoomMax = 150;
+  static const int _zoomStep = 15;
+
   // 30-min time slots matching showroom floor operating hours
   final List<String> _timeSlots = [
     '9:00 AM',
@@ -386,6 +391,10 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
       return true;
     }).toList();
 
+    // NOTE: the page title ("Live floor" / "Updated just now") is intentionally
+    // NOT rendered here anymore. It's already rendered once by the parent
+    // shell/route header above this screen; rendering it again here caused
+    // the duplicated "Live floor" heading seen in the deployed build.
     return Scaffold(
       backgroundColor: const Color(0xFFFAF9F6),
       body: SingleChildScrollView(
@@ -393,33 +402,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Page Header matching prototype
-            const Padding(
-              padding: EdgeInsets.only(top: 8, bottom: 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Live floor',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: -0.6,
-                    ),
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    'Updated just now',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 8),
 
             // 1. Top 4-KPI Row (CURRENT DEALERSHIP, ALL DEALERSHIPS, SALES REPS · LIVE, SESSION OUTCOMES)
             _buildKpiCards(_dashboardData),
@@ -903,37 +886,70 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           ),
           const SizedBox(width: 12),
 
-          // Zoom Controls
-          InkWell(
-            onTap: () {
-              setState(() {
-                _zoomLevel =
-                    _zoomLevel == 100 ? 120 : (_zoomLevel == 120 ? 85 : 100);
-              });
-            },
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              height: 28,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.zoom_in, size: 14, color: Color(0xFF64748B)),
-                  const SizedBox(width: 4),
-                  Text(
+          // Zoom Controls: [-] 100% [+] — matches the prototype's two-button control
+          Container(
+            height: 28,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(4),
+                  onTap: _zoomLevel <= _zoomMin
+                      ? null
+                      : () => setState(() {
+                            _zoomLevel =
+                                math.max(_zoomMin, _zoomLevel - _zoomStep);
+                          }),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    child: Icon(
+                      Icons.zoom_out,
+                      size: 14,
+                      color: _zoomLevel <= _zoomMin
+                          ? const Color(0xFFCBD5E1)
+                          : const Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 38,
+                  child: Text(
                     '$_zoomLevel%',
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF334155)),
                   ),
-                ],
-              ),
+                ),
+                InkWell(
+                  borderRadius: BorderRadius.circular(4),
+                  onTap: _zoomLevel >= _zoomMax
+                      ? null
+                      : () => setState(() {
+                            _zoomLevel =
+                                math.min(_zoomMax, _zoomLevel + _zoomStep);
+                          }),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    child: Icon(
+                      Icons.zoom_in,
+                      size: 14,
+                      color: _zoomLevel >= _zoomMax
+                          ? const Color(0xFFCBD5E1)
+                          : const Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1730,6 +1746,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     );
   }
 
+  // Empty slot: stays visually clean/blank by default (matching the prototype)
+  // and only reveals the "add" affordance on hover, instead of showing a
+  // faint-but-visible plus icon on every empty cell all the time.
   Widget _buildEmptySlot({String? repId, String? repName, String? slot}) {
     final tooltipMsg = (repName != null && slot != null)
         ? 'Available slot ($slot) for $repName • Click to start new enquiry'
@@ -1737,7 +1756,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
 
     return Tooltip(
       message: tooltipMsg,
-      child: InkWell(
+      child: _HoverRevealAddIcon(
         onTap: () {
           if (repId != null) {
             context.go('/tablet?repId=$repId');
@@ -1745,11 +1764,6 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             context.go('/tablet');
           }
         },
-        child: Container(
-          color: Colors.transparent,
-          alignment: Alignment.center,
-          child: const Icon(Icons.add, size: 13, color: Color(0x2294A3B8)),
-        ),
       ),
     );
   }
@@ -1953,6 +1967,49 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF0F172A))),
         ],
+      ),
+    );
+  }
+}
+
+/// A small helper widget used by empty timeline cells.
+///
+/// Instead of always painting a faint-but-visible "+" icon over every empty
+/// slot (which reads as visual noise against the prototype's clean blank
+/// cells), this only fades the icon in while the pointer is hovering over
+/// the cell, and still responds to tap/click everywhere on mobile/touch.
+class _HoverRevealAddIcon extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _HoverRevealAddIcon({required this.onTap});
+
+  @override
+  State<_HoverRevealAddIcon> createState() => _HoverRevealAddIconState();
+}
+
+class _HoverRevealAddIconState extends State<_HoverRevealAddIcon> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: InkWell(
+        onTap: widget.onTap,
+        child: Container(
+          color: Colors.transparent,
+          alignment: Alignment.center,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 120),
+            opacity: _hovering ? 1.0 : 0.0,
+            child: const Icon(
+              Icons.add,
+              size: 13,
+              color: Color(0xFF94A3B8),
+            ),
+          ),
+        ),
       ),
     );
   }
