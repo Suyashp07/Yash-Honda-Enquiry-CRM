@@ -25,7 +25,7 @@ flutter pub get
 
 echo "Building Flutter Web application..."
 if [ -n "$BACKEND_URL" ]; then
-  flutter build web --release --no-wasm-dry-run --no-tree-shake-icons --dart-define=BACKEND_URL="$BACKEND_URL"
+  flutter build web --release --no-tree-shake-icons --dart-define=BACKEND_URL="$BACKEND_URL"
 else
-  flutter build web --release --no-wasm-dry-run --no-tree-shake-icons
+  flutter build web --release --no-tree-shake-icons
 fi
