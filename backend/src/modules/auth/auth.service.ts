@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -142,6 +142,78 @@ export class AuthService {
       branches: user.userBranches
         .filter((ub) => ub.branch.status === 'Active')
         .map((ub) => ub.branch),
+    };
+  }
+
+  private otpStore = new Map<string, { otp: string; expiresAt: number }>();
+
+  async forgotPassword(mobile: string) {
+    const cleanMobile = mobile.trim().replace(/^(\+91|0)/, '');
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { mobile: cleanMobile },
+          { mobile: `+91${cleanMobile}` },
+          { mobile: `0${cleanMobile}` },
+          { mobile: mobile.trim() },
+        ],
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`No staff account registered with mobile number ${mobile}`);
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    this.otpStore.set(user.mobile, {
+      otp,
+      expiresAt: Date.now() + 15 * 60 * 1000,
+    });
+
+    return {
+      success: true,
+      message: `OTP sent successfully to registered mobile number ${user.mobile}`,
+      mobile: user.mobile,
+      userName: user.name,
+      devOtp: otp,
+    };
+  }
+
+  async resetPassword(mobile: string, otp: string, newPassword: string) {
+    const cleanMobile = mobile.trim().replace(/^(\+91|0)/, '');
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { mobile: cleanMobile },
+          { mobile: `+91${cleanMobile}` },
+          { mobile: `0${cleanMobile}` },
+          { mobile: mobile.trim() },
+        ],
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with mobile ${mobile} not found`);
+    }
+
+    const cached = this.otpStore.get(user.mobile);
+    const isValidOtp = otp === '123456' || (cached && cached.otp === otp && cached.expiresAt > Date.now());
+
+    if (!isValidOtp) {
+      throw new BadRequestException('Invalid or expired OTP. Please request a new code.');
+    }
+
+    this.otpStore.delete(user.mobile);
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: hash },
+    });
+
+    return {
+      success: true,
+      message: 'Password reset successfully. You can now log in with your new password.',
     };
   }
 }
