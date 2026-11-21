@@ -34,7 +34,11 @@ class AdminSubItem {
   final IconData icon;
   final String? tooltip;
 
-  const AdminSubItem({required this.title, required this.route, required this.icon, this.tooltip});
+  const AdminSubItem(
+      {required this.title,
+      required this.route,
+      required this.icon,
+      this.tooltip});
 }
 
 class ResponsiveScaffold extends ConsumerStatefulWidget {
@@ -74,16 +78,56 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
   }
 
   static const List<AdminSubItem> adminSubItems = [
-    AdminSubItem(title: 'Vehicle Masters', route: '/admin/vehicles', icon: Icons.two_wheeler_outlined, tooltip: 'Manage Honda two-wheelers, variants, prices & brochures'),
-    AdminSubItem(title: 'Model Groups', route: '/admin/model-groups', icon: Icons.layers_outlined, tooltip: 'Scooters, Commuters, Premium & BigWing categories'),
-    AdminSubItem(title: 'Colours', route: '/admin/colours', icon: Icons.palette_outlined, tooltip: 'Palette shades, paint codes & vehicle swatches'),
-    AdminSubItem(title: 'Add-ons', route: '/admin/accessories', icon: Icons.inventory_2_outlined, tooltip: 'Accessories, AMC, extended warranties & helmet kits'),
-    AdminSubItem(title: 'Finance Providers', route: '/admin/financiers', icon: Icons.account_balance_outlined, tooltip: 'Banking partners, interest rates & hypothecation fee'),
-    AdminSubItem(title: 'Areas', route: '/admin/areas', icon: Icons.location_on_outlined, tooltip: 'Pune delivery areas, pin codes & territorial boundaries'),
-    AdminSubItem(title: 'Lead Sources', route: '/admin/lead-sources', icon: Icons.campaign_outlined, tooltip: 'Walk-ins, telephonic, BikeWale, ads & digital leads'),
-    AdminSubItem(title: 'Branches', route: '/admin/branches', icon: Icons.storefront_outlined, tooltip: 'Yash Honda showroom network (BigWing & RedWing)'),
-    AdminSubItem(title: 'Users', route: '/admin/users', icon: Icons.people_outline, tooltip: 'Staff logins, branch allocations & role-based permissions'),
-    AdminSubItem(title: 'Company Profile', route: '/admin/company-profile', icon: Icons.business_outlined, tooltip: 'Letterhead, bank details, GSTIN & quotation branding'),
+    AdminSubItem(
+        title: 'Vehicle Masters',
+        route: '/admin/vehicles',
+        icon: Icons.two_wheeler_outlined,
+        tooltip: 'Manage Honda two-wheelers, variants, prices & brochures'),
+    AdminSubItem(
+        title: 'Model Groups',
+        route: '/admin/model-groups',
+        icon: Icons.layers_outlined,
+        tooltip: 'Scooters, Commuters, Premium & BigWing categories'),
+    AdminSubItem(
+        title: 'Colours',
+        route: '/admin/colours',
+        icon: Icons.palette_outlined,
+        tooltip: 'Palette shades, paint codes & vehicle swatches'),
+    AdminSubItem(
+        title: 'Add-ons',
+        route: '/admin/accessories',
+        icon: Icons.inventory_2_outlined,
+        tooltip: 'Accessories, AMC, extended warranties & helmet kits'),
+    AdminSubItem(
+        title: 'Finance Providers',
+        route: '/admin/financiers',
+        icon: Icons.account_balance_outlined,
+        tooltip: 'Banking partners, interest rates & hypothecation fee'),
+    AdminSubItem(
+        title: 'Areas',
+        route: '/admin/areas',
+        icon: Icons.location_on_outlined,
+        tooltip: 'Pune delivery areas, pin codes & territorial boundaries'),
+    AdminSubItem(
+        title: 'Lead Sources',
+        route: '/admin/lead-sources',
+        icon: Icons.campaign_outlined,
+        tooltip: 'Walk-ins, telephonic, BikeWale, ads & digital leads'),
+    AdminSubItem(
+        title: 'Branches',
+        route: '/admin/branches',
+        icon: Icons.storefront_outlined,
+        tooltip: 'Yash Honda showroom network (BigWing & RedWing)'),
+    AdminSubItem(
+        title: 'Users',
+        route: '/admin/users',
+        icon: Icons.people_outline,
+        tooltip: 'Staff logins, branch allocations & role-based permissions'),
+    AdminSubItem(
+        title: 'Company Profile',
+        route: '/admin/company-profile',
+        icon: Icons.business_outlined,
+        tooltip: 'Letterhead, bank details, GSTIN & quotation branding'),
   ];
 
   static const List<NavItem> navItems = [
@@ -101,7 +145,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
       icon: Icons.bar_chart_rounded,
       route: '/summary',
       hideFromSalesExec: true,
-      tooltip: 'Dealership Summary: Location-wise As-On-Date & MTD Leads, Bookings & Conversion',
+      tooltip:
+          'Dealership Summary: Location-wise As-On-Date & MTD Leads, Bookings & Conversion',
     ),
     NavItem(
       title: 'Enquiries',
@@ -153,7 +198,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
     );
   }
 
-  Widget _buildDesktopLayout(BuildContext context, WidgetRef ref, List<NavItem> items) {
+  Widget _buildDesktopLayout(
+      BuildContext context, WidgetRef ref, List<NavItem> items) {
     final user = ref.watch(authStateProvider).user;
 
     return Scaffold(
@@ -176,9 +222,12 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
                   child: Tooltip(
-                    message: 'Yash Honda Dealership CRM • Official Pune Network',
+                    message:
+                        'Yash Honda Dealership CRM • Official Pune Network',
                     child: InkWell(
-                      onTap: () => context.go(user?.canAccessDashboard == true ? '/dashboard' : '/enquiries'),
+                      onTap: () => context.go(user?.canAccessDashboard == true
+                          ? '/dashboard'
+                          : '/enquiries'),
                       child: Row(
                         children: [
                           Container(
@@ -235,7 +284,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                     children: [
                       ...items.map((item) {
                         final isSelected = widget.currentRoute == item.route ||
-                            (item.route != '/dashboard' && widget.currentRoute.startsWith(item.route));
+                            (item.route != '/dashboard' &&
+                                widget.currentRoute.startsWith(item.route));
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 2),
@@ -246,9 +296,12 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
                                 height: 38,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFFFEE2E2) : Colors.transparent,
+                                  color: isSelected
+                                      ? const Color(0xFFFEE2E2)
+                                      : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Row(
@@ -256,15 +309,21 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                                     Icon(
                                       item.icon,
                                       size: 18,
-                                      color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+                                      color: isSelected
+                                          ? const Color(0xFFDC2626)
+                                          : const Color(0xFF64748B),
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
                                       item.short,
                                       style: TextStyle(
                                         fontSize: 13,
-                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                        color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF334155),
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: isSelected
+                                            ? const Color(0xFFDC2626)
+                                            : const Color(0xFF334155),
                                       ),
                                     ),
                                   ],
@@ -284,11 +343,13 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                               ? 'Click to collapse Admin Panel configuration sub-menus'
                               : 'Click to expand Admin Panel master records & configurations',
                           child: InkWell(
-                            onTap: () => setState(() => _isAdminExpanded = !_isAdminExpanded),
+                            onTap: () => setState(
+                                () => _isAdminExpanded = !_isAdminExpanded),
                             borderRadius: BorderRadius.circular(6),
                             child: Container(
                               height: 38,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
                               child: Row(
                                 children: [
                                   const Icon(
@@ -308,7 +369,9 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                                     ),
                                   ),
                                   Icon(
-                                    _isAdminExpanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+                                    _isAdminExpanded
+                                        ? Icons.arrow_drop_up_rounded
+                                        : Icons.arrow_drop_down_rounded,
                                     size: 20,
                                     color: const Color(0xFF64748B),
                                   ),
@@ -317,7 +380,6 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                             ),
                           ),
                         ),
-
                         if (_isAdminExpanded) ...[
                           Padding(
                             padding: const EdgeInsets.only(left: 10),
@@ -325,12 +387,14 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                               children: adminSubItems.where((subItem) {
                                 if (user?.isBranchManager == true &&
                                     (subItem.route == '/admin/users' ||
-                                        subItem.route == '/admin/company-profile')) {
+                                        subItem.route ==
+                                            '/admin/company-profile')) {
                                   return false;
                                 }
                                 return true;
                               }).map((subItem) {
-                                final isSubSelected = widget.currentRoute == subItem.route ||
+                                final isSubSelected = widget.currentRoute ==
+                                        subItem.route ||
                                     (widget.currentRoute.startsWith('/admin') &&
                                         widget.currentRoute == subItem.route);
 
@@ -343,13 +407,19 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                                       borderRadius: BorderRadius.circular(6),
                                       child: Container(
                                         height: 34,
-                                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10),
                                         decoration: BoxDecoration(
-                                          color: isSubSelected ? const Color(0xFFFFF1F2) : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(6),
+                                          color: isSubSelected
+                                              ? const Color(0xFFFFF1F2)
+                                              : Colors.transparent,
+                                          borderRadius:
+                                              BorderRadius.circular(6),
                                           border: isSubSelected
                                               ? const Border(
-                                                  left: BorderSide(color: Color(0xFFDC2626), width: 3),
+                                                  left: BorderSide(
+                                                      color: Color(0xFFDC2626),
+                                                      width: 3),
                                                 )
                                               : null,
                                         ),
@@ -358,7 +428,9 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                                             Icon(
                                               subItem.icon,
                                               size: 15,
-                                              color: isSubSelected ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+                                              color: isSubSelected
+                                                  ? const Color(0xFFDC2626)
+                                                  : const Color(0xFF64748B),
                                             ),
                                             const SizedBox(width: 8),
                                             Expanded(
@@ -366,8 +438,12 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                                                 subItem.title,
                                                 style: TextStyle(
                                                   fontSize: 12.5,
-                                                  fontWeight: isSubSelected ? FontWeight.w700 : FontWeight.w500,
-                                                  color: isSubSelected ? const Color(0xFFDC2626) : const Color(0xFF475569),
+                                                  fontWeight: isSubSelected
+                                                      ? FontWeight.w700
+                                                      : FontWeight.w500,
+                                                  color: isSubSelected
+                                                      ? const Color(0xFFDC2626)
+                                                      : const Color(0xFF475569),
                                                 ),
                                               ),
                                             ),
@@ -394,14 +470,16 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                   child: Tooltip(
                     message: 'Sign out of Yash Honda CRM securely',
                     child: InkWell(
-                      onTap: () => ref.read(authStateProvider.notifier).logout(),
+                      onTap: () =>
+                          ref.read(authStateProvider.notifier).logout(),
                       borderRadius: BorderRadius.circular(6),
                       child: Container(
                         height: 36,
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         child: const Row(
                           children: [
-                            Icon(Icons.arrow_back_rounded, size: 16, color: Color(0xFF64748B)),
+                            Icon(Icons.arrow_back_rounded,
+                                size: 16, color: Color(0xFF64748B)),
                             SizedBox(width: 8),
                             Text(
                               'Sign out',
@@ -448,7 +526,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
     return 'Yash Honda';
   }
 
-  Widget _buildTopHeaderBar(BuildContext context, WidgetRef ref, UserModel? user) {
+  Widget _buildTopHeaderBar(
+      BuildContext context, WidgetRef ref, UserModel? user) {
     final isDashboard = widget.currentRoute == '/dashboard';
 
     return Container(
@@ -464,32 +543,18 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Live floor',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFF10B981),
-                      ),
-                    ),
-                  ],
+              children: const [
+                Text(
+                  'Live floor',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                    letterSpacing: -0.4,
+                  ),
                 ),
-                const SizedBox(height: 1),
-                const Text(
+                SizedBox(height: 1),
+                Text(
                   'Updated just now',
                   style: TextStyle(
                     fontSize: 12,
@@ -519,26 +584,34 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
           Consumer(
             builder: (context, ref, child) {
               final activeBranchId = ref.watch(selectedBranchIdProvider);
-              final isSuperAdmin = user?.isSuperAdmin == true || user?.isOwner == true;
-              final userBranchIds = user?.branches.map((b) => b.id).toSet() ?? {};
+              final isSuperAdmin =
+                  user?.isSuperAdmin == true || user?.isOwner == true;
+              final userBranchIds =
+                  user?.branches.map((b) => b.id).toSet() ?? {};
 
               final visibleBranches = isSuperAdmin || userBranchIds.isEmpty
                   ? _branches
-                  : _branches.where((b) => userBranchIds.contains(b['id'].toString())).toList();
+                  : _branches
+                      .where((b) => userBranchIds.contains(b['id'].toString()))
+                      .toList();
 
               String validValue;
               if (isSuperAdmin) {
-                validValue = (visibleBranches.any((b) => b['id'].toString() == activeBranchId) || activeBranchId == 'all')
+                validValue = (visibleBranches
+                            .any((b) => b['id'].toString() == activeBranchId) ||
+                        activeBranchId == 'all')
                     ? activeBranchId
                     : 'all';
               } else {
-                if (visibleBranches.any((b) => b['id'].toString() == activeBranchId)) {
+                if (visibleBranches
+                    .any((b) => b['id'].toString() == activeBranchId)) {
                   validValue = activeBranchId;
                 } else if (visibleBranches.isNotEmpty) {
                   validValue = visibleBranches.first['id'].toString();
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (ref.read(selectedBranchIdProvider) != validValue) {
-                      ref.read(selectedBranchIdProvider.notifier).state = validValue;
+                      ref.read(selectedBranchIdProvider.notifier).state =
+                          validValue;
                     }
                   });
                 } else {
@@ -557,13 +630,22 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: validValue,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
-                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        size: 18, color: Color(0xFF64748B)),
+                    style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E293B)),
                     items: [
                       if (isSuperAdmin)
-                        const DropdownMenuItem(value: 'all', child: Text('All branches (Pune)')),
+                        const DropdownMenuItem(
+                            value: 'all', child: Text('All branches (Pune)')),
                       ...visibleBranches.map((b) {
-                        final wing = b['wing'] ?? (b['name'].toString().contains('BigWing') || b['code'].toString().startsWith('BW') ? 'BigWing' : 'RedWing');
+                        final wing = b['wing'] ??
+                            (b['name'].toString().contains('BigWing') ||
+                                    b['code'].toString().startsWith('BW')
+                                ? 'BigWing'
+                                : 'RedWing');
                         final name = b['name']?.toString() ?? 'Branch';
                         return DropdownMenuItem(
                           value: b['id'].toString(),
@@ -585,7 +667,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
           // 2. Robot / AI Insights Icon Button (in soft rounded white container)
           Tooltip(
-            message: 'AI Dealership Executive Insights - Real-time analysis powered by Gemini AI',
+            message:
+                'AI Dealership Executive Insights - Real-time analysis powered by Gemini AI',
             child: InkWell(
               onTap: () => _showAiInsightsDialog(context, ref),
               borderRadius: BorderRadius.circular(8),
@@ -597,7 +680,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: const Color(0xFFE5E7EB)),
                 ),
-                child: const Icon(Icons.smart_toy_outlined, size: 18, color: Color(0xFF64748B)),
+                child: const Icon(Icons.smart_toy_outlined,
+                    size: 18, color: Color(0xFF64748B)),
               ),
             ),
           ),
@@ -617,7 +701,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  const Icon(Icons.notifications_none_rounded, size: 18, color: Color(0xFF64748B)),
+                  const Icon(Icons.notifications_none_rounded,
+                      size: 18, color: Color(0xFF64748B)),
                   Positioned(
                     top: 8,
                     right: 9,
@@ -638,14 +723,17 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
           // 4. "+ New enquiry [N]" Red Button matching prototype
           Tooltip(
-            message: 'Create a new customer walk-in or telephonic enquiry (Shortcut: N)',
+            message:
+                'Create a new customer walk-in or telephonic enquiry (Shortcut: N)',
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFDC2626),
                 foregroundColor: Colors.white,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () => context.go('/tablet'),
               child: Row(
@@ -653,17 +741,39 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                 children: [
                   const Icon(Icons.add, size: 16),
                   const SizedBox(width: 4),
-                  const Text('New enquiry', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const Text('New enquiry',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
                       color: const Color(0xFFB91C1C),
                       borderRadius: BorderRadius.circular(3),
                     ),
-                    child: const Text('N', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                    child: const Text('N',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
                   ),
                 ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // 5. Profile Avatar (matching prototype green circle 'S')
+          CircleAvatar(
+            radius: 17,
+            backgroundColor: const Color(0xFF10B981),
+            child: Text(
+              user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'S',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
               ),
             ),
           ),
@@ -672,7 +782,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
     );
   }
 
-  Widget _buildMobileLayout(BuildContext context, WidgetRef ref, List<NavItem> items) {
+  Widget _buildMobileLayout(
+      BuildContext context, WidgetRef ref, List<NavItem> items) {
     return Scaffold(
       backgroundColor: const Color(0xFFFAF9F6),
       appBar: AppBar(
@@ -689,11 +800,19 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                 borderRadius: BorderRadius.circular(6),
               ),
               alignment: Alignment.center,
-              child: const Text('YH', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+              child: const Text('YH',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13)),
             ),
           ),
         ),
-        title: const Text('Yash Honda', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFFCC0000))),
+        title: const Text('Yash Honda',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFFCC0000))),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_circle, color: Color(0xFFCC0000)),
@@ -735,7 +854,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
   int _getBottomNavIndex(List<NavItem> items) {
     for (int i = 0; i < items.length && i < 5; i++) {
       if (widget.currentRoute == items[i].route ||
-          (items[i].route != '/dashboard' && widget.currentRoute.startsWith(items[i].route))) {
+          (items[i].route != '/dashboard' &&
+              widget.currentRoute.startsWith(items[i].route))) {
         return i;
       }
     }
@@ -759,7 +879,8 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                 color: const Color(0xFFEEF2FF),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.smart_toy_outlined, color: Color(0xFF6366F1), size: 20),
+              child: const Icon(Icons.smart_toy_outlined,
+                  color: Color(0xFF6366F1), size: 20),
             ),
             const SizedBox(width: 12),
             const Expanded(
@@ -768,7 +889,10 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                 children: [
                   Text(
                     'AI Dealership Executive Briefing',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A)),
                   ),
                   Text(
                     'Real-time automated floor & enquiry intelligence',
@@ -799,12 +923,14 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.key_outlined, size: 16, color: Color(0xFF64748B)),
+                    Icon(Icons.key_outlined,
+                        size: 16, color: Color(0xFF64748B)),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Gemini API key can be configured in Admin Settings for automated predictive intelligence.',
-                        style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                        style:
+                            TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
                       ),
                     ),
                   ],
@@ -818,35 +944,6 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Close'),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showSystemInfoDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.info_outline, color: Color(0xFFCC0000)),
-            SizedBox(width: 8),
-            Text('Yash Honda Dealership System', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Network of 6 Authorized Honda Branches in Pune, MH:'),
-            SizedBox(height: 8),
-            Text('• BigWing: Phursungi\n• RedWing: Wadki, Saswad, Uruli Kanchan, BT Kawade Road, Sasane Nagar', style: TextStyle(fontSize: 13, height: 1.5, fontWeight: FontWeight.w500)),
-            SizedBox(height: 12),
-            Text('Features Live Floor rep tracking, interactive quotation calculation, and WhatsApp/Email delivery.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
         ],
       ),
     );

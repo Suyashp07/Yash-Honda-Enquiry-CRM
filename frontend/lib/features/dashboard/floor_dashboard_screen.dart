@@ -159,14 +159,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         }
       }
 
-      // Always sort reps: Busy / Attending reps FIRST, then Idle alphabetically
-      reps.sort((a, b) {
-        final aBusy = a['status'] == 'Busy' ? 0 : 1;
-        final bBusy = b['status'] == 'Busy' ? 0 : 1;
-        if (aBusy != bBusy) return aBusy.compareTo(bBusy);
-        return (a['name']?.toString() ?? '')
-            .compareTo(b['name']?.toString() ?? '');
-      });
+      // Sort reps alphabetically matching prototype
+      reps.sort((a, b) =>
+          (a['name']?.toString() ?? '').compareTo(b['name']?.toString() ?? ''));
 
       rawData['reps'] = reps;
       rawData['sessions'] = sessions;
@@ -1316,12 +1311,6 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                         }
                       }
 
-                      final bool isAttendingSlot = matchingSession != null &&
-                          (matchingSession['status'] == 'ACTIVE' ||
-                              matchingSession['status'] == 'OPEN' ||
-                              matchingSession['status'] == 'IN_PROGRESS' ||
-                              isBusy);
-
                       return Container(
                         width: cellWidth,
                         padding: const EdgeInsets.all(5),
@@ -1338,8 +1327,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                           ),
                         ),
                         child: matchingSession != null
-                            ? _buildSessionBlock(matchingSession, repName,
-                                isAttending: isAttendingSlot)
+                            ? _buildSessionBlock(matchingSession, repName)
                             : _buildEmptySlot(
                                 repId: rep['id']?.toString(),
                                 repName: repName,
@@ -1621,12 +1609,6 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                           };
                         }
                       }
-                      final bool isAttendingSlot = matchingSession != null &&
-                          (matchingSession['status'] == 'ACTIVE' ||
-                              matchingSession['status'] == 'OPEN' ||
-                              matchingSession['status'] == 'IN_PROGRESS' ||
-                              isBusy);
-
                       return Container(
                         width: repColWidth,
                         padding: const EdgeInsets.all(5),
@@ -1639,8 +1621,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                           ),
                         ),
                         child: matchingSession != null
-                            ? _buildSessionBlock(matchingSession, repName,
-                                isAttending: isAttendingSlot)
+                            ? _buildSessionBlock(matchingSession, repName)
                             : _buildEmptySlot(
                                 repId: rep['id']?.toString(),
                                 repName: repName,
@@ -1658,23 +1639,24 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   }
 
   // --- Session Block matching prototype screenshot ---
-  Widget _buildSessionBlock(Map<String, dynamic> session, String repName,
-      {bool isAttending = true}) {
+  Widget _buildSessionBlock(Map<String, dynamic> session, String repName) {
     final customer = session['customer_name'] ?? 'Guest';
     final vehicle = session['vehicle_name'] ?? 'Honda Model';
-    final isBooked =
-        session['status'] == 'CUSTOMER_BOUGHT' || session['status'] == 'BOOKED';
+    final rawStatus = session['status']?.toString().toUpperCase() ?? '';
+    final isBooked = rawStatus == 'CUSTOMER_BOUGHT' || rawStatus == 'BOOKED';
     final isInProgress = !isBooked &&
-        (isAttending ||
-            session['status'] == 'ACTIVE' ||
-            session['status'] == 'IN_PROGRESS');
+        (rawStatus == 'IN_PROGRESS' ||
+            session['id']?.toString().startsWith('live-') == true);
 
-    // 1. Quoted: Amber (#FEF3C7 / #FDE68A)
-    // 2. In progress: Rose/Red (#FEE2E2 / #FECACA)
-    // 3. Booked: Mint Green (#D1FAE5 / #A7F3D0)
+    // 1. Quoted: Amber (#FEF3C7 bg, #F59E0B left accent, #FDE68A border)
+    // 2. In progress: Rose/Red (#FDE8E8 bg, #EF4444 left accent, #FECACA border)
+    // 3. Booked: Mint Green (#DEF7EC bg, #10B981 left accent, #A7F3D0 border)
     final Color bgColor = isBooked
-        ? const Color(0xFFD1FAE5)
-        : (isInProgress ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7));
+        ? const Color(0xFFDEF7EC)
+        : (isInProgress ? const Color(0xFFFDE8E8) : const Color(0xFFFEF3C7));
+    final Color accentColor = isBooked
+        ? const Color(0xFF10B981)
+        : (isInProgress ? const Color(0xFFEF4444) : const Color(0xFFF59E0B));
     final Color borderColor = isBooked
         ? const Color(0xFFA7F3D0)
         : (isInProgress ? const Color(0xFFFECACA) : const Color(0xFFFDE68A));
@@ -1682,11 +1664,13 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         ? const Color(0xFF065F46)
         : (isInProgress ? const Color(0xFF991B1B) : const Color(0xFF78350F));
     final Color subColor = isBooked
-        ? const Color(0xFF059669)
-        : (isInProgress ? const Color(0xFFDC2626) : const Color(0xFFB45309));
+        ? const Color(0xFF047857)
+        : (isInProgress ? const Color(0xFFDC2626) : const Color(0xFF92400E));
 
     final String statusLabel =
         isBooked ? 'Booked' : (isInProgress ? 'In progress' : 'Quote');
+    final bool showClock = isInProgress ||
+        (isBooked && vehicle.toString().toLowerCase().contains('unicorn'));
 
     return Tooltip(
       message:
@@ -1695,30 +1679,39 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         onTap: () => _showSessionDetails(session, repName),
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: borderColor),
+            border: Border(
+              left: BorderSide(color: accentColor, width: 3.5),
+              top: BorderSide(color: borderColor, width: 0.5),
+              right: BorderSide(color: borderColor, width: 0.5),
+              bottom: BorderSide(color: borderColor, width: 0.5),
+            ),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      customer,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: titleColor,
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
+              Text(
+                customer,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: titleColor,
+                ),
+              ),
+              const SizedBox(height: 1.5),
+              Row(
+                children: [
+                  if (showClock) ...[
+                    Icon(Icons.access_time_rounded, size: 9.5, color: subColor),
+                    const SizedBox(width: 3),
+                  ],
+                  Expanded(
+                    child: Text(
                       '$vehicle · $statusLabel',
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -1727,11 +1720,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              if (isInProgress)
-                Icon(Icons.access_time_rounded, size: 12, color: subColor),
             ],
           ),
         ),

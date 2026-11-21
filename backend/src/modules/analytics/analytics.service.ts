@@ -235,7 +235,11 @@ export class AnalyticsService {
     const repStats = salesReps.map((rep) => {
       const repEnquiriesToday = currentTodayEnquiries.filter((e) => e.assignedToId === rep.id);
       const activeLiveSession = activeSessions.find((s) => s.salesExecId === rep.id);
-      const isBusy = activeLiveSession != null || repEnquiriesToday.length > 0;
+      const inProgressEnq = repEnquiriesToday.find((e) =>
+        e.status === 'ACTIVE' && (e.remarks?.includes('In progress') || !e.quotations?.length),
+      );
+      const isBusy = activeLiveSession != null || inProgressEnq != null;
+      const activeCustomer = activeLiveSession?.customerName || inProgressEnq?.customer?.name;
       return {
         id: rep.id,
         name: rep.name,
@@ -243,17 +247,12 @@ export class AnalyticsService {
         branches: rep.userBranches.map((ub) => ub.branch.code),
         enquiriesTodayCount: repEnquiriesToday.length + (activeLiveSession ? 1 : 0),
         status: isBusy ? 'Busy' : 'Idle',
-        activeCustomerName: activeLiveSession?.customerName,
+        activeCustomerName: activeCustomer,
       };
     });
 
-    // Always sort reps: Busy / Attending reps FIRST, then Idle reps alphabetically
-    repStats.sort((a, b) => {
-      const aBusy = a.status === 'Busy' ? 0 : 1;
-      const bBusy = b.status === 'Busy' ? 0 : 1;
-      if (aBusy !== bBusy) return aBusy - bBusy;
-      return a.name.localeCompare(b.name);
-    });
+    // Sort reps alphabetically matching prototype
+    repStats.sort((a, b) => a.name.localeCompare(b.name));
 
     const busyRepsCount = repStats.filter((r) => r.status === 'Busy').length;
     const idleRepsCount = repStats.length - busyRepsCount;
@@ -308,16 +307,19 @@ export class AnalyticsService {
         })),
         ...currentTodayEnquiries.map((e) => {
           const q = e.quotations?.[0];
+          const isBooked = e.status === EnquiryStatus.CUSTOMER_BOUGHT;
+          const isInProgress = !isBooked && (e.remarks?.includes('In progress') || (e.status as any) === 'IN_PROGRESS' || !q);
+          const computedStatus = isBooked ? 'BOOKED' : (isInProgress ? 'IN_PROGRESS' : 'QUOTED');
           return {
             id: e.id,
             enquiryNumber: q?.quoteNumber || `ENQ-${e.id.slice(-5).toUpperCase()}`,
             branchId: e.branchId,
             enquiryType: e.enquiryType,
-            status: e.status,
+            status: computedStatus,
             sales_exec_id: e.assignedToId,
             customer_name: e.customer?.name ?? 'Walk-in Guest',
             customer_mobile: e.customer?.mobile ?? '',
-            vehicle_name: q?.vehicle?.name ?? 'Enquiry Session',
+            vehicle_name: q?.vehicle?.name ?? (e.remarks?.split('·')[0]?.trim() || 'Honda Model'),
             colour: q?.colourName ?? '',
             grand_total: q?.grandTotal ? Number(q.grandTotal) : null,
             created_at: e.createdAt.toISOString(),
