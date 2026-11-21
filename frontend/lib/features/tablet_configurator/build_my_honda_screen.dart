@@ -319,7 +319,16 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             final onRoad =
                 double.tryParse(bv['onRoadPrice']?.toString() ?? '0') ??
                     (exShowroom * 1.18);
-            final category = bv['category']?.toString() ?? 'MC';
+            final rawCat = bv['category']?.toString() ?? 'MC';
+            String category = 'MC';
+            if (rawCat.toLowerCase().contains('scooter')) {
+              category = 'Scooter';
+            } else if (rawCat.toLowerCase().contains('big') ||
+                rawCat.toLowerCase().contains('wing')) {
+              category = 'BigBike';
+            } else {
+              category = 'MC';
+            }
 
             // Find matching local high-res visual
             String localImg = _vehicleLocalImages[code] ??
@@ -417,17 +426,36 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     return Icons.inventory_2_outlined;
   }
 
+  bool _matchesCategory(String? itemCat, String targetCat) {
+    if (itemCat == null) return false;
+    final itemLower = itemCat.toLowerCase();
+    if (targetCat == 'MC') {
+      return itemCat == 'MC' || itemLower.contains('motorcycle') || itemLower == 'mc';
+    }
+    if (targetCat == 'Scooter') {
+      return itemLower.contains('scooter');
+    }
+    if (targetCat == 'BigBike') {
+      return itemLower.contains('big') || itemLower.contains('wing');
+    }
+    return itemCat == targetCat;
+  }
+
   List<Map<String, dynamic>> get _currentCategoryVehicles {
     final source =
         _backendVehicles.isNotEmpty ? _backendVehicles : _defaultCatalog;
-    List<Map<String, dynamic>> pool =
-        source.where((v) => v['category'] == _selectedCategory).toList();
+    List<Map<String, dynamic>> pool = source
+        .where((v) => _matchesCategory(v['category']?.toString(), _selectedCategory))
+        .toList();
 
     if (_selectedCcFilter != 'All' && _selectedCcFilter != 'On Road') {
       pool = pool.where((v) => v['ccCategory'] == _selectedCcFilter).toList();
     }
     if (pool.isEmpty) {
-      pool = source.where((v) => v['category'] == _selectedCategory).toList();
+      pool = source
+          .where((v) =>
+              _matchesCategory(v['category']?.toString(), _selectedCategory))
+          .toList();
     }
     return pool;
   }

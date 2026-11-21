@@ -1514,17 +1514,21 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                             fontWeight: FontWeight.w600, fontSize: 12)),
                     const SizedBox(height: 4),
                     DropdownButtonFormField<String>(
-                      value: ['Motorcycle', 'Scooter'].contains(vehicleType)
-                          ? vehicleType
-                          : 'Motorcycle',
+                      value: vehicleType == 'Motorcycle' || vehicleType == 'MC'
+                          ? 'MC'
+                          : vehicleType == 'BigBike'
+                              ? 'BigBike'
+                              : 'Scooter',
                       items: const [
                         DropdownMenuItem(
-                            value: 'Motorcycle', child: Text('Motorcycle')),
+                            value: 'MC', child: Text('Motorcycles (MC)')),
                         DropdownMenuItem(
-                            value: 'Scooter', child: Text('Scooter')),
+                            value: 'Scooter', child: Text('Scooters')),
+                        DropdownMenuItem(
+                            value: 'BigBike', child: Text('Big Bikes (BigWing)')),
                       ],
                       onChanged: (val) =>
-                          setDlgState(() => vehicleType = val ?? 'Motorcycle'),
+                          setDlgState(() => vehicleType = val ?? 'MC'),
                       decoration: const InputDecoration(
                         isDense: true,
                         contentPadding:
