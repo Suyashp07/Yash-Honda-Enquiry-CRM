@@ -1,13 +1,16 @@
 #!/bin/bash
 set -e
 
-# Cache/Install Flutter SDK on Vercel build container (pinned to stable 3.24.5)
-if [ ! -d "$HOME/flutter" ]; then
-  echo "Cloning Flutter SDK (3.24.5)..."
-  git clone https://github.com/flutter/flutter.git -b 3.24.5 --depth 1 $HOME/flutter
+FLUTTER_VERSION="3.24.5"
+FLUTTER_DIR="$HOME/flutter-$FLUTTER_VERSION"
+
+# Cache/Install Flutter SDK on Vercel build container
+if [ ! -d "$FLUTTER_DIR" ]; then
+  echo "Cloning Flutter SDK ($FLUTTER_VERSION)..."
+  git clone https://github.com/flutter/flutter.git -b $FLUTTER_VERSION --depth 1 "$FLUTTER_DIR"
 fi
 
-export PATH="$HOME/flutter/bin:$PATH"
+export PATH="$FLUTTER_DIR/bin:$PATH"
 
 # Navigate into frontend folder if running from repository root
 if [ -d "frontend" ]; then
@@ -17,7 +20,7 @@ fi
 echo "Configuring Flutter..."
 flutter config --no-analytics
 
-echo "Getting dependencies..."
+echo "Resolving dependencies..."
 flutter pub get
 
 echo "Building Flutter Web application..."
