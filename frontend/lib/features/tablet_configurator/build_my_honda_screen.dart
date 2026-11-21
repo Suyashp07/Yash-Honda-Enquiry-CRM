@@ -737,11 +737,15 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
     return InkWell(
       onTap: () {
+        final wasSelected = _selectedCategory == code;
         setState(() {
           _selectedCategory = code;
           final pool = _currentCategoryVehicles;
           if (pool.isNotEmpty) _selectedVehicle = pool.first;
         });
+        if (wasSelected) {
+          _nextStep();
+        }
       },
       borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
@@ -771,17 +775,27 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               Positioned(
                 bottom: 16,
                 right: 16,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: Color(0x22000000), blurRadius: 6, offset: Offset(0, 2)),
-                    ],
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedCategory = code;
+                      final pool = _currentCategoryVehicles;
+                      if (pool.isNotEmpty) _selectedVehicle = pool.first;
+                    });
+                    _nextStep();
+                  },
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(color: Color(0x22000000), blurRadius: 6, offset: Offset(0, 2)),
+                      ],
+                    ),
+                    child: const Icon(Icons.arrow_forward_rounded, color: Color(0xFFDC2626), size: 18),
                   ),
-                  child: const Icon(Icons.arrow_forward_rounded, color: Color(0xFFDC2626), size: 18),
                 ),
               ),
             ],
