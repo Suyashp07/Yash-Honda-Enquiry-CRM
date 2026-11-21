@@ -319,11 +319,10 @@ Feel free to ask me about specific branch performance, sales rep attendance, top
   }
 
   private async callGeminiApi(apiKey: string, query: string, history: ChatMessage[], context: any): Promise<string> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
     const systemPrompt = `You are the executive AI Business Advisor for Yash Honda Two-Wheelers in Pune (Owner: Suyash Pandey). You have direct access to live dealership data: ${JSON.stringify(context)}. Provide crisp, professional, data-backed business insights, formatted in clean markdown with bullet points and clear numbers. Do not fabricate data; stick to the provided dealership metrics.`;
 
     const contents = [
-      { role: 'user', parts: [{ text: systemPrompt }] },
       ...history.map((h) => ({
         role: h.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: h.content }],
@@ -331,14 +330,22 @@ Feel free to ask me about specific branch performance, sales rep attendance, top
       { role: 'user', parts: [{ text: query }] },
     ];
 
+    const body = {
+      system_instruction: {
+        parts: [{ text: systemPrompt }],
+      },
+      contents,
+    };
+
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
-      throw new Error(`Gemini API error: ${res.statusText}`);
+      const errText = await res.text();
+      throw new Error(`Gemini API error: ${res.statusText} - ${errText}`);
     }
 
     const data = await res.json();
