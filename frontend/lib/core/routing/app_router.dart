@@ -24,7 +24,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (authState.isLoading) return null;
 
       final isLoggingIn = state.uri.path == '/login';
+      final isConfigurator = state.uri.path == '/build-my-honda' ||
+          state.uri.path == '/tablet-configurator';
       if (!authState.isAuthenticated) {
+        if (isConfigurator) return null;
         return isLoggingIn ? null : '/login';
       }
 
