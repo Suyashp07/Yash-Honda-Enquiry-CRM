@@ -26,7 +26,7 @@ export class BranchAccessGuard implements CanActivate {
     }
 
     // Super Admin has full unrestricted access across all 6 branches
-    if (user.role === Role.SUPER_ADMIN) {
+    if (user.role === Role.SUPER_ADMIN || user.role === Role.OWNER) {
       return true;
     }
 

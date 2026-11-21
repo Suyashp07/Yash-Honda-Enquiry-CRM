@@ -22,6 +22,11 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('User has no role assigned or is not authenticated');
     }
 
+    // Owner and Super Admin have unrestricted master access to all endpoints
+    if (user.role === Role.OWNER || user.role === Role.SUPER_ADMIN) {
+      return true;
+    }
+
     const hasRole = requiredRoles.includes(user.role);
     if (!hasRole) {
       throw new ForbiddenException(`Access restricted to roles: ${requiredRoles.join(', ')}`);

@@ -1913,6 +1913,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       const SizedBox(height: 4),
                       DropdownButtonFormField<String>(
                         value: [
+                          'OWNER',
                           'SUPER_ADMIN',
                           'BRANCH_MANAGER',
                           'SALES_EXEC',
@@ -1922,6 +1923,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                             ? role
                             : 'SALES_EXEC',
                         items: const [
+                          DropdownMenuItem(
+                              value: 'OWNER', child: Text('Owner')),
                           DropdownMenuItem(
                               value: 'SUPER_ADMIN', child: Text('Super Admin')),
                           DropdownMenuItem(

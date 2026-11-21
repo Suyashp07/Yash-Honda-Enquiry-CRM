@@ -38,6 +38,9 @@ class UserModel {
   String get normalizedRole =>
       role.trim().toUpperCase().replaceAll(' ', '_').replaceAll('-', '_');
 
+  bool get isOwner =>
+      normalizedRole == 'OWNER' || role.toLowerCase().contains('owner');
+
   bool get isSuperAdmin =>
       normalizedRole == 'SUPER_ADMIN' ||
       normalizedRole == 'OWNER' ||
@@ -72,6 +75,7 @@ class UserModel {
   String get displayName => roleDisplayName;
 
   String get roleDisplayName {
+    if (isOwner) return 'Owner';
     if (isSuperAdmin) return 'Super Admin';
     if (isBranchManager) return 'Branch Manager';
     if (isSalesExec) return 'Sales Executive';
@@ -108,8 +112,9 @@ class UserModel {
 extension StringRoleDisplayNameExtension on String {
   String get displayName {
     switch (trim().toUpperCase().replaceAll(' ', '_').replaceAll('-', '_')) {
-      case 'SUPER_ADMIN':
       case 'OWNER':
+        return 'Owner';
+      case 'SUPER_ADMIN':
         return 'Super Admin';
       case 'BRANCH_MANAGER':
         return 'Branch Manager';

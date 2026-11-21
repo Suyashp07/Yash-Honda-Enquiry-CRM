@@ -7,7 +7,7 @@ export class ReportsService {
   constructor(private prisma: PrismaService) {}
 
   private getBranchFilter(user: any, branchId?: string) {
-    if (user.role === Role.SUPER_ADMIN) {
+    if (user.role === Role.SUPER_ADMIN || user.role === Role.OWNER) {
       return branchId ? { branchId } : {};
     }
     return { branchId: branchId || { in: user.assignedBranchIds } };

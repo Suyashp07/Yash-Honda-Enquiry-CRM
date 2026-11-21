@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
 import '../../core/networking/api_client.dart';
+import '../../core/providers/branch_provider.dart';
 import '../../shared/models/user_model.dart';
 
 class AuthState {
@@ -36,8 +37,9 @@ class AuthState {
 class AuthNotifier extends StateNotifier<AuthState> {
   final Dio dio;
   final FlutterSecureStorage storage;
+  final Ref? ref;
 
-  AuthNotifier({required this.dio, required this.storage}) : super(AuthState(isLoading: true)) {
+  AuthNotifier({required this.dio, required this.storage, this.ref}) : super(AuthState(isLoading: true)) {
     checkInitialAuth();
   }
 
@@ -48,11 +50,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       if (token != null && userStr != null) {
         final userJson = jsonDecode(userStr);
+        final user = UserModel.fromJson(userJson);
         state = state.copyWith(
           isLoading: false,
           isAuthenticated: true,
-          user: UserModel.fromJson(userJson),
+          user: user,
         );
+
+        // When Owner or Super Admin logs in, always default to all branches
+        if (user.isSuperAdmin || user.isOwner) {
+          ref?.read(selectedBranchIdProvider.notifier).state = 'all';
+        } else if (user.branches.isNotEmpty) {
+          ref?.read(selectedBranchIdProvider.notifier).state = user.branches.first.id;
+        }
         return;
       }
     } catch (_) {}
@@ -76,6 +86,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await storage.write(key: 'accessToken', value: accessToken);
       await storage.write(key: 'refreshToken', value: refreshToken);
       await storage.write(key: 'userData', value: jsonEncode(user.toJson()));
+
+      // Super Admin and Owner must always see all branches by default on login
+      if (user.isSuperAdmin || user.isOwner) {
+        ref?.read(selectedBranchIdProvider.notifier).state = 'all';
+      } else if (user.branches.isNotEmpty) {
+        ref?.read(selectedBranchIdProvider.notifier).state = user.branches.first.id;
+      }
 
       state = state.copyWith(
         isLoading: false,
@@ -102,6 +119,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 final authStateProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final dio = ref.watch(dioProvider);
   final storage = ref.watch(secureStorageProvider);
-  return AuthNotifier(dio: dio, storage: storage);
+  return AuthNotifier(dio: dio, storage: storage, ref: ref);
 });
 

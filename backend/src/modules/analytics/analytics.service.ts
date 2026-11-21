@@ -70,7 +70,7 @@ export class AnalyticsService {
     const allBranchIds = allBranches.map((b) => b.id);
 
     // Enforce branch scope based on user role
-    const isSuperAdmin = user.role === Role.SUPER_ADMIN;
+    const isSuperAdmin = user.role === Role.SUPER_ADMIN || user.role === Role.OWNER;
     const userAssignedBranchIds: string[] = user.assignedBranchIds || [];
     const accessibleBranchIds = isSuperAdmin
       ? allBranchIds
@@ -244,7 +244,7 @@ export class AnalyticsService {
     const dateRange = this.getDates(range);
 
     const branchCondition: any =
-      user.role === Role.SUPER_ADMIN
+      user.role === Role.SUPER_ADMIN || user.role === Role.OWNER
         ? branchId
           ? { branchId }
           : {}
@@ -298,7 +298,7 @@ export class AnalyticsService {
     const dateRange = this.getDates(range);
 
     const branchCondition: any =
-      user.role === Role.SUPER_ADMIN
+      user.role === Role.SUPER_ADMIN || user.role === Role.OWNER
         ? branchId
           ? { branchId }
           : {}
@@ -354,7 +354,7 @@ export class AnalyticsService {
     const dateRange = this.getDates(range);
 
     const branchCondition: any =
-      user.role === Role.SUPER_ADMIN
+      user.role === Role.SUPER_ADMIN || user.role === Role.OWNER
         ? branchId
           ? { branchId }
           : {}
@@ -419,7 +419,7 @@ export class AnalyticsService {
 
     // Branches filter based on user role and branchId query
     const branchFilter =
-      user.role === Role.SUPER_ADMIN
+      user.role === Role.SUPER_ADMIN || user.role === Role.OWNER
         ? branchId && branchId !== 'all'
           ? { id: branchId }
           : undefined

@@ -110,7 +110,7 @@ export class EnquiriesService {
     const where: any = {};
 
     // Branch scoping
-    if (user.role !== Role.SUPER_ADMIN) {
+    if (user.role !== Role.SUPER_ADMIN && user.role !== Role.OWNER) {
       if (filters.branchId) {
         if (!user.assignedBranchIds.includes(filters.branchId)) {
           throw new ForbiddenException('Access denied to this branch');
@@ -233,7 +233,7 @@ export class EnquiriesService {
       throw new NotFoundException(`Enquiry with ID ${id} not found`);
     }
 
-    if (user.role !== Role.SUPER_ADMIN && !user.assignedBranchIds.includes(enquiry.branchId)) {
+    if (user.role !== Role.SUPER_ADMIN && user.role !== Role.OWNER && !user.assignedBranchIds.includes(enquiry.branchId)) {
       throw new ForbiddenException('Access denied: You are not assigned to this enquiry branch');
     }
 

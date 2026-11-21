@@ -225,6 +225,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             runSpacing: 6,
             children: [
               ActionChip(
+                label: const Text('Owner', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                backgroundColor: const Color(0xFFFEE2E2),
+                labelStyle: const TextStyle(color: Color(0xFFDC2626)),
+                onPressed: () => _fillCredentials('8888888888', 'Owner'),
+              ),
+              ActionChip(
                 label: const Text('Super Admin', style: TextStyle(fontSize: 11)),
                 onPressed: () => _fillCredentials('9999999999', 'Super Admin'),
               ),

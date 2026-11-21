@@ -192,6 +192,15 @@ export class UsersService {
         'Masters': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Users': { view: false, create: false, edit: false, delete: false, export: false, send: false },
       },
+      'Owner': {
+        'Leads': { view: true, create: true, edit: true, delete: true, export: true, send: true },
+        'Quotes': { view: true, create: true, edit: true, delete: true, export: true, send: true },
+        'Follow-ups': { view: true, create: true, edit: true, delete: true, export: true, send: true },
+        'Dashboard': { view: true, create: true, edit: true, delete: true, export: true, send: true },
+        'Reports': { view: true, create: true, edit: true, delete: true, export: true, send: true },
+        'Masters': { view: true, create: true, edit: true, delete: true, export: true, send: true },
+        'Users': { view: true, create: true, edit: true, delete: true, export: true, send: true },
+      },
       'Super Admin': {
         'Leads': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Quotes': { view: true, create: true, edit: true, delete: true, export: true, send: true },

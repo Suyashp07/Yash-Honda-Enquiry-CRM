@@ -21,7 +21,7 @@ export class TelephonyService {
       throw new NotFoundException(`Enquiry with ID ${dto.enquiryId} not found`);
     }
 
-    if (user.role !== Role.SUPER_ADMIN && !user.assignedBranchIds.includes(enquiry.branchId)) {
+    if (user.role !== Role.SUPER_ADMIN && user.role !== Role.OWNER && !user.assignedBranchIds.includes(enquiry.branchId)) {
       throw new ForbiddenException('Access denied to call customer for this branch');
     }
 
@@ -53,7 +53,7 @@ export class TelephonyService {
 
   async findAll(user: any, branchId?: string) {
     const where: any = {};
-    if (user.role !== Role.SUPER_ADMIN) {
+    if (user.role !== Role.SUPER_ADMIN && user.role !== Role.OWNER) {
       if (branchId) {
         where.branchId = branchId;
       } else {
@@ -88,7 +88,7 @@ export class TelephonyService {
       throw new NotFoundException(`Call with ID ${callId} not found`);
     }
 
-    if (user.role !== Role.SUPER_ADMIN && !user.assignedBranchIds.includes(call.branchId)) {
+    if (user.role !== Role.SUPER_ADMIN && user.role !== Role.OWNER && !user.assignedBranchIds.includes(call.branchId)) {
       throw new ForbiddenException('Access denied to access call recording');
     }
 

@@ -8,6 +8,7 @@ generator client {
 }
 
 enum Role {
+  OWNER
   SUPER_ADMIN
   BRANCH_MANAGER
   SALES_EXEC

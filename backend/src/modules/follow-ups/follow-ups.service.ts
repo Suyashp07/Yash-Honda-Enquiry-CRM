@@ -60,7 +60,7 @@ export class FollowUpsService {
       enquiry: {},
     };
 
-    if (user.role !== Role.SUPER_ADMIN) {
+    if (user.role !== Role.SUPER_ADMIN && user.role !== Role.OWNER) {
       if (branchId) {
         where.enquiry.branchId = branchId;
       } else {
