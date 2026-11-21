@@ -107,48 +107,69 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         }
       }
 
-      if (localLiveSessions.isNotEmpty) {
-        final reps = List<Map<String, dynamic>>.from((rawData['reps'] as List?)
-                ?.map((e) => Map<String, dynamic>.from(e)) ??
-            []);
-        final sessions = List<Map<String, dynamic>>.from(
-            (rawData['sessions'] as List?)
-                    ?.map((e) => Map<String, dynamic>.from(e)) ??
-                []);
+      final reps = List<Map<String, dynamic>>.from((rawData['reps'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e)) ??
+          []);
+      final sessions = List<Map<String, dynamic>>.from(
+          (rawData['sessions'] as List?)
+                  ?.map((e) => Map<String, dynamic>.from(e)) ??
+              []);
 
-        for (final ls in localLiveSessions) {
-          final repId = ls['salesExecId']?.toString();
-          final repIdx = reps.indexWhere((r) => r['id']?.toString() == repId);
-          if (repIdx != -1) {
-            reps[repIdx]['status'] = 'Busy';
-            reps[repIdx]['activeCustomerName'] = ls['customerName'];
-          }
-          final existingIdx =
-              sessions.indexWhere((s) => s['id'] == 'live-$repId');
-          final liveBlock = {
-            'id': 'live-$repId',
-            'enquiryNumber': 'Draft · Live',
-            'branchId': ls['branchId'],
-            'enquiryType': 'Walk-in',
-            'status': 'IN_PROGRESS',
-            'sales_exec_id': repId,
-            'customer_name': ls['customerName'],
-            'customer_mobile': ls['customerMobile'],
-            'vehicle_name': ls['vehicleName'],
-            'colour': ls['colourName'],
-            'grand_total': ls['grandTotal'],
-            'created_at': DateTime.now().toIso8601String(),
-          };
-          if (existingIdx != -1) {
-            sessions[existingIdx] = liveBlock;
-          } else {
-            sessions.insert(0, liveBlock);
-          }
+      for (final ls in localLiveSessions) {
+        final repId = ls['salesExecId']?.toString();
+        if (repId == null) continue;
+
+        final repIdx = reps.indexWhere((r) => r['id']?.toString() == repId);
+        if (repIdx != -1) {
+          reps[repIdx]['status'] = 'Busy';
+          reps[repIdx]['activeCustomerName'] = ls['customerName'];
+        } else {
+          // If rep is not in the list (e.g. branch filter or newly added), append
+          reps.add({
+            'id': repId,
+            'name': ls['salesExecName'] ?? 'Sales Rep',
+            'mobile': '',
+            'status': 'Busy',
+            'activeCustomerName': ls['customerName'],
+            'branches': [],
+            'enquiriesTodayCount': 1,
+          });
         }
 
-        rawData['reps'] = reps;
-        rawData['sessions'] = sessions;
+        final existingIdx =
+            sessions.indexWhere((s) => s['id'] == 'live-$repId');
+        final liveBlock = {
+          'id': 'live-$repId',
+          'enquiryNumber': 'Draft · Live',
+          'branchId': ls['branchId'],
+          'enquiryType': 'Walk-in',
+          'status': 'IN_PROGRESS',
+          'sales_exec_id': repId,
+          'customer_name': ls['customerName'],
+          'customer_mobile': ls['customerMobile'],
+          'vehicle_name': ls['vehicleName'],
+          'colour': ls['colourName'],
+          'grand_total': ls['grandTotal'],
+          'created_at': DateTime.now().toIso8601String(),
+        };
+        if (existingIdx != -1) {
+          sessions[existingIdx] = liveBlock;
+        } else {
+          sessions.insert(0, liveBlock);
+        }
       }
+
+      // Always sort reps: Busy / Attending reps FIRST, then Idle alphabetically
+      reps.sort((a, b) {
+        final aBusy = a['status'] == 'Busy' ? 0 : 1;
+        final bBusy = b['status'] == 'Busy' ? 0 : 1;
+        if (aBusy != bBusy) return aBusy.compareTo(bBusy);
+        return (a['name']?.toString() ?? '')
+            .compareTo(b['name']?.toString() ?? '');
+      });
+
+      rawData['reps'] = reps;
+      rawData['sessions'] = sessions;
     } catch (_) {}
     return rawData;
   }
@@ -377,6 +398,34 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Page Header matching prototype
+            const Padding(
+              padding: EdgeInsets.only(top: 8, bottom: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Live floor',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                      letterSpacing: -0.6,
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'Updated just now',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             // 1. Top 4-KPI Row (CURRENT DEALERSHIP, ALL DEALERSHIPS, SALES REPS · LIVE, SESSION OUTCOMES)
             _buildKpiCards(_dashboardData),
             const SizedBox(height: 16),

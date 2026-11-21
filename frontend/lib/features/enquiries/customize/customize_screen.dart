@@ -52,21 +52,28 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   }
 
   Future<void> _syncLiveFloorSession() async {
-    if (_selectedRepId == null || _selectedBranchId == null) return;
+    if (_selectedRepId == null) return;
     final name = _nameController.text.trim();
     final mobile = _mobileController.text.trim();
     final vehicle = _selectedVehicle?['name'] ?? 'Honda Model';
     final colour = _selectedColour;
     final grandTotal = _liveCalculation?['grandTotal'];
 
+    final repObj = _salesReps.firstWhere(
+      (r) => r['id']?.toString() == _selectedRepId,
+      orElse: () => null,
+    );
+    final repName = repObj?['name']?.toString() ?? 'Sales Rep';
+
     final payload = {
       'salesExecId': _selectedRepId,
+      'salesExecName': repName,
       'customerName': name.isNotEmpty ? name : 'Walk-in Guest',
       'customerMobile': mobile,
       'vehicleName': vehicle,
       'colourName': colour,
       'grandTotal': grandTotal,
-      'branchId': _selectedBranchId,
+      'branchId': _selectedBranchId ?? '',
       'status': 'IN_PROGRESS',
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
@@ -609,7 +616,21 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   return DropdownMenuItem(value: r['id'].toString(), child: Text(r['name'] ?? 'Rep'));
                 }).toList(),
                 onChanged: (val) {
-                  setState(() => _selectedRepId = val);
+                  setState(() {
+                    _selectedRepId = val;
+                    // Auto-sync rep's branch if known
+                    final repObj = _salesReps.firstWhere(
+                      (r) => r['id']?.toString() == val,
+                      orElse: () => null,
+                    );
+                    if (repObj != null && repObj['userBranches'] is List && (repObj['userBranches'] as List).isNotEmpty) {
+                      final repBranchId = repObj['userBranches'][0]['branch']?['id']?.toString() ??
+                          repObj['userBranches'][0]['branchId']?.toString();
+                      if (repBranchId != null && repBranchId.isNotEmpty) {
+                        _selectedBranchId = repBranchId;
+                      }
+                    }
+                  });
                   _syncLiveFloorSession();
                 },
               ),

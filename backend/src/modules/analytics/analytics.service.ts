@@ -247,6 +247,14 @@ export class AnalyticsService {
       };
     });
 
+    // Always sort reps: Busy / Attending reps FIRST, then Idle reps alphabetically
+    repStats.sort((a, b) => {
+      const aBusy = a.status === 'Busy' ? 0 : 1;
+      const bBusy = b.status === 'Busy' ? 0 : 1;
+      if (aBusy !== bBusy) return aBusy - bBusy;
+      return a.name.localeCompare(b.name);
+    });
+
     const busyRepsCount = repStats.filter((r) => r.status === 'Busy').length;
     const idleRepsCount = repStats.length - busyRepsCount;
     const liveSessionsCount = activeSessions.length;

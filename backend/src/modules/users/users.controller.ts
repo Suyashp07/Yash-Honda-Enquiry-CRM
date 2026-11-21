@@ -15,7 +15,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.SALES_EXEC)
+  @Roles(Role.OWNER, Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.SALES_EXEC)
   @ApiOperation({ summary: 'List users with optional branch and role filters' })
   @ApiQuery({ name: 'branchId', required: false })
   @ApiQuery({ name: 'role', required: false, enum: Role })
@@ -24,42 +24,42 @@ export class UsersController {
   }
 
   @Get('permissions')
-  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER)
+  @Roles(Role.OWNER, Role.SUPER_ADMIN, Role.BRANCH_MANAGER)
   @ApiOperation({ summary: 'Get RBAC permissions matrix for all roles' })
   getPermissions() {
     return this.usersService.getRolePermissions();
   }
 
   @Put('permissions/:role')
-  @Roles(Role.SUPER_ADMIN)
+  @Roles(Role.OWNER, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Update RBAC permissions for a role (Super Admin only)' })
   savePermissions(@Param('role') role: string, @Body() body: any) {
     return this.usersService.saveRolePermissions(role, body.permissions ?? body);
   }
 
   @Get(':id')
-  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.SALES_EXEC)
+  @Roles(Role.OWNER, Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.SALES_EXEC)
   @ApiOperation({ summary: 'Get user profile and branch assignments' })
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
 
   @Post()
-  @Roles(Role.SUPER_ADMIN)
+  @Roles(Role.OWNER, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Create user with multi-branch assignment (Super Admin only)' })
   create(@Body() dto: CreateUserDto) {
     return this.usersService.create(dto);
   }
 
   @Put(':id')
-  @Roles(Role.SUPER_ADMIN)
+  @Roles(Role.OWNER, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Update user, password or branch assignments (Super Admin only)' })
   update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.usersService.update(id, dto);
   }
 
   @Delete(':id')
-  @Roles(Role.SUPER_ADMIN)
+  @Roles(Role.OWNER, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Deactivate staff account (Super Admin only)' })
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);

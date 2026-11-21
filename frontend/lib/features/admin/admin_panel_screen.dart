@@ -23,6 +23,7 @@ class AdminPanelScreen extends ConsumerStatefulWidget {
 
 class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   bool _isLoading = true;
+  String? _loadError;
   List<Map<String, dynamic>> _items = [];
 
   // For User roles & permissions sub-tab
@@ -93,7 +94,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
 
     try {
       final dio = ref.read(dioProvider);
@@ -161,10 +165,14 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       setState(() {
         _items = rawList.map((e) => Map<String, dynamic>.from(e)).toList();
         _isLoading = false;
+        _loadError = null;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _loadError = e.toString();
+      });
       if (e is DioException && e.response?.statusCode == 401) {
         ref.read(authStateProvider.notifier).logout();
         ScaffoldMessenger.of(context).clearSnackBars();
@@ -2648,11 +2656,43 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             Padding(
               padding: const EdgeInsets.all(40),
               child: Center(
-                child: Text(
-                  'No ${_getSectionTitle().toLowerCase()} found.',
-                  style:
-                      const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                ),
+                child: _loadError != null
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.cloud_off_outlined,
+                              size: 36, color: Color(0xFFEF4444)),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Unable to load ${_getSectionTitle().toLowerCase()}',
+                            style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0F172A)),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Server was temporarily busy or re-connecting. Please retry.',
+                            style: TextStyle(
+                                fontSize: 12, color: Color(0xFF64748B)),
+                          ),
+                          const SizedBox(height: 14),
+                          OutlinedButton.icon(
+                            onPressed: _loadSectionData,
+                            icon: const Icon(Icons.refresh, size: 14),
+                            label: const Text('Retry'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFDC2626),
+                              side: const BorderSide(color: Color(0xFFDC2626)),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        'No ${_getSectionTitle().toLowerCase()} found.',
+                        style: const TextStyle(
+                            color: Color(0xFF94A3B8), fontSize: 13),
+                      ),
               ),
             )
           else

@@ -815,19 +815,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildMobileView(AuthState authState) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-        child: _buildLoginForm(authState),
+    return Container(
+      color: const Color(0xFFFAF9F6),
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: _buildLoginForm(authState),
+        ),
       ),
     );
   }
 
   Widget _buildTabletView(AuthState authState) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(40),
-        child: _buildLoginForm(authState),
+    return Container(
+      color: const Color(0xFFFAF9F6),
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(40),
+          child: _buildLoginForm(authState),
+        ),
       ),
     );
   }
@@ -836,147 +842,158 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildDesktopView(AuthState authState) {
     return Row(
       children: [
-        // Left Branding Hero Panel
+        // Left Branding Hero Panel with subtle technical grid lines
         Expanded(
           flex: 6,
           child: Container(
             color: const Color(0xFF080C14),
-            padding: const EdgeInsets.symmetric(horizontal: 72, vertical: 56),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Stack(
               children: [
-                // Top Brand Logo
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDC2626),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'H',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'YASH HONDA',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Multi-branch Dealership CRM',
-                          style: TextStyle(
-                            color: Color(0xFF94A3B8),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: const GridLinesPainter(),
+                  ),
                 ),
-
-                // Main Center Hero Content
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Red category tag
-                    const Text(
-                      'ENQUIRY & CRM',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 2.2,
-                        color: Color(0xFFDC2626),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Big Headline
-                    const Text(
-                      'Every walk-in, call and\nfollow-up. One place.',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 40,
-                        fontWeight: FontWeight.w800,
-                        height: 1.15,
-                        letterSpacing: -0.8,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Subtitle
-                    const Text(
-                      'Live enquiries from all six Pune branches, with AI summaries and a real-time floor dashboard.',
-                      style: TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontSize: 15,
-                        height: 1.5,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    const SizedBox(height: 36),
-
-                    // 6 Pune Branches Table Box
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A).withValues(alpha: 0.8),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF1E293B)),
-                      ),
-                      child: Column(
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 72, vertical: 56),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Top Brand Logo
+                      Row(
                         children: [
-                          _buildBranchRow(
-                            col1Name: 'Phursungi',
-                            col1Badge: 'BigWing',
-                            col2Name: 'Wadki',
-                            col2Badge: 'RedWing',
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDC2626),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Center(
+                              child: Text(
+                                'H',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
                           ),
-                          Container(height: 1, color: const Color(0xFF1E293B)),
-                          _buildBranchRow(
-                            col1Name: 'Saswad',
-                            col1Badge: 'RedWing',
-                            col2Name: 'Uruli Kanchan',
-                            col2Badge: 'RedWing',
-                          ),
-                          Container(height: 1, color: const Color(0xFF1E293B)),
-                          _buildBranchRow(
-                            col1Name: 'BT Kawade',
-                            col1Badge: 'RedWing',
-                            col2Name: 'Sasane Nagar',
-                            col2Badge: 'RedWing',
+                          const SizedBox(width: 14),
+                          const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'YASH HONDA',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Multi-branch Dealership CRM',
+                                style: TextStyle(
+                                  color: Color(0xFF94A3B8),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
 
-                // Footer
-                const Text(
-                  '© 2026 Yash Honda Two-Wheelers Pvt Ltd · Authorized Honda Dealership',
-                  style: TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
+                      // Main Center Hero Content
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Red category tag
+                          const Text(
+                            'ENQUIRY & CRM',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2.2,
+                              color: Color(0xFFDC2626),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Big Headline
+                          const Text(
+                            'Every walk-in, call and\nfollow-up. One place.',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 40,
+                              fontWeight: FontWeight.w800,
+                              height: 1.15,
+                              letterSpacing: -0.8,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+
+                          // Subtitle
+                          const Text(
+                            'Live enquiries from all six Pune branches, with AI summaries and a real-time floor dashboard.',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 15,
+                              height: 1.5,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const SizedBox(height: 36),
+
+                          // 6 Pune Branches Table Box
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F172A).withValues(alpha: 0.8),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFF1E293B)),
+                            ),
+                            child: Column(
+                              children: [
+                                _buildBranchRow(
+                                  col1Name: 'Phursungi',
+                                  col1Badge: 'BigWing',
+                                  col2Name: 'Wadki',
+                                  col2Badge: 'RedWing',
+                                ),
+                                Container(height: 1, color: const Color(0xFF1E293B)),
+                                _buildBranchRow(
+                                  col1Name: 'Saswad',
+                                  col1Badge: 'RedWing',
+                                  col2Name: 'Uruli Kanchan',
+                                  col2Badge: 'RedWing',
+                                ),
+                                Container(height: 1, color: const Color(0xFF1E293B)),
+                                _buildBranchRow(
+                                  col1Name: 'BT Kawade',
+                                  col1Badge: 'RedWing',
+                                  col2Name: 'Sasane Nagar',
+                                  col2Badge: 'RedWing',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Footer
+                      const Text(
+                        '© 2026 Yash Honda Two-Wheelers Pvt Ltd · Authorized Honda Dealership',
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -984,11 +1001,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
 
-        // Right Login Form
+        // Right Login Form on warm stone backdrop
         Expanded(
           flex: 5,
           child: Container(
-            color: Colors.white,
+            color: const Color(0xFFFAF9F6),
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
@@ -1071,4 +1088,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+}
+
+/// Subtle technical architectural grid pattern for the left hero panel
+class GridLinesPainter extends CustomPainter {
+  final Color lineColor;
+  final double step;
+
+  const GridLinesPainter({
+    this.lineColor = const Color(0x18FFFFFF), // ~9.4% subtle white lines
+    this.step = 46.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = lineColor
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    for (double x = 0; x <= size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y <= size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
