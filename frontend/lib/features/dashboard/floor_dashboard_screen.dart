@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +30,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   String _selectedRepId = 'all';
   DateTime _currentDate = DateTime.now();
   final _searchController = TextEditingController();
+  final _timelineScrollController = ScrollController();
   String _searchQuery = '';
   String _viewMode = 'rows'; // 'rows' or 'columns'
   int _zoomLevel = 100;
@@ -81,7 +83,87 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   void dispose() {
     _refreshTimer?.cancel();
     _searchController.dispose();
+    _timelineScrollController.dispose();
     super.dispose();
+  }
+
+  Future<Map<String, dynamic>> _mergeLocalLiveSessions(Map<String, dynamic> rawData) async {
+    try {
+      final storage = ref.read(secureStorageProvider);
+      final allKeys = await storage.readAll();
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final List<dynamic> localLiveSessions = [];
+
+      for (final entry in allKeys.entries) {
+        if (entry.key.startsWith('yash_live_session_')) {
+          try {
+            final parsed = jsonDecode(entry.value);
+            final ts = parsed['timestamp'] as int? ?? 0;
+            if (nowMs - ts < 30 * 60 * 1000) {
+              localLiveSessions.add(parsed);
+            }
+          } catch (_) {}
+        }
+      }
+
+      if (localLiveSessions.isNotEmpty) {
+        final reps = List<Map<String, dynamic>>.from(
+            (rawData['reps'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? []);
+        final sessions = List<Map<String, dynamic>>.from(
+            (rawData['sessions'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? []);
+
+        for (final ls in localLiveSessions) {
+          final repId = ls['salesExecId']?.toString();
+          final repIdx = reps.indexWhere((r) => r['id']?.toString() == repId);
+          if (repIdx != -1) {
+            reps[repIdx]['status'] = 'Busy';
+            reps[repIdx]['activeCustomerName'] = ls['customerName'];
+          }
+          final existingIdx = sessions.indexWhere((s) => s['id'] == 'live-$repId');
+          final liveBlock = {
+            'id': 'live-$repId',
+            'enquiryNumber': 'Draft · Live',
+            'branchId': ls['branchId'],
+            'enquiryType': 'Walk-in',
+            'status': 'IN_PROGRESS',
+            'sales_exec_id': repId,
+            'customer_name': ls['customerName'],
+            'customer_mobile': ls['customerMobile'],
+            'vehicle_name': ls['vehicleName'],
+            'colour': ls['colourName'],
+            'grand_total': ls['grandTotal'],
+            'created_at': DateTime.now().toIso8601String(),
+          };
+          if (existingIdx != -1) {
+            sessions[existingIdx] = liveBlock;
+          } else {
+            sessions.insert(0, liveBlock);
+          }
+        }
+
+        rawData['reps'] = reps;
+        rawData['sessions'] = sessions;
+      }
+    } catch (_) {}
+    return rawData;
+  }
+
+  void _scrollToCurrentTimeSlot() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_timelineScrollController.hasClients) {
+        final nowSlot = _getNowSlot();
+        final idx = _timeSlots.indexOf(nowSlot);
+        if (idx > 1) {
+          final cellW = 130.0 * (_zoomLevel / 100.0);
+          final targetOffset = (idx - 1) * cellW;
+          _timelineScrollController.animateTo(
+            math.min(targetOffset, _timelineScrollController.position.maxScrollExtent),
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOut,
+          );
+        }
+      }
+    });
   }
 
   Future<void> _loadDashboardSilently() async {
@@ -95,10 +177,11 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
       query['date'] = DateFormat('yyyy-MM-dd').format(_currentDate);
 
       final res = await dio.get('/analytics/floor', queryParameters: query);
+      final mergedData = await _mergeLocalLiveSessions(Map<String, dynamic>.from(res.data));
 
       if (!mounted) return;
       setState(() {
-        _dashboardData = res.data;
+        _dashboardData = mergedData;
       });
     } catch (_) {}
   }
@@ -119,14 +202,17 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
       query['date'] = DateFormat('yyyy-MM-dd').format(targetDate);
 
       final res = await dio.get('/analytics/floor', queryParameters: query);
+      final mergedData = await _mergeLocalLiveSessions(Map<String, dynamic>.from(res.data));
 
       if (!mounted) return;
       setState(() {
         _currentDate = targetDate;
         _selectedBranch = activeBranch;
-        _dashboardData = res.data;
+        _dashboardData = mergedData;
         _isLoading = false;
       });
+
+      _scrollToCurrentTimeSlot();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -637,7 +723,10 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
               ),
               const SizedBox(width: 6),
               InkWell(
-                onTap: () => _loadDashboard(date: DateTime.now()),
+                onTap: () {
+                  _loadDashboard(date: DateTime.now());
+                  _scrollToCurrentTimeSlot();
+                },
                 borderRadius: BorderRadius.circular(6),
                 child: Container(
                   height: 26,
@@ -952,6 +1041,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         ],
       ),
       child: SingleChildScrollView(
+        controller: _timelineScrollController,
         scrollDirection: Axis.horizontal,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1047,9 +1137,15 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
               final repSessions = sessions
                   .where((s) => s['sales_exec_id'] == rep['id'])
                   .toList();
+              // Sort newest first
+              repSessions.sort((a, b) {
+                final at = a['created_at']?.toString() ?? '';
+                final bt = b['created_at']?.toString() ?? '';
+                return bt.compareTo(at);
+              });
               final currentSession =
                   repSessions.isNotEmpty ? repSessions.first : null;
-              final customerName = currentSession?['customer_name'] ?? 'Guest';
+              final customerName = rep['activeCustomerName'] ?? currentSession?['customer_name'] ?? 'Guest';
 
               return Container(
                 height: 72,
@@ -1134,11 +1230,36 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                           nowSlotTarget != null && slot == nowSlotTarget;
 
                       // Display session block if slot matches representative's session
-                      final matchingSession =
+                      var matchingSession =
                           _findSessionForSlot(repSessions, slot);
+
+                      // If this is the current active 'NOW' slot and the rep is currently Busy:
+                      if (matchingSession == null && isNow && isBusy) {
+                        if (repSessions.isNotEmpty) {
+                          matchingSession = repSessions.firstWhere(
+                            (s) =>
+                                s['status'] == 'ACTIVE' ||
+                                s['status'] == 'OPEN' ||
+                                s['status'] == 'IN_PROGRESS',
+                            orElse: () => repSessions.first,
+                          );
+                        } else {
+                          final custName =
+                              rep['activeCustomerName'] ?? 'Walk-in Guest';
+                          matchingSession = {
+                            'id': 'live-${rep["id"]}',
+                            'customer_name': custName,
+                            'vehicle_name': 'Honda Model',
+                            'status': 'IN_PROGRESS',
+                            'created_at': DateTime.now().toIso8601String(),
+                          };
+                        }
+                      }
+
                       final bool isAttendingSlot = matchingSession != null &&
                           (matchingSession['status'] == 'ACTIVE' ||
                               matchingSession['status'] == 'OPEN' ||
+                              matchingSession['status'] == 'IN_PROGRESS' ||
                               isBusy);
 
                       return Container(
@@ -1196,6 +1317,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         ],
       ),
       child: SingleChildScrollView(
+        controller: _timelineScrollController,
         scrollDirection: Axis.horizontal,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1411,11 +1533,38 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                       final repSessions = sessions
                           .where((s) => s['sales_exec_id'] == rep['id'])
                           .toList();
-                      final matchingSession =
+                      repSessions.sort((a, b) {
+                        final at = a['created_at']?.toString() ?? '';
+                        final bt = b['created_at']?.toString() ?? '';
+                        return bt.compareTo(at);
+                      });
+                      var matchingSession =
                           _findSessionForSlot(repSessions, slot);
+                      if (matchingSession == null && isNow && isBusy) {
+                        if (repSessions.isNotEmpty) {
+                          matchingSession = repSessions.firstWhere(
+                            (s) =>
+                                s['status'] == 'ACTIVE' ||
+                                s['status'] == 'OPEN' ||
+                                s['status'] == 'IN_PROGRESS',
+                            orElse: () => repSessions.first,
+                          );
+                        } else {
+                          final custName =
+                              rep['activeCustomerName'] ?? 'Walk-in Guest';
+                          matchingSession = {
+                            'id': 'live-${rep["id"]}',
+                            'customer_name': custName,
+                            'vehicle_name': 'Honda Model',
+                            'status': 'IN_PROGRESS',
+                            'created_at': DateTime.now().toIso8601String(),
+                          };
+                        }
+                      }
                       final bool isAttendingSlot = matchingSession != null &&
                           (matchingSession['status'] == 'ACTIVE' ||
                               matchingSession['status'] == 'OPEN' ||
+                              matchingSession['status'] == 'IN_PROGRESS' ||
                               isBusy);
 
                       return Container(

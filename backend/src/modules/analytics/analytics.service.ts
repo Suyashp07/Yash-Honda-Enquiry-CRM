@@ -148,12 +148,13 @@ export class AnalyticsService {
       : allBranches.find((b) => accessibleBranchIds.includes(b.id)) || allBranches[0];
     const currentBranchName = currentBranchObj?.name || 'Phursungi';
 
-    // Enquiries on this day within accessible branch scope
+    // Enquiries on this day within accessible branch scope (newest first)
     const allTodayEnquiries = await this.prisma.enquiry.findMany({
       where: {
         branchId: { in: accessibleBranchIds },
         createdAt: dayDates,
       },
+      orderBy: { createdAt: 'desc' },
       include: {
         customer: {
           select: {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -58,23 +59,40 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     final colour = _selectedColour;
     final grandTotal = _liveCalculation?['grandTotal'];
 
+    final payload = {
+      'salesExecId': _selectedRepId,
+      'customerName': name.isNotEmpty ? name : 'Walk-in Guest',
+      'customerMobile': mobile,
+      'vehicleName': vehicle,
+      'colourName': colour,
+      'grandTotal': grandTotal,
+      'branchId': _selectedBranchId,
+      'status': 'IN_PROGRESS',
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    };
+
+    // 1. Sync instantly to browser storage for 0ms cross-tab visibility
+    try {
+      final storage = ref.read(secureStorageProvider);
+      await storage.write(
+        key: 'yash_live_session_${_selectedRepId}',
+        value: jsonEncode(payload),
+      );
+    } catch (_) {}
+
+    // 2. Broadcast to backend server
     try {
       final dio = ref.read(dioProvider);
-      await dio.post('/analytics/floor/session', data: {
-        'salesExecId': _selectedRepId,
-        'customerName': name.isNotEmpty ? name : 'Walk-in Guest',
-        'customerMobile': mobile,
-        'vehicleName': vehicle,
-        'colourName': colour,
-        'grandTotal': grandTotal,
-        'branchId': _selectedBranchId,
-        'status': 'IN_PROGRESS',
-      });
+      await dio.post('/analytics/floor/session', data: payload);
     } catch (_) {}
   }
 
   Future<void> _endLiveFloorSession() async {
     if (_selectedRepId == null) return;
+    try {
+      final storage = ref.read(secureStorageProvider);
+      await storage.delete(key: 'yash_live_session_${_selectedRepId}');
+    } catch (_) {}
     try {
       final dio = ref.read(dioProvider);
       await dio.delete('/analytics/floor/session/$_selectedRepId');
