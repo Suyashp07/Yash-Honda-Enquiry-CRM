@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/networking/api_client.dart';
-import '../../core/utils/currency_formatter.dart';
 import '../auth/auth_notifier.dart';
 
 class DealershipSummaryScreen extends ConsumerStatefulWidget {
@@ -17,7 +16,7 @@ class DealershipSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScreen> {
-  String _activeView = 'matrix'; // 'matrix', 'summary2', 'financial'
+  String _activeView = 'matrix'; // 'matrix', 'summary2'
   String _selectedPeriod = 'today'; // 'today', 'week', 'mtd', 'ytd'
   DateTime _selectedDate = DateTime.now();
   String _selectedBranch = 'all';
@@ -130,7 +129,6 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
             else ...[
               if (_activeView == 'matrix') _buildMatrixView(),
               if (_activeView == 'summary2') _buildSummary2View(),
-              if (_activeView == 'financial') _buildFinancialView(),
             ],
           ],
         ),
@@ -194,7 +192,6 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
               children: [
                 _buildViewTab('matrix', 'Matrix View', Icons.table_chart_outlined, tooltip: 'Performance matrix comparing branches, walk-ins, bookings & conversion rates'),
                 _buildViewTab('summary2', 'Summary 2', Icons.grid_view_outlined, tooltip: 'Executive KPI cards and model contribution analytics'),
-                _buildViewTab('financial', 'Financial', Icons.currency_rupee, tooltip: 'Revenue statistics, booking advances and payment mode share'),
               ],
             ),
           ),
@@ -1381,229 +1378,4 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
     );
   }
 
-  // ==========================================
-  // 3. FINANCIAL VIEW (Sold Vehicles Revenue)
-  // ==========================================
-  Widget _buildFinancialView() {
-    final financials = _summaryData?['financials'] ?? {};
-    final totals = financials['totals'] ?? {};
-    final byLocation = (financials['byLocation'] as List?) ?? [];
-    final byCategory = (financials['byCategory'] as List?) ?? [];
-    final byMode = (financials['byMode'] as List?) ?? [];
-    final byModel = (financials['byModel'] as List?) ?? [];
-
-    final units = totals['units'] ?? 0;
-    final onRoad = totals['onRoad'] ?? 0;
-    final exShowroom = totals['exShowroom'] ?? 0;
-    final roadTax = totals['roadTax'] ?? 0;
-    final insurance = totals['insurance'] ?? 0;
-    final accessories = totals['stdAccessories'] ?? 0;
-    final avgDealSize = units > 0 ? (onRoad / units).round() : 0;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Revenue Totals Grid
-        Row(
-          children: [
-            Expanded(child: _buildFinancialKpi('TOTAL REVENUE', CurrencyFormatter.format(onRoad), '$units units sold', AppColors.primary)),
-            const SizedBox(width: 12),
-            Expanded(child: _buildFinancialKpi('EX-SHOWROOM', CurrencyFormatter.format(exShowroom), 'Vehicle Base Price', const Color(0xFF2563EB))),
-            const SizedBox(width: 12),
-            Expanded(child: _buildFinancialKpi('RTO ROAD TAX', CurrencyFormatter.format(roadTax), 'Government Tax Collected', const Color(0xFF0D9488))),
-            const SizedBox(width: 12),
-            Expanded(child: _buildFinancialKpi('INSURANCE', CurrencyFormatter.format(insurance), 'Comprehensive Covers', const Color(0xFF7C3AED))),
-            const SizedBox(width: 12),
-            Expanded(child: _buildFinancialKpi('AVG DEAL SIZE', CurrencyFormatter.format(avgDealSize), 'Std Acc: ${CurrencyFormatter.format(accessories)}', const Color(0xFFEA580C))),
-          ],
-        ),
-        const SizedBox(height: 20),
-
-        // Revenue by Location Table
-        const Text('REVENUE BY SHOWROOM LOCATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE2E8F0))),
-          child: Table(
-            columnWidths: const {
-              0: FlexColumnWidth(3),
-              1: FlexColumnWidth(1.2),
-              2: FlexColumnWidth(2),
-              3: FlexColumnWidth(2),
-              4: FlexColumnWidth(2),
-              5: FlexColumnWidth(2.5),
-            },
-            children: [
-              TableRow(
-                decoration: const BoxDecoration(color: Color(0xFFF8FAFC), border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0)))),
-                children: [
-                  _buildTableCell('LOCATION / BRANCH', isHeader: true),
-                  _buildTableCell('UNITS', isHeader: true),
-                  _buildTableCell('EX-SHOWROOM', isHeader: true),
-                  _buildTableCell('ROAD TAX', isHeader: true),
-                  _buildTableCell('INSURANCE', isHeader: true),
-                  _buildTableCell('TOTAL ON-ROAD', isHeader: true),
-                ],
-              ),
-              ...byLocation.map((b) {
-                return TableRow(
-                  decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9)))),
-                  children: [
-                    _buildTableCell('${b['name']} (${b['code']})', isBold: true),
-                    _buildTableCell('${b['units']}'),
-                    _buildTableCell(CurrencyFormatter.format(b['exShowroom'])),
-                    _buildTableCell(CurrencyFormatter.format(b['roadTax'])),
-                    _buildTableCell(CurrencyFormatter.format(b['insurance'])),
-                    _buildTableCell(CurrencyFormatter.format(b['onRoad']), isBold: true, color: AppColors.primary),
-                  ],
-                );
-              }),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // By Category & By Mode
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // By Category
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('CATEGORY DISTRIBUTION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE2E8F0))),
-                    child: Column(
-                      children: byCategory.map((cat) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(cat['category'] ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                              Text('${cat['units']} units · ${CurrencyFormatter.format(cat['onRoad'])}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-
-            // By Mode
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('COMMERCIAL MODE SHARE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE2E8F0))),
-                    child: Column(
-                      children: byMode.map((m) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(m['mode'] ?? '', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                              Text('${m['units']} units · ${CurrencyFormatter.format(m['onRoad'])}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        if (byModel.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          const Text('REVENUE BY VEHICLE MODEL', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
-          const SizedBox(height: 10),
-          Container(
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE2E8F0))),
-            child: Table(
-              columnWidths: const {
-                0: FlexColumnWidth(3),
-                1: FlexColumnWidth(1.2),
-                2: FlexColumnWidth(2),
-                3: FlexColumnWidth(2),
-                4: FlexColumnWidth(2.5),
-              },
-              children: [
-                TableRow(
-                  decoration: const BoxDecoration(color: Color(0xFFF8FAFC), border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0)))),
-                  children: [
-                    _buildTableCell('MODEL NAME', isHeader: true),
-                    _buildTableCell('SOLD', isHeader: true),
-                    _buildTableCell('AVG ON-ROAD', isHeader: true),
-                    _buildTableCell('EX-SHOWROOM', isHeader: true),
-                    _buildTableCell('TOTAL REVENUE', isHeader: true),
-                  ],
-                ),
-                ...byModel.map((m) {
-                  return TableRow(
-                    decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9)))),
-                    children: [
-                      _buildTableCell('${m['modelName']} (${m['category']})', isBold: true),
-                      _buildTableCell('${m['units']}'),
-                      _buildTableCell(CurrencyFormatter.format(m['unitPrice'])),
-                      _buildTableCell(CurrencyFormatter.format(m['exShowroom'])),
-                      _buildTableCell(CurrencyFormatter.format(m['onRoad']), isBold: true, color: AppColors.primary),
-                    ],
-                  );
-                }),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildFinancialKpi(String label, String value, String sub, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5)),
-          const SizedBox(height: 6),
-          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color)),
-          const SizedBox(height: 2),
-          Text(sub, style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTableCell(String text, {bool isHeader = false, bool isBold = false, Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: isHeader ? 11 : 12,
-          fontWeight: isHeader || isBold ? FontWeight.w800 : FontWeight.w500,
-          color: color ?? (isHeader ? const Color(0xFF64748B) : const Color(0xFF0F172A)),
-        ),
-      ),
-    );
-  }
 }
