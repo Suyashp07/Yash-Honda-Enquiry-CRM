@@ -6,7 +6,7 @@ import '../../core/providers/branch_provider.dart';
 import '../../core/networking/api_client.dart';
 import '../../features/auth/auth_notifier.dart';
 import '../models/user_model.dart';
-import 'ai_summary/ai_summary_card.dart';
+import 'ai_summary/ai_copilot_chat_dialog.dart';
 
 class NavItem {
   final String title;
@@ -899,88 +899,6 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
   void _showAiInsightsDialog(BuildContext context, WidgetRef ref) {
     final activeBranchId = ref.read(selectedBranchIdProvider);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
-        contentPadding: const EdgeInsets.fromLTRB(24, 10, 24, 20),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEEF2FF),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.smart_toy_outlined,
-                  color: Color(0xFF6366F1), size: 20),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'AI Dealership Executive Briefing',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A)),
-                  ),
-                  Text(
-                    'Real-time automated floor & enquiry intelligence',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: 580,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AiSummaryCard(
-                branchCode: activeBranchId,
-                range: 'today',
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.key_outlined,
-                        size: 16, color: Color(0xFF64748B)),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Gemini API key can be configured in Admin Settings for automated predictive intelligence.',
-                        style:
-                            TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
+    AiCopilotChatDialog.show(context, initialBranchId: activeBranchId);
   }
 }

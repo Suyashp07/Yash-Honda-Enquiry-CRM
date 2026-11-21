@@ -1,6 +1,6 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
-import { AiInsightsService } from './ai-insights.service';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { AiInsightsService, ChatDto } from './ai-insights.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -29,5 +29,35 @@ export class AiInsightsController {
     const isForce = forceRefresh === 'true' || forceRefresh === '1';
     return this.aiInsightsService.getSummary(user, branch, range, isForce);
   }
-}
 
+  @Post('chat')
+  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.SALES_EXEC)
+  @ApiOperation({ summary: 'Interactive Dealership Copilot Chatbot for Executive & Floor Intelligence' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', example: 'What is our total booking and conversion today?' },
+        branch: { type: 'string', example: 'all' },
+        range: { type: 'string', example: 'today' },
+        history: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              role: { type: 'string', enum: ['user', 'assistant'] },
+              content: { type: 'string' },
+            },
+          },
+        },
+      },
+      required: ['query'],
+    },
+  })
+  chat(
+    @CurrentUser() user: any,
+    @Body() dto: ChatDto,
+  ) {
+    return this.aiInsightsService.chat(user, dto);
+  }
+}
