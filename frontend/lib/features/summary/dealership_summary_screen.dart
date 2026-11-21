@@ -84,14 +84,10 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Screen Title & Subtitle Header
-            _buildScreenHeader(),
-            const SizedBox(height: 16),
-
             // Top Toolbar Controls
             _buildTopControls(),
             const SizedBox(height: 16),
@@ -133,32 +129,6 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildScreenHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Dealership Summary View',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF0F172A),
-            letterSpacing: -0.3,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Location-wise As-On-Date & Month-To-Date (MTD) Leads, Bookings & Conversion',
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.grey.shade600,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 

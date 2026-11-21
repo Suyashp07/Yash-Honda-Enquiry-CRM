@@ -564,6 +564,31 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                 ),
               ],
             )
+          else if (widget.currentRoute.startsWith('/summary'))
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Text(
+                  'Dealership Summary',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                SizedBox(height: 1),
+                Text(
+                  'Location-wise As-On-Date & Month-To-Date (MTD) Leads, Bookings & Conversion',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            )
           else
             Text(
               _getPageTitle(widget.currentRoute),
