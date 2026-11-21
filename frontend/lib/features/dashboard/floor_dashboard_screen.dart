@@ -475,6 +475,10 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     final quoted = outcomes['quoted'] ?? 14;
     final booked = outcomes['booked'] ?? (summary['bookingsToday'] ?? 4);
 
+    final authUser = ref.watch(authStateProvider).user;
+    final showAllDealerships =
+        authUser?.isSuperAdmin == true || authUser?.isOwner == true;
+
     return Row(
       children: [
         // Card 1: CURRENT DEALERSHIP
@@ -505,36 +509,38 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             ],
           ),
         ),
-        const SizedBox(width: 14),
 
-        // Card 2: ALL DEALERSHIPS
-        Expanded(
-          child: _buildMetricCard(
-            title: 'ALL DEALERSHIPS',
-            tooltip:
-                'Aggregated totals across all 6 Yash Honda showrooms in Pune (Phursungi BigWing, Wadki, Saswad, Uruli Kanchan, BT Kawade, Sasane Nagar)',
-            columns: [
-              _MetricCol(
-                  label: 'Total',
-                  value: consolidatedTotal.toString(),
-                  color: const Color(0xFF0F172A),
-                  tooltip:
-                      'Consolidated network-wide enquiries received today across Pune'),
-              _MetricCol(
-                  label: 'Walk-ins',
-                  value: consolidatedWalkIns.toString(),
-                  color: const Color(0xFF0F172A),
-                  tooltip:
-                      'Combined walk-in footfalls across all 6 Pune showrooms'),
-              _MetricCol(
-                  label: 'Calls',
-                  value: consolidatedCalls.toString(),
-                  color: const Color(0xFF0F172A),
-                  tooltip:
-                      'Combined inbound telephone inquiries handled network-wide'),
-            ],
+        // Card 2: ALL DEALERSHIPS (Visible ONLY to Super Admin and Owner)
+        if (showAllDealerships) ...[
+          const SizedBox(width: 14),
+          Expanded(
+            child: _buildMetricCard(
+              title: 'ALL DEALERSHIPS',
+              tooltip:
+                  'Aggregated totals across all 6 Yash Honda showrooms in Pune (Phursungi BigWing, Wadki, Saswad, Uruli Kanchan, BT Kawade, Sasane Nagar)',
+              columns: [
+                _MetricCol(
+                    label: 'Total',
+                    value: consolidatedTotal.toString(),
+                    color: const Color(0xFF0F172A),
+                    tooltip:
+                        'Consolidated network-wide enquiries received today across Pune'),
+                _MetricCol(
+                    label: 'Walk-ins',
+                    value: consolidatedWalkIns.toString(),
+                    color: const Color(0xFF0F172A),
+                    tooltip:
+                        'Combined walk-in footfalls across all 6 Pune showrooms'),
+                _MetricCol(
+                    label: 'Calls',
+                    value: consolidatedCalls.toString(),
+                    color: const Color(0xFF0F172A),
+                    tooltip:
+                        'Combined inbound telephone inquiries handled network-wide'),
+              ],
+            ),
           ),
-        ),
+        ],
         const SizedBox(width: 14),
 
         // Card 3: SALES REPS · LIVE
