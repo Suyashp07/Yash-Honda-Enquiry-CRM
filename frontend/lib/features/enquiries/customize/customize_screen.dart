@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,8 +12,9 @@ import '../../auth/auth_notifier.dart';
 
 class CustomizeScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> vehicle;
+  final String? initialRepId;
 
-  const CustomizeScreen({super.key, this.vehicle = const {}});
+  const CustomizeScreen({super.key, this.vehicle = const {}, this.initialRepId});
 
   @override
   ConsumerState<CustomizeScreen> createState() => _CustomizeScreenState();
@@ -36,7 +38,48 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   List<dynamic> _accessories = [];
   List<dynamic> _financiers = [];
   List<dynamic> _leadSources = [];
+  List<dynamic> _salesReps = [];
   Map<String, dynamic>? _settings;
+  Timer? _sessionDebounceTimer;
+
+  void _debouncedSyncSession() {
+    setState(() {});
+    _sessionDebounceTimer?.cancel();
+    _sessionDebounceTimer = Timer(const Duration(milliseconds: 600), () {
+      _syncLiveFloorSession();
+    });
+  }
+
+  Future<void> _syncLiveFloorSession() async {
+    if (_selectedRepId == null || _selectedBranchId == null) return;
+    final name = _nameController.text.trim();
+    final mobile = _mobileController.text.trim();
+    final vehicle = _selectedVehicle?['name'] ?? 'Honda Model';
+    final colour = _selectedColour;
+    final grandTotal = _liveCalculation?['grandTotal'];
+
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.post('/analytics/floor/session', data: {
+        'salesExecId': _selectedRepId,
+        'customerName': name.isNotEmpty ? name : 'Walk-in Guest',
+        'customerMobile': mobile,
+        'vehicleName': vehicle,
+        'colourName': colour,
+        'grandTotal': grandTotal,
+        'branchId': _selectedBranchId,
+        'status': 'IN_PROGRESS',
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _endLiveFloorSession() async {
+    if (_selectedRepId == null) return;
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.delete('/analytics/floor/session/$_selectedRepId');
+    } catch (_) {}
+  }
 
   // Selected State
   String? _selectedVehicleId;
@@ -66,15 +109,17 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   void initState() {
     super.initState();
 
-    // Listen to text changes for immediate dynamic update of the Quote Preview!
-    _nameController.addListener(() => setState(() {}));
-    _mobileController.addListener(() => setState(() {}));
+    // Listen to text changes for immediate dynamic update of the Quote Preview and Live Floor Session!
+    _nameController.addListener(_debouncedSyncSession);
+    _mobileController.addListener(_debouncedSyncSession);
 
     _loadAllMasters();
   }
 
   @override
   void dispose() {
+    _sessionDebounceTimer?.cancel();
+    _endLiveFloorSession();
     _nameController.dispose();
     _mobileController.dispose();
     _emailController.dispose();
@@ -139,12 +184,14 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         initialBranchId = branches.first['id'].toString();
       }
 
-      // Initial sales rep selection: default to logged-in user if available, else first rep
-      String? initialRepId;
-      if (user != null && reps.any((r) => r['id'].toString() == user.id)) {
-        initialRepId = user.id;
-      } else if (reps.isNotEmpty) {
-        initialRepId = reps.first['id'].toString();
+      // Initial sales rep selection: query param -> logged-in user -> first rep
+      String? initialRepId = widget.initialRepId;
+      if (initialRepId == null || !reps.any((r) => r['id'].toString() == initialRepId)) {
+        if (user != null && reps.any((r) => r['id'].toString() == user.id)) {
+          initialRepId = user.id;
+        } else if (reps.isNotEmpty) {
+          initialRepId = reps.first['id'].toString();
+        }
       }
 
       if (!mounted) return;
@@ -160,6 +207,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         _selectedVehicleId = initialVehicleId;
         _selectedColour = initialColour;
         _selectedBranchId = initialBranchId;
+        _salesReps = reps;
 
         if (leadSources.isNotEmpty) _selectedSourceId = leadSources.first['id'].toString();
         if (areas.isNotEmpty) _selectedAreaId = areas.first['id'].toString();
@@ -203,6 +251,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         _liveCalculation = res.data;
         _isCalculating = false;
       });
+      _syncLiveFloorSession();
     } catch (_) {
       if (!mounted) return;
       setState(() => _isCalculating = false);
@@ -283,6 +332,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
 
       final enquiry = res.data;
       final quotation = (enquiry['quotations'] as List?)?.first ?? {};
+      _endLiveFloorSession();
 
       // If user selected "Send by email" and provided customer email, dispatch quotation email
       final custEmail = _emailController.text.trim();
@@ -530,6 +580,20 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   DropdownMenuItem(value: 'This Month', child: Text('This Month')),
                 ],
                 onChanged: (val) => setState(() => _buyingWhen = val ?? 'Immediate'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildDropdownField<String>(
+                label: 'Sales Rep',
+                value: _selectedRepId,
+                items: _salesReps.map((r) {
+                  return DropdownMenuItem(value: r['id'].toString(), child: Text(r['name'] ?? 'Rep'));
+                }).toList(),
+                onChanged: (val) {
+                  setState(() => _selectedRepId = val);
+                  _syncLiveFloorSession();
+                },
               ),
             ),
           ],

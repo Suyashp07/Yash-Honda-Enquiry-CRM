@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,16 +41,44 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     '9:00 PM', '9:30 PM',
   ];
 
+  Timer? _refreshTimer;
+
   @override
   void initState() {
     super.initState();
     _loadDashboard();
+    // Auto-refresh every 8 seconds for live showroom floor updates
+    _refreshTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted && !_isLoading) {
+        _loadDashboardSilently();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadDashboardSilently() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final query = <String, dynamic>{};
+      final String activeBranch = ref.read(selectedBranchIdProvider);
+      if (activeBranch != 'all') {
+        query['branchId'] = activeBranch;
+      }
+      query['date'] = DateFormat('yyyy-MM-dd').format(_currentDate);
+
+      final res = await dio.get('/analytics/floor', queryParameters: query);
+
+      if (!mounted) return;
+      setState(() {
+        _dashboardData = res.data;
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadDashboard({String? branchId, DateTime? date}) async {

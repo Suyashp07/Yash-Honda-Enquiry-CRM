@@ -6,6 +6,62 @@ import { EnquiryStatus, Role } from '@prisma/client';
 export class AnalyticsService {
   constructor(private prisma: PrismaService) {}
 
+  private activeFloorSessions = new Map<string, {
+    salesExecId: string;
+    salesExecName?: string;
+    customerName: string;
+    customerMobile?: string;
+    vehicleName: string;
+    colourName?: string;
+    grandTotal?: number;
+    branchId: string;
+    status: string;
+    startedAt: Date;
+    lastHeartbeat: Date;
+  }>();
+
+  upsertFloorSession(user: any, data: any) {
+    const salesExecId = data.salesExecId || user.id;
+    const branchId = data.branchId || user.assignedBranchIds?.[0] || '';
+    const existing = this.activeFloorSessions.get(salesExecId);
+
+    const session = {
+      salesExecId,
+      salesExecName: data.salesExecName || user.name || 'Sales Rep',
+      customerName: data.customerName || 'Walk-in Guest',
+      customerMobile: data.customerMobile || '',
+      vehicleName: data.vehicleName || 'Honda Model',
+      colourName: data.colourName || '',
+      grandTotal: data.grandTotal ? Number(data.grandTotal) : undefined,
+      branchId,
+      status: data.status || 'IN_PROGRESS',
+      startedAt: existing?.startedAt || new Date(),
+      lastHeartbeat: new Date(),
+    };
+
+    this.activeFloorSessions.set(salesExecId, session);
+    return { success: true, session };
+  }
+
+  removeFloorSession(user: any, salesExecId?: string) {
+    const targetId = salesExecId || user.id;
+    this.activeFloorSessions.delete(targetId);
+    return { success: true };
+  }
+
+  getActiveFloorSessions(branchIds: string[]) {
+    const cutoff = new Date(Date.now() - 30 * 60 * 1000);
+    const result: any[] = [];
+    for (const [id, s] of this.activeFloorSessions.entries()) {
+      if (s.lastHeartbeat < cutoff) {
+        this.activeFloorSessions.delete(id);
+      } else if (branchIds.includes(s.branchId)) {
+        result.push(s);
+      }
+    }
+    return result;
+  }
+
   private getDates(range?: string, from?: string, to?: string) {
     if (from && to) {
       return { gte: new Date(from), lte: new Date(to) };
@@ -172,46 +228,52 @@ export class AnalyticsService {
         e.status !== EnquiryStatus.CUSTOMER_BOUGHT && (!e.quotations || e.quotations.length === 0),
     ).length;
 
+    const activeSessions = this.getActiveFloorSessions(currentBranchIds);
+
     // Rep workload mapping
     const repStats = salesReps.map((rep) => {
       const repEnquiriesToday = currentTodayEnquiries.filter((e) => e.assignedToId === rep.id);
+      const activeLiveSession = activeSessions.find((s) => s.salesExecId === rep.id);
+      const isBusy = activeLiveSession != null || repEnquiriesToday.length > 0;
       return {
         id: rep.id,
         name: rep.name,
         mobile: rep.mobile,
         branches: rep.userBranches.map((ub) => ub.branch.code),
-        enquiriesTodayCount: repEnquiriesToday.length,
-        status: repEnquiriesToday.length > 0 ? 'Busy' : 'Idle',
+        enquiriesTodayCount: repEnquiriesToday.length + (activeLiveSession ? 1 : 0),
+        status: isBusy ? 'Busy' : 'Idle',
+        activeCustomerName: activeLiveSession?.customerName,
       };
     });
 
     const busyRepsCount = repStats.filter((r) => r.status === 'Busy').length;
     const idleRepsCount = repStats.length - busyRepsCount;
+    const liveSessionsCount = activeSessions.length;
 
     return {
       date: effectiveDateStr,
       currentDealership: {
         name: currentBranchName,
-        total: currentTotal,
-        walkIns: currentWalkIns,
+        total: currentTotal + liveSessionsCount,
+        walkIns: currentWalkIns + liveSessionsCount,
         callsRecd: currentCalls,
       },
       consolidated: {
         name: 'All Dealerships',
-        total: consolidatedTotal,
-        walkIns: consolidatedWalkIns,
+        total: consolidatedTotal + liveSessionsCount,
+        walkIns: consolidatedWalkIns + liveSessionsCount,
         callsRecd: consolidatedCalls,
       },
       summary: {
-        totalEnquiriesToday: currentTotal,
-        walkInsToday: currentWalkIns,
+        totalEnquiriesToday: currentTotal + liveSessionsCount,
+        walkInsToday: currentWalkIns + liveSessionsCount,
         telephonicToday: currentCalls,
         bookingsToday: bookedToday,
         activeRepsCount: salesReps.length,
         busyRepsCount,
         idleRepsCount,
         outcomes: {
-          inProgress: inProgressToday,
+          inProgress: inProgressToday + liveSessionsCount,
           quoted: quotedToday,
           booked: bookedToday,
         },
@@ -220,23 +282,39 @@ export class AnalyticsService {
         ? allBranches
         : allBranches.filter((b) => accessibleBranchIds.includes(b.id)),
       reps: repStats,
-      sessions: currentTodayEnquiries.map((e) => {
-        const q = e.quotations?.[0];
-        return {
-          id: e.id,
-          enquiryNumber: q?.quoteNumber || `ENQ-${e.id.slice(-5).toUpperCase()}`,
-          branchId: e.branchId,
-          enquiryType: e.enquiryType,
-          status: e.status,
-          sales_exec_id: e.assignedToId,
-          customer_name: e.customer?.name ?? 'Walk-in Guest',
-          customer_mobile: e.customer?.mobile ?? '',
-          vehicle_name: q?.vehicle?.name ?? 'Enquiry Session',
-          colour: q?.colourName ?? '',
-          grand_total: q?.grandTotal ? Number(q.grandTotal) : null,
-          created_at: e.createdAt.toISOString(),
-        };
-      }),
+      sessions: [
+        ...activeSessions.map((s) => ({
+          id: `live-${s.salesExecId}`,
+          enquiryNumber: 'Draft · Live',
+          branchId: s.branchId,
+          enquiryType: 'Walk-in',
+          status: 'ACTIVE',
+          sales_exec_id: s.salesExecId,
+          customer_name: s.customerName || 'Walk-in Guest',
+          customer_mobile: s.customerMobile || '',
+          vehicle_name: s.vehicleName || 'Honda Model',
+          colour: s.colourName || '',
+          grand_total: s.grandTotal || null,
+          created_at: s.startedAt.toISOString(),
+        })),
+        ...currentTodayEnquiries.map((e) => {
+          const q = e.quotations?.[0];
+          return {
+            id: e.id,
+            enquiryNumber: q?.quoteNumber || `ENQ-${e.id.slice(-5).toUpperCase()}`,
+            branchId: e.branchId,
+            enquiryType: e.enquiryType,
+            status: e.status,
+            sales_exec_id: e.assignedToId,
+            customer_name: e.customer?.name ?? 'Walk-in Guest',
+            customer_mobile: e.customer?.mobile ?? '',
+            vehicle_name: q?.vehicle?.name ?? 'Enquiry Session',
+            colour: q?.colourName ?? '',
+            grand_total: q?.grandTotal ? Number(q.grandTotal) : null,
+            created_at: e.createdAt.toISOString(),
+          };
+        }),
+      ],
     };
   }
 

@@ -100,14 +100,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/tablet',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
-          return CustomizeScreen(vehicle: extra['vehicle'] ?? {});
+          final repId = state.uri.queryParameters['repId'];
+          return CustomizeScreen(
+            vehicle: extra['vehicle'] ?? {},
+            initialRepId: repId,
+          );
         },
       ),
       GoRoute(
         path: '/enquiries/customize',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
-          return CustomizeScreen(vehicle: extra['vehicle'] ?? {});
+          final repId = state.uri.queryParameters['repId'];
+          return CustomizeScreen(
+            vehicle: extra['vehicle'] ?? {},
+            initialRepId: repId,
+          );
         },
       ),
 

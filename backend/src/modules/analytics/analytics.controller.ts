@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -25,6 +25,20 @@ export class AnalyticsController {
     @Query('date') date?: string,
   ) {
     return this.analyticsService.getFloorDashboard(user, branchId, date);
+  }
+
+  @Post('floor/session')
+  @Roles(Role.SUPER_ADMIN, Role.OWNER, Role.BRANCH_MANAGER, Role.SALES_EXEC)
+  @ApiOperation({ summary: 'Broadcast active live floor session / in-progress enquiry drafting' })
+  upsertFloorSession(@CurrentUser() user: any, @Body() data: any) {
+    return this.analyticsService.upsertFloorSession(user, data);
+  }
+
+  @Delete('floor/session/:salesExecId')
+  @Roles(Role.SUPER_ADMIN, Role.OWNER, Role.BRANCH_MANAGER, Role.SALES_EXEC)
+  @ApiOperation({ summary: 'End active live floor session' })
+  removeFloorSession(@CurrentUser() user: any, @Param('salesExecId') salesExecId: string) {
+    return this.analyticsService.removeFloorSession(user, salesExecId);
   }
 
   @Get('summary/executive')
