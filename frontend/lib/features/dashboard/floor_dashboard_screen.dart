@@ -87,7 +87,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     super.dispose();
   }
 
-  Future<Map<String, dynamic>> _mergeLocalLiveSessions(Map<String, dynamic> rawData) async {
+  Future<Map<String, dynamic>> _mergeLocalLiveSessions(
+      Map<String, dynamic> rawData) async {
     try {
       final storage = ref.read(secureStorageProvider);
       final allKeys = await storage.readAll();
@@ -107,10 +108,13 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
       }
 
       if (localLiveSessions.isNotEmpty) {
-        final reps = List<Map<String, dynamic>>.from(
-            (rawData['reps'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? []);
+        final reps = List<Map<String, dynamic>>.from((rawData['reps'] as List?)
+                ?.map((e) => Map<String, dynamic>.from(e)) ??
+            []);
         final sessions = List<Map<String, dynamic>>.from(
-            (rawData['sessions'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? []);
+            (rawData['sessions'] as List?)
+                    ?.map((e) => Map<String, dynamic>.from(e)) ??
+                []);
 
         for (final ls in localLiveSessions) {
           final repId = ls['salesExecId']?.toString();
@@ -119,7 +123,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             reps[repIdx]['status'] = 'Busy';
             reps[repIdx]['activeCustomerName'] = ls['customerName'];
           }
-          final existingIdx = sessions.indexWhere((s) => s['id'] == 'live-$repId');
+          final existingIdx =
+              sessions.indexWhere((s) => s['id'] == 'live-$repId');
           final liveBlock = {
             'id': 'live-$repId',
             'enquiryNumber': 'Draft · Live',
@@ -157,7 +162,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           final cellW = 130.0 * (_zoomLevel / 100.0);
           final targetOffset = (idx - 1) * cellW;
           _timelineScrollController.animateTo(
-            math.min(targetOffset, _timelineScrollController.position.maxScrollExtent),
+            math.min(targetOffset,
+                _timelineScrollController.position.maxScrollExtent),
             duration: const Duration(milliseconds: 350),
             curve: Curves.easeOut,
           );
@@ -177,7 +183,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
       query['date'] = DateFormat('yyyy-MM-dd').format(_currentDate);
 
       final res = await dio.get('/analytics/floor', queryParameters: query);
-      final mergedData = await _mergeLocalLiveSessions(Map<String, dynamic>.from(res.data));
+      final mergedData =
+          await _mergeLocalLiveSessions(Map<String, dynamic>.from(res.data));
 
       if (!mounted) return;
       setState(() {
@@ -202,7 +209,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
       query['date'] = DateFormat('yyyy-MM-dd').format(targetDate);
 
       final res = await dio.get('/analytics/floor', queryParameters: query);
-      final mergedData = await _mergeLocalLiveSessions(Map<String, dynamic>.from(res.data));
+      final mergedData =
+          await _mergeLocalLiveSessions(Map<String, dynamic>.from(res.data));
 
       if (!mounted) return;
       setState(() {
@@ -588,7 +596,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     ),
                   Expanded(
                     child: Tooltip(
-                      message: columns[i].tooltip ?? '${columns[i].label}: ${columns[i].value}',
+                      message: columns[i].tooltip ??
+                          '${columns[i].label}: ${columns[i].value}',
                       child: Column(
                         children: [
                           Text(
@@ -1145,7 +1154,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
               });
               final currentSession =
                   repSessions.isNotEmpty ? repSessions.first : null;
-              final customerName = rep['activeCustomerName'] ?? currentSession?['customer_name'] ?? 'Guest';
+              final customerName = rep['activeCustomerName'] ??
+                  currentSession?['customer_name'] ??
+                  'Guest';
 
               return Container(
                 height: 72,
