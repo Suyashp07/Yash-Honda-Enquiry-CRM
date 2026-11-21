@@ -111,7 +111,7 @@ export class EnquiriesService {
 
     // Branch scoping
     if (user.role !== Role.SUPER_ADMIN && user.role !== Role.OWNER) {
-      if (filters.branchId) {
+      if (filters.branchId && filters.branchId !== 'all') {
         if (!user.assignedBranchIds.includes(filters.branchId)) {
           throw new ForbiddenException('Access denied to this branch');
         }
@@ -119,7 +119,7 @@ export class EnquiriesService {
       } else {
         where.branchId = { in: user.assignedBranchIds };
       }
-    } else if (filters.branchId) {
+    } else if (filters.branchId && filters.branchId !== 'all') {
       where.branchId = filters.branchId;
     }
 

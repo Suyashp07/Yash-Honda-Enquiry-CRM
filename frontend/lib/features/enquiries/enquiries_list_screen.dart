@@ -8,6 +8,7 @@ import '../../core/networking/api_client.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/mask_util.dart';
+import '../../core/providers/branch_provider.dart';
 import '../auth/auth_notifier.dart';
 
 class EnquiriesListScreen extends ConsumerStatefulWidget {
@@ -47,7 +48,12 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     setState(() => _isLoading = true);
     try {
       final dio = ref.read(dioProvider);
-      final res = await dio.get('/enquiries');
+      final activeBranch = ref.read(selectedBranchIdProvider);
+      final query = <String, dynamic>{};
+      if (activeBranch.isNotEmpty && activeBranch != 'all') {
+        query['branchId'] = activeBranch;
+      }
+      final res = await dio.get('/enquiries', queryParameters: query);
 
       if (!mounted) return;
       setState(() {
@@ -1000,6 +1006,12 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String>(selectedBranchIdProvider, (prev, next) {
+      if (prev != next) {
+        _loadEnquiries();
+      }
+    });
+
     final filtered = _filteredEnquiries;
 
     return Scaffold(
@@ -1285,6 +1297,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                     ),
                                     const DataColumn(label: Text('Type', style: _headerStyle), tooltip: 'Customer enquiry channel: Walk-in or Telephonic inquiry'),
                                     const DataColumn(label: Text('Source', style: _headerStyle), tooltip: 'Marketing acquisition channel (Walk-in, BikeWale, Digital Ads, etc.)'),
+                                    const DataColumn(label: Text('Branch', style: _headerStyle), tooltip: 'Dealership showroom branch where this enquiry was generated'),
                                     const DataColumn(label: Text('Area', style: _headerStyle), tooltip: 'Customer residential/work locality in Pune'),
                                     const DataColumn(label: Text('Model(s)', style: _headerStyle), tooltip: 'Interested Honda motorcycle or scooter model'),
                                     const DataColumn(label: Text('Mode', style: _headerStyle), tooltip: 'Preferred payment mode (Cash, Bank Finance, etc.)'),
@@ -1507,6 +1520,22 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                           Tooltip(
                                             message: 'Lead Source: ${e['leadSource']?['name'] ?? e['enquiryType'] ?? 'Walk-in'}',
                                             child: Text(e['leadSource']?['name'] ?? e['enquiryType'] ?? 'Walk-in', style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B))),
+                                          ),
+                                        ),
+
+                                        // Branch
+                                        DataCell(
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFEFF6FF),
+                                              borderRadius: BorderRadius.circular(4),
+                                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                                            ),
+                                            child: Text(
+                                              e['branch']?['name'] ?? 'Showroom',
+                                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1D4ED8)),
+                                            ),
                                           ),
                                         ),
 

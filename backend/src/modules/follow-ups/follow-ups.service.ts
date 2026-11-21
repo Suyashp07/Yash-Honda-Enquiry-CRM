@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateFollowUpDto, CompleteFollowUpDto } from './dto/follow-up.dto';
 import { Role } from '@prisma/client';
@@ -61,12 +61,15 @@ export class FollowUpsService {
     };
 
     if (user.role !== Role.SUPER_ADMIN && user.role !== Role.OWNER) {
-      if (branchId) {
+      if (branchId && branchId !== 'all') {
+        if (!user.assignedBranchIds.includes(branchId)) {
+          throw new ForbiddenException('Access denied to this branch');
+        }
         where.enquiry.branchId = branchId;
       } else {
         where.enquiry.branchId = { in: user.assignedBranchIds };
       }
-    } else if (branchId) {
+    } else if (branchId && branchId !== 'all') {
       where.enquiry.branchId = branchId;
     }
 

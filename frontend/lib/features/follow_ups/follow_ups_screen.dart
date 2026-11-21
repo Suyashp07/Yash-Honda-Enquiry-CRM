@@ -4,6 +4,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/utils/mask_util.dart';
+import '../../core/providers/branch_provider.dart';
 
 class FollowUpsScreen extends ConsumerStatefulWidget {
   const FollowUpsScreen({super.key});
@@ -28,7 +29,12 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen> {
     setState(() => _isLoading = true);
     try {
       final dio = ref.read(dioProvider);
-      final res = await dio.get('/follow-ups', queryParameters: {'scope': _scope});
+      final activeBranch = ref.read(selectedBranchIdProvider);
+      final query = <String, dynamic>{'scope': _scope};
+      if (activeBranch.isNotEmpty && activeBranch != 'all') {
+        query['branchId'] = activeBranch;
+      }
+      final res = await dio.get('/follow-ups', queryParameters: query);
       setState(() {
         _followUps = res.data;
         _isLoading = false;
@@ -66,6 +72,12 @@ class _FollowUpsScreenState extends ConsumerState<FollowUpsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String>(selectedBranchIdProvider, (prev, next) {
+      if (prev != next) {
+        _loadFollowUps();
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Padding(
