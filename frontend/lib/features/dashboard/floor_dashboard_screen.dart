@@ -408,19 +408,44 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             _buildKpiCards(_dashboardData),
             const SizedBox(height: 16),
 
-            // 2. Search Box + Date Selector + [Rows]/Columns + Zoom Bar matching prototype
-            _buildSearchAndControlsBar(),
-            const SizedBox(height: 12),
+            // 2. Single Unified White Card Container (wrapping Search, Filters, and Timeline Grid)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x04000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Row 1: Search Box + Date Selector + [Rows]/Columns + Zoom Bar
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                    child: _buildSearchAndControlsBar(),
+                  ),
 
-            // 3. Filter Chips Row (All reps · 20 + colored status dots)
-            _buildFilterChipsRow(reps),
-            const SizedBox(height: 14),
+                  // Row 2: Filter Chips Row (All reps · 20 + colored status dots)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildFilterChipsRow(reps),
+                  ),
+                  const SizedBox(height: 14),
 
-            // 4. Showroom Floor Timeline Table Grid
-            _buildTimelineGrid(filteredReps, sessions),
+                  // Row 3: Showroom Floor Timeline Table Grid (embedded seamlessly with top border)
+                  _buildTimelineGrid(filteredReps, sessions),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
 
-            // 5. Timeline Legend at Bottom
+            // 3. Timeline Legend at Bottom
             _buildTimelineLegend(),
             const SizedBox(height: 40),
           ],
@@ -660,300 +685,283 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
 
   // --- 2. Search Box + Date Selector + [Rows]/Columns + Zoom Bar matching prototype ---
   Widget _buildSearchAndControlsBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x03000000),
-            blurRadius: 4,
-            offset: Offset(0, 1),
+    return Row(
+      children: [
+        // Search box matching prototype: Search rep or customer
+        Container(
+          width: 300,
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Search box matching prototype: Search rep or customer
-          Expanded(
-            child: SizedBox(
-              height: 32,
-              child: TextField(
-                controller: _searchController,
-                onChanged: (val) =>
-                    setState(() => _searchQuery = val.trim().toLowerCase()),
-                style:
-                    const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
-                decoration: InputDecoration(
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
-                  prefixIcon: const Icon(Icons.search,
-                      size: 16, color: Color(0xFF94A3B8)),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 14),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                      : null,
-                  hintText: 'Search rep or customer',
-                  hintStyle:
-                      const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
-                  filled: false,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Date Navigator: <  Sat, 21 Nov, 2026  >  Today
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left,
-                    size: 18, color: Color(0xFF64748B)),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                splashRadius: 13,
-                onPressed: () => _loadDashboard(
-                    date: _currentDate.subtract(const Duration(days: 1))),
-              ),
-              InkWell(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _currentDate,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2030),
-                  );
-                  if (picked != null) _loadDashboard(date: picked);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Text(
-                    DateFormat('EEE, d MMM, yyyy').format(_currentDate),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right,
-                    size: 18, color: Color(0xFF64748B)),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                splashRadius: 13,
-                onPressed: () => _loadDashboard(
-                    date: _currentDate.add(const Duration(days: 1))),
-              ),
-              const SizedBox(width: 6),
-              InkWell(
-                onTap: () {
-                  _loadDashboard(date: DateTime.now());
-                  _scrollToCurrentTimeSlot();
-                },
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  height: 26,
-                  padding: const EdgeInsets.symmetric(horizontal: 9),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'Today',
-                    style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF334155)),
+              const Icon(Icons.search, size: 16, color: Color(0xFF94A3B8)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) =>
+                      setState(() => _searchQuery = val.trim().toLowerCase()),
+                  style:
+                      const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                    hintText: 'Search rep or customer',
+                    hintStyle: const TextStyle(
+                        fontSize: 12.5, color: Color(0xFF94A3B8)),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 14),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                                minWidth: 20, minHeight: 20),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                        : null,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(width: 12),
+        ),
 
-          // View Mode Switch: Rows vs Columns
-          Container(
-            height: 28,
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(6),
+        const Spacer(),
+
+        // Date Navigator: <  Sat, 21 Nov, 2026  >
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left_rounded,
+                  size: 20, color: Color(0xFF64748B)),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              splashRadius: 14,
+              onPressed: () => _loadDashboard(
+                  date: _currentDate.subtract(const Duration(days: 1))),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                InkWell(
-                  onTap: () => setState(() => _viewMode = 'rows'),
-                  borderRadius: BorderRadius.circular(4),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _viewMode == 'rows'
-                          ? Colors.white
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: _viewMode == 'rows'
-                          ? const [
-                              BoxShadow(
-                                  color: Color(0x0A000000),
-                                  blurRadius: 2,
-                                  offset: Offset(0, 1))
-                            ]
-                          : null,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.table_rows_outlined,
-                            size: 13,
-                            color: _viewMode == 'rows'
-                                ? const Color(0xFF0F172A)
-                                : const Color(0xFF64748B)),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Rows',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: _viewMode == 'rows'
-                                ? const Color(0xFF0F172A)
-                                : const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
+            InkWell(
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _currentDate,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2030),
+                );
+                if (picked != null) _loadDashboard(date: picked);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  DateFormat('EEE, d MMM, yyyy').format(_currentDate),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0F172A),
                   ),
                 ),
-                InkWell(
-                  onTap: () => setState(() => _viewMode = 'columns'),
-                  borderRadius: BorderRadius.circular(4),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _viewMode == 'columns'
-                          ? Colors.white
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: _viewMode == 'columns'
-                          ? const [
-                              BoxShadow(
-                                  color: Color(0x0A000000),
-                                  blurRadius: 2,
-                                  offset: Offset(0, 1))
-                            ]
-                          : null,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.view_week_outlined,
-                            size: 13,
-                            color: _viewMode == 'columns'
-                                ? const Color(0xFF0F172A)
-                                : const Color(0xFF64748B)),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Columns',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: _viewMode == 'columns'
-                                ? const Color(0xFF0F172A)
-                                : const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right_rounded,
+                  size: 20, color: Color(0xFF64748B)),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              splashRadius: 14,
+              onPressed: () => _loadDashboard(
+                  date: _currentDate.add(const Duration(days: 1))),
+            ),
+            const SizedBox(width: 8),
+
+            // Today button
+            InkWell(
+              onTap: () {
+                _loadDashboard(date: DateTime.now());
+                _scrollToCurrentTimeSlot();
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                alignment: Alignment.center,
+                child: const Text(
+                  'Today',
+                  style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF334155)),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 10),
+
+        // View Mode Switch: Rows vs Columns
+        Container(
+          height: 32,
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(8),
           ),
-          const SizedBox(width: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              InkWell(
+                onTap: () => setState(() => _viewMode = 'rows'),
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color:
+                        _viewMode == 'rows' ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                    boxShadow: _viewMode == 'rows'
+                        ? const [
+                            BoxShadow(
+                                color: Color(0x0C000000),
+                                blurRadius: 2,
+                                offset: Offset(0, 1))
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.table_rows_outlined,
+                          size: 14,
+                          color: _viewMode == 'rows'
+                              ? const Color(0xFF0F172A)
+                              : const Color(0xFF64748B)),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Rows',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: _viewMode == 'rows'
+                              ? const Color(0xFF0F172A)
+                              : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: () => setState(() => _viewMode = 'columns'),
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _viewMode == 'columns'
+                        ? Colors.white
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                    boxShadow: _viewMode == 'columns'
+                        ? const [
+                            BoxShadow(
+                                color: Color(0x0C000000),
+                                blurRadius: 2,
+                                offset: Offset(0, 1))
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.view_week_outlined,
+                          size: 14,
+                          color: _viewMode == 'columns'
+                              ? const Color(0xFF0F172A)
+                              : const Color(0xFF64748B)),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Columns',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: _viewMode == 'columns'
+                              ? const Color(0xFF0F172A)
+                              : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
 
-          // Zoom Controls: [-] 100% [+] — matches the prototype's two-button control
-          Container(
-            height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+        // Zoom Dropdown matching prototype: 🔍 100% ⌄
+        PopupMenuButton<int>(
+          initialValue: _zoomLevel,
+          onSelected: (val) => setState(() => _zoomLevel = val),
+          tooltip: 'Zoom timeline view',
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          itemBuilder: (context) => [75, 90, 100, 110, 125, 150]
+              .map((z) => PopupMenuItem<int>(
+                    value: z,
+                    height: 32,
+                    child: Text('$z%',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight:
+                              z == _zoomLevel ? FontWeight.w700 : FontWeight.w500,
+                          color: z == _zoomLevel
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFF0F172A),
+                        )),
+                  ))
+              .toList(),
+          child: Container(
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(4),
-                  onTap: _zoomLevel <= _zoomMin
-                      ? null
-                      : () => setState(() {
-                            _zoomLevel =
-                                math.max(_zoomMin, _zoomLevel - _zoomStep);
-                          }),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                    child: Icon(
-                      Icons.zoom_out,
-                      size: 14,
-                      color: _zoomLevel <= _zoomMin
-                          ? const Color(0xFFCBD5E1)
-                          : const Color(0xFF64748B),
-                    ),
+                const Icon(Icons.search, size: 14, color: Color(0xFF64748B)),
+                const SizedBox(width: 5),
+                Text(
+                  '$_zoomLevel%',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0F172A),
                   ),
                 ),
-                SizedBox(
-                  width: 38,
-                  child: Text(
-                    '$_zoomLevel%',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF334155)),
-                  ),
-                ),
-                InkWell(
-                  borderRadius: BorderRadius.circular(4),
-                  onTap: _zoomLevel >= _zoomMax
-                      ? null
-                      : () => setState(() {
-                            _zoomLevel =
-                                math.min(_zoomMax, _zoomLevel + _zoomStep);
-                          }),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                    child: Icon(
-                      Icons.zoom_in,
-                      size: 14,
-                      color: _zoomLevel >= _zoomMax
-                          ? const Color(0xFFCBD5E1)
-                          : const Color(0xFF64748B),
-                    ),
-                  ),
-                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.keyboard_arrow_down_rounded,
+                    size: 16, color: Color(0xFF64748B)),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1100,100 +1108,106 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     String? nowSlotTarget,
   ) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-              color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
-        ],
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+        border: Border(
+          top: BorderSide(color: Color(0xFFE2E8F0)),
+        ),
       ),
-      child: SingleChildScrollView(
-        controller: _timelineScrollController,
-        scrollDirection: Axis.horizontal,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Row: Sales Rep + Time Slots
-            Container(
-              height: 42,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-              ),
-              child: Row(
-                children: [
-                  // Rep Label Column
-                  Container(
-                    width: 200,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    alignment: Alignment.centerLeft,
-                    child: const Text(
-                      'SALES REP',
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF64748B),
-                          letterSpacing: 0.5),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+        child: SingleChildScrollView(
+          controller: _timelineScrollController,
+          scrollDirection: Axis.horizontal,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Row: Sales Rep + Time Slots
+              Container(
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF8FAFC),
+                  border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                ),
+                child: Row(
+                  children: [
+                    // Rep Label Column
+                    Container(
+                      width: 200,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      alignment: Alignment.centerLeft,
+                      child: const Text(
+                        'SALES REP',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.5),
+                      ),
                     ),
-                  ),
 
-                  // Time Slots
-                  ..._timeSlots.map((slot) {
-                    final isNow = slot == nowSlotTarget;
-                    return Container(
-                      width: cellWidth,
-                      decoration: BoxDecoration(
-                        color: isNow
-                            ? const Color(0xFFFFFBEB)
-                            : Colors.transparent,
-                        border: Border(
-                          left: const BorderSide(color: Color(0xFFE2E8F0)),
-                          right: isNow
-                              ? const BorderSide(
-                                  color: Color(0xFFDC2626), width: 2)
-                              : BorderSide.none,
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            slot.replaceAll(' AM', '').replaceAll(' PM', ''),
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight:
-                                  isNow ? FontWeight.w800 : FontWeight.w500,
-                              color: isNow
-                                  ? const Color(0xFFDC2626)
-                                  : const Color(0xFF64748B),
-                            ),
+                    // Time Slots
+                    ..._timeSlots.map((slot) {
+                      final isNow = slot == nowSlotTarget;
+                      return Container(
+                        width: cellWidth,
+                        decoration: BoxDecoration(
+                          color: isNow
+                              ? const Color(0xFFFFFBEB)
+                              : Colors.transparent,
+                          border: Border(
+                            left: const BorderSide(color: Color(0xFFE2E8F0)),
+                            right: isNow
+                                ? const BorderSide(
+                                    color: Color(0xFFDC2626), width: 2)
+                                : BorderSide.none,
                           ),
-                          if (isNow) ...[
-                            const SizedBox(width: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 4, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFDC2626),
-                                borderRadius: BorderRadius.circular(3),
+                        ),
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              slot.replaceAll(' AM', '').replaceAll(' PM', ''),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight:
+                                    isNow ? FontWeight.w800 : FontWeight.w500,
+                                color: isNow
+                                    ? const Color(0xFFDC2626)
+                                    : const Color(0xFF64748B),
                               ),
-                              child: const Text('NOW',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.bold)),
                             ),
+                            if (isNow) ...[
+                              const SizedBox(width: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDC2626),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: const Text('NOW',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                    );
-                  }),
-                ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
               ),
-            ),
 
             // Rep Rows
             ...reps.map((rep) {
@@ -1357,6 +1371,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -1371,19 +1386,25 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     const double rowHeight = 68.0;
 
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-              color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
-        ],
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+        border: Border(
+          top: BorderSide(color: Color(0xFFE2E8F0)),
+        ),
       ),
-      child: SingleChildScrollView(
-        controller: _timelineScrollController,
-        scrollDirection: Axis.horizontal,
-        child: Column(
+      child: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+        child: SingleChildScrollView(
+          controller: _timelineScrollController,
+          scrollDirection: Axis.horizontal,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header Row: [ Time ] + [ Rep 1 ] [ Rep 2 ] [ Rep 3 ] ...
@@ -1650,6 +1671,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             }),
           ],
         ),
+      ),
       ),
     );
   }

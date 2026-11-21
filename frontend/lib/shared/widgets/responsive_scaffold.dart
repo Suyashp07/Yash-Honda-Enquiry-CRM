@@ -721,31 +721,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
           ),
           const SizedBox(width: 12),
 
-          // 4. "Build My Honda" Showroom Tablet Configurator
-          Tooltip(
-            message:
-                'Open 7-Step Interactive "Build My Honda" Showroom Tablet Configurator',
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFDC2626),
-                side: const BorderSide(color: Color(0xFFFCA5A5)),
-                backgroundColor: const Color(0xFFFEF2F2),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () => context.go('/build-my-honda'),
-              icon: const Icon(Icons.two_wheeler_outlined, size: 16),
-              label: const Text(
-                'Build My Honda',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // 5. "+ New enquiry [N]" Red Button matching prototype
+          // 4. "+ New enquiry [N]" Red Button matching prototype
           Tooltip(
             message:
                 'Create a new customer walk-in or telephonic enquiry (Shortcut: N)',
