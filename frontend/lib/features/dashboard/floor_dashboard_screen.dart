@@ -35,11 +35,6 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   String _viewMode = 'rows'; // 'rows' or 'columns'
   int _zoomLevel = 100;
 
-  // Zoom bounds matching the prototype's step control
-  static const int _zoomMin = 70;
-  static const int _zoomMax = 150;
-  static const int _zoomStep = 15;
-
   // 30-min time slots matching showroom floor operating hours
   final List<String> _timeSlots = [
     '9:00 AM',
@@ -396,7 +391,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     // shell/route header above this screen; rendering it again here caused
     // the duplicated "Live floor" heading seen in the deployed build.
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF9F6),
+      backgroundColor: const Color(0xFFF1F5F9),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 6, 24, 24),
         child: Column(
@@ -626,25 +621,26 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           ],
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
               style: const TextStyle(
-                fontSize: 10.5,
+                fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF64748B),
-                letterSpacing: 0.5,
+                letterSpacing: 0.6,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Row(
               children: [
                 for (int i = 0; i < columns.length; i++) ...[
                   if (i > 0)
                     Container(
                       width: 1,
-                      height: 32,
-                      color: const Color(0xFFF1F5F9),
+                      height: 36,
+                      color: const Color(0xFFE2E8F0),
                     ),
                   Expanded(
                     child: Tooltip(
@@ -655,18 +651,18 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                           Text(
                             columns[i].value,
                             style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
                               color: columns[i].color,
-                              letterSpacing: -0.5,
+                              letterSpacing: -0.6,
                             ),
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 4),
                           Text(
                             columns[i].label,
                             style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF94A3B8),
+                              fontSize: 11.5,
+                              color: Color(0xFF64748B),
                               fontWeight: FontWeight.w500,
                             ),
                           ),

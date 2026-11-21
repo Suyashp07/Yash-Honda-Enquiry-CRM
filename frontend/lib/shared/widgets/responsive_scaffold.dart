@@ -94,11 +94,6 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
         icon: Icons.palette_outlined,
         tooltip: 'Palette shades, paint codes & vehicle swatches'),
     AdminSubItem(
-        title: 'Add-ons',
-        route: '/admin/accessories',
-        icon: Icons.inventory_2_outlined,
-        tooltip: 'Accessories, AMC, extended warranties & helmet kits'),
-    AdminSubItem(
         title: 'Finance Providers',
         route: '/admin/financiers',
         icon: Icons.account_balance_outlined,
@@ -151,14 +146,14 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
     NavItem(
       title: 'Enquiries',
       short: 'Enquiries',
-      icon: Icons.receipt_long_outlined,
+      icon: Icons.assignment_outlined,
       route: '/enquiries',
       tooltip: 'Enquiries: Walk-in & phone leads, quotes & customer pipeline',
     ),
     NavItem(
       title: 'Follow-ups',
       short: 'Follow-ups',
-      icon: Icons.group_outlined,
+      icon: Icons.calendar_today_outlined,
       route: '/follow-ups',
       tooltip: 'Follow-ups: Scheduled callbacks, test rides & prospect history',
     ),
@@ -203,7 +198,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
     final user = ref.watch(authStateProvider).user;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF9F6),
+      backgroundColor: const Color(0xFFF1F5F9),
       body: Row(
         children: [
           // Expanded 230px Navigation Sidebar matching Prototype Screenshots
@@ -464,9 +459,57 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
                 const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
+                // Red Profile icon placed above Sign out
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 17,
+                        backgroundColor: const Color(0xFFDC2626), // RED in color
+                        child: Text(
+                          user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'S',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user?.name ?? 'Suyash Pandey',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            Text(
+                              user?.displayName ?? 'Super Admin',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+
                 // Bottom Exit / Sign Out Button
                 Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                   child: Tooltip(
                     message: 'Sign out of Yash Honda CRM securely',
                     child: InkWell(
@@ -534,16 +577,19 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       decoration: const BoxDecoration(
-        color: Color(0xFFFAF9F6),
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+        ),
       ),
       child: Row(
         children: [
           // Left: Page Title directly opposite right action buttons
           if (isDashboard)
-            Column(
+            const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 Text(
                   'Live floor',
                   style: TextStyle(
@@ -568,7 +614,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 Text(
                   'Dealership Summary',
                   style: TextStyle(
@@ -603,7 +649,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
           const Spacer(),
 
           // Right side controls matching prototype:
-          // [All branches (Pune) v] [Robot] [Bell with red dot] [+ New enquiry [N]]
+          // [All branches (Pune) v] [Robot] [Bell with red dot] [+ New enquiry]
 
           // 1. Branch Selector Dropdown
           Consumer(
@@ -690,50 +736,39 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
           ),
           const SizedBox(width: 8),
 
-          // 2. Robot / AI Insights Icon Button (in soft rounded white container)
+          // 2. Robot / AI Insights Icon Button (bare icon, NO block)
           Tooltip(
             message:
                 'AI Dealership Executive Insights - Real-time analysis powered by Gemini AI',
             child: InkWell(
               onTap: () => _showAiInsightsDialog(context, ref),
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                ),
-                child: const Icon(Icons.smart_toy_outlined,
-                    size: 18, color: Color(0xFF64748B)),
+              borderRadius: BorderRadius.circular(6),
+              child: const Padding(
+                padding: EdgeInsets.all(7),
+                child: Icon(Icons.smart_toy_outlined,
+                    size: 20, color: Color(0xFF64748B)),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
 
-          // 3. Notification Bell with red dot
+          // 3. Notification Bell with red dot (bare icon, NO block)
           Tooltip(
             message: 'Urgent follow-ups & notifications',
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
+            child: Padding(
+              padding: const EdgeInsets.all(7),
               child: Stack(
+                clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
                   const Icon(Icons.notifications_none_rounded,
-                      size: 18, color: Color(0xFF64748B)),
+                      size: 21, color: Color(0xFF64748B)),
                   Positioned(
-                    top: 8,
-                    right: 9,
+                    top: 1,
+                    right: 1,
                     child: Container(
-                      width: 6,
-                      height: 6,
+                      width: 6.5,
+                      height: 6.5,
                       decoration: const BoxDecoration(
                         color: Color(0xFFDC2626),
                         shape: BoxShape.circle,
@@ -744,61 +779,36 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
 
-          // 4. "+ New enquiry [N]" Red Button matching prototype
+          // 4. "+ New enquiry" Red Button (NO 'N' badge)
           Tooltip(
             message:
-                'Create a new customer walk-in or telephonic enquiry (Shortcut: N)',
+                'Create a new customer walk-in or telephonic enquiry',
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFDC2626),
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () => context.go('/tablet'),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.add, size: 16),
-                  const SizedBox(width: 4),
-                  const Text('New enquiry',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFB91C1C),
-                      borderRadius: BorderRadius.circular(3),
+                  Icon(Icons.add, size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'New enquiry',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
                     ),
-                    child: const Text('N',
-                        style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
                   ),
                 ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // 5. Profile Avatar (matching prototype green circle 'S')
-          CircleAvatar(
-            radius: 17,
-            backgroundColor: const Color(0xFF10B981),
-            child: Text(
-              user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'S',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
               ),
             ),
           ),
