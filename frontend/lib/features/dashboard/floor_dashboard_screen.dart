@@ -16,7 +16,8 @@ class FloorDashboardScreen extends ConsumerStatefulWidget {
   const FloorDashboardScreen({super.key});
 
   @override
-  ConsumerState<FloorDashboardScreen> createState() => _FloorDashboardScreenState();
+  ConsumerState<FloorDashboardScreen> createState() =>
+      _FloorDashboardScreenState();
 }
 
 class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
@@ -34,11 +35,32 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
 
   // 30-min time slots matching showroom floor operating hours
   final List<String> _timeSlots = [
-    '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
-    '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM',
-    '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM',
-    '6:00 PM', '6:30 PM', '7:00 PM', '7:30 PM', '8:00 PM', '8:30 PM',
-    '9:00 PM', '9:30 PM',
+    '9:00 AM',
+    '9:30 AM',
+    '10:00 AM',
+    '10:30 AM',
+    '11:00 AM',
+    '11:30 AM',
+    '12:00 PM',
+    '12:30 PM',
+    '1:00 PM',
+    '1:30 PM',
+    '2:00 PM',
+    '2:30 PM',
+    '3:00 PM',
+    '3:30 PM',
+    '4:00 PM',
+    '4:30 PM',
+    '5:00 PM',
+    '5:30 PM',
+    '6:00 PM',
+    '6:30 PM',
+    '7:00 PM',
+    '7:30 PM',
+    '8:00 PM',
+    '8:30 PM',
+    '9:00 PM',
+    '9:30 PM',
   ];
 
   Timer? _refreshTimer;
@@ -87,7 +109,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     try {
       final dio = ref.read(dioProvider);
       final query = <String, dynamic>{};
-      final String activeBranch = branchId ?? ref.read(selectedBranchIdProvider);
+      final String activeBranch =
+          branchId ?? ref.read(selectedBranchIdProvider);
       if (activeBranch != 'all') {
         query['branchId'] = activeBranch;
       }
@@ -130,7 +153,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           action: SnackBarAction(
             label: 'Retry',
             textColor: const Color(0xFFEF4444),
-            onPressed: () => _loadDashboard(branchId: _selectedBranch, date: _currentDate),
+            onPressed: () =>
+                _loadDashboard(branchId: _selectedBranch, date: _currentDate),
           ),
         ),
       );
@@ -189,7 +213,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     }
   }
 
-  Map<String, dynamic>? _findSessionForSlot(List<dynamic> repSessions, String slot) {
+  Map<String, dynamic>? _findSessionForSlot(
+      List<dynamic> repSessions, String slot) {
     for (final s in repSessions) {
       if (s is Map<String, dynamic>) {
         if (_getSessionSlot(s) == slot) {
@@ -199,8 +224,6 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     }
     return null;
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -218,7 +241,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           children: [
             CircularProgressIndicator(color: Color(0xFFDC2626)),
             SizedBox(height: 12),
-            Text('Loading Showroom Floor Timeline...', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+            Text('Loading Showroom Floor Timeline...',
+                style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
           ],
         ),
       );
@@ -233,12 +257,20 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
       if (_searchQuery.isNotEmpty) {
         final name = (rep['name'] as String?)?.toLowerCase() ?? '';
         final phone = (rep['mobile'] as String?) ?? '';
-        final matchesRep = name.contains(_searchQuery) || phone.contains(_searchQuery);
+        final matchesRep =
+            name.contains(_searchQuery) || phone.contains(_searchQuery);
         final matchesSession = sessions.any((s) =>
             s['sales_exec_id'] == rep['id'] &&
-            (((s['customer_name'] as String?)?.toLowerCase().contains(_searchQuery) ?? false) ||
-                ((s['customer_mobile'] as String?)?.contains(_searchQuery) ?? false) ||
-                ((s['vehicle_name'] as String?)?.toLowerCase().contains(_searchQuery) ?? false)));
+            (((s['customer_name'] as String?)
+                        ?.toLowerCase()
+                        .contains(_searchQuery) ??
+                    false) ||
+                ((s['customer_mobile'] as String?)?.contains(_searchQuery) ??
+                    false) ||
+                ((s['vehicle_name'] as String?)
+                        ?.toLowerCase()
+                        .contains(_searchQuery) ??
+                    false)));
         if (!matchesRep && !matchesSession) return false;
       }
       return true;
@@ -314,9 +346,11 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     final reps = (data?['reps'] as List?) ?? [];
     final outcomes = summary['outcomes'] ?? {};
 
-    final currentTotal = current['total'] ?? summary['totalEnquiriesToday'] ?? 0;
+    final currentTotal =
+        current['total'] ?? summary['totalEnquiriesToday'] ?? 0;
     final currentWalkIns = current['walkIns'] ?? summary['walkInsToday'] ?? 0;
-    final currentCalls = current['callsRecd'] ?? summary['telephonicToday'] ?? 0;
+    final currentCalls =
+        current['callsRecd'] ?? summary['telephonicToday'] ?? 0;
 
     final consolidatedTotal = consolidated['total'] ?? currentTotal;
     final consolidatedWalkIns = consolidated['walkIns'] ?? currentWalkIns;
@@ -336,11 +370,27 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         Expanded(
           child: _buildMetricCard(
             title: 'CURRENT DEALERSHIP',
-            tooltip: 'Live inquiries logged today for the actively selected showroom',
+            tooltip:
+                'Live inquiries logged today for the actively selected showroom',
             columns: [
-              _MetricCol(label: 'Total', value: currentTotal.toString(), color: const Color(0xFF0F172A), tooltip: 'Total customer leads recorded today at this branch'),
-              _MetricCol(label: 'Walk-ins', value: currentWalkIns.toString(), color: const Color(0xFF0F172A), tooltip: 'Physical customer visits to the showroom floor today'),
-              _MetricCol(label: 'Calls', value: currentCalls.toString(), color: const Color(0xFF0F172A), tooltip: 'Inbound telephonic customer inquiries handled today'),
+              _MetricCol(
+                  label: 'Total',
+                  value: currentTotal.toString(),
+                  color: const Color(0xFF0F172A),
+                  tooltip:
+                      'Total customer leads recorded today at this branch'),
+              _MetricCol(
+                  label: 'Walk-ins',
+                  value: currentWalkIns.toString(),
+                  color: const Color(0xFF0F172A),
+                  tooltip:
+                      'Physical customer visits to the showroom floor today'),
+              _MetricCol(
+                  label: 'Calls',
+                  value: currentCalls.toString(),
+                  color: const Color(0xFF0F172A),
+                  tooltip:
+                      'Inbound telephonic customer inquiries handled today'),
             ],
           ),
         ),
@@ -350,11 +400,27 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         Expanded(
           child: _buildMetricCard(
             title: 'ALL DEALERSHIPS',
-            tooltip: 'Aggregated totals across all 6 Yash Honda showrooms in Pune (Phursungi BigWing, Wadki, Saswad, Uruli Kanchan, BT Kawade, Sasane Nagar)',
+            tooltip:
+                'Aggregated totals across all 6 Yash Honda showrooms in Pune (Phursungi BigWing, Wadki, Saswad, Uruli Kanchan, BT Kawade, Sasane Nagar)',
             columns: [
-              _MetricCol(label: 'Total', value: consolidatedTotal.toString(), color: const Color(0xFF0F172A), tooltip: 'Consolidated network-wide enquiries received today across Pune'),
-              _MetricCol(label: 'Walk-ins', value: consolidatedWalkIns.toString(), color: const Color(0xFF0F172A), tooltip: 'Combined walk-in footfalls across all 6 Pune showrooms'),
-              _MetricCol(label: 'Calls', value: consolidatedCalls.toString(), color: const Color(0xFF0F172A), tooltip: 'Combined inbound telephone inquiries handled network-wide'),
+              _MetricCol(
+                  label: 'Total',
+                  value: consolidatedTotal.toString(),
+                  color: const Color(0xFF0F172A),
+                  tooltip:
+                      'Consolidated network-wide enquiries received today across Pune'),
+              _MetricCol(
+                  label: 'Walk-ins',
+                  value: consolidatedWalkIns.toString(),
+                  color: const Color(0xFF0F172A),
+                  tooltip:
+                      'Combined walk-in footfalls across all 6 Pune showrooms'),
+              _MetricCol(
+                  label: 'Calls',
+                  value: consolidatedCalls.toString(),
+                  color: const Color(0xFF0F172A),
+                  tooltip:
+                      'Combined inbound telephone inquiries handled network-wide'),
             ],
           ),
         ),
@@ -364,11 +430,27 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         Expanded(
           child: _buildMetricCard(
             title: 'SALES REPS · LIVE',
-            tooltip: 'Live on-duty sales executive occupancy & availability status',
+            tooltip:
+                'Live on-duty sales executive occupancy & availability status',
             columns: [
-              _MetricCol(label: 'Total', value: totalReps.toString(), color: const Color(0xFF0F172A), tooltip: 'Total sales executives assigned to this showroom floor'),
-              _MetricCol(label: 'Busy', value: busyReps.toString(), color: const Color(0xFFDC2626), tooltip: 'Sales executives currently attending customers or conducting test rides'),
-              _MetricCol(label: 'Idle', value: idleReps.toString(), color: const Color(0xFF16A34A), tooltip: 'Sales executives currently idle and available for the next walk-in'),
+              _MetricCol(
+                  label: 'Total',
+                  value: totalReps.toString(),
+                  color: const Color(0xFF0F172A),
+                  tooltip:
+                      'Total sales executives assigned to this showroom floor'),
+              _MetricCol(
+                  label: 'Busy',
+                  value: busyReps.toString(),
+                  color: const Color(0xFFDC2626),
+                  tooltip:
+                      'Sales executives currently attending customers or conducting test rides'),
+              _MetricCol(
+                  label: 'Idle',
+                  value: idleReps.toString(),
+                  color: const Color(0xFF16A34A),
+                  tooltip:
+                      'Sales executives currently idle and available for the next walk-in'),
             ],
           ),
         ),
@@ -378,11 +460,27 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         Expanded(
           child: _buildMetricCard(
             title: 'SESSION OUTCOMES',
-            tooltip: 'Daily sales pipeline progression and conversion status of consultations initiated today',
+            tooltip:
+                'Daily sales pipeline progression and conversion status of consultations initiated today',
             columns: [
-              _MetricCol(label: 'In progress', value: inProgress.toString(), color: const Color(0xFFDC2626), tooltip: 'Customer consultations actively underway right now'),
-              _MetricCol(label: 'Quoted', value: quoted.toString(), color: const Color(0xFFD97706), tooltip: 'Official quotations calculated and delivered to customers today'),
-              _MetricCol(label: 'Booked', value: booked.toString(), color: const Color(0xFF16A34A), tooltip: 'Enquiries successfully converted to confirmed bookings with advance token today'),
+              _MetricCol(
+                  label: 'In progress',
+                  value: inProgress.toString(),
+                  color: const Color(0xFFDC2626),
+                  tooltip:
+                      'Customer consultations actively underway right now'),
+              _MetricCol(
+                  label: 'Quoted',
+                  value: quoted.toString(),
+                  color: const Color(0xFFD97706),
+                  tooltip:
+                      'Official quotations calculated and delivered to customers today'),
+              _MetricCol(
+                  label: 'Booked',
+                  value: booked.toString(),
+                  color: const Color(0xFF16A34A),
+                  tooltip:
+                      'Enquiries successfully converted to confirmed bookings with advance token today'),
             ],
           ),
         ),
@@ -484,11 +582,15 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
               height: 32,
               child: TextField(
                 controller: _searchController,
-                onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-                style: const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
+                onChanged: (val) =>
+                    setState(() => _searchQuery = val.trim().toLowerCase()),
+                style:
+                    const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
                 decoration: InputDecoration(
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
-                  prefixIcon: const Icon(Icons.search, size: 16, color: Color(0xFF94A3B8)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+                  prefixIcon: const Icon(Icons.search,
+                      size: 16, color: Color(0xFF94A3B8)),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear, size: 14),
@@ -499,7 +601,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                         )
                       : null,
                   hintText: 'Search rep or customer',
-                  hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
+                  hintStyle:
+                      const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
                   filled: false,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -515,11 +618,13 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(Icons.chevron_left, size: 18, color: Color(0xFF64748B)),
+                icon: const Icon(Icons.chevron_left,
+                    size: 18, color: Color(0xFF64748B)),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
                 splashRadius: 13,
-                onPressed: () => _loadDashboard(date: _currentDate.subtract(const Duration(days: 1))),
+                onPressed: () => _loadDashboard(
+                    date: _currentDate.subtract(const Duration(days: 1))),
               ),
               InkWell(
                 onTap: () async {
@@ -544,11 +649,13 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.chevron_right, size: 18, color: Color(0xFF64748B)),
+                icon: const Icon(Icons.chevron_right,
+                    size: 18, color: Color(0xFF64748B)),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
                 splashRadius: 13,
-                onPressed: () => _loadDashboard(date: _currentDate.add(const Duration(days: 1))),
+                onPressed: () => _loadDashboard(
+                    date: _currentDate.add(const Duration(days: 1))),
               ),
               const SizedBox(width: 6),
               InkWell(
@@ -565,7 +672,10 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                   alignment: Alignment.center,
                   child: const Text(
                     'Today',
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                    style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF334155)),
                   ),
                 ),
               ),
@@ -588,24 +698,38 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                   onTap: () => setState(() => _viewMode = 'rows'),
                   borderRadius: BorderRadius.circular(4),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: _viewMode == 'rows' ? Colors.white : Colors.transparent,
+                      color: _viewMode == 'rows'
+                          ? Colors.white
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(4),
                       boxShadow: _viewMode == 'rows'
-                          ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 2, offset: Offset(0, 1))]
+                          ? const [
+                              BoxShadow(
+                                  color: Color(0x0A000000),
+                                  blurRadius: 2,
+                                  offset: Offset(0, 1))
+                            ]
                           : null,
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.table_rows_outlined, size: 13, color: _viewMode == 'rows' ? const Color(0xFF0F172A) : const Color(0xFF64748B)),
+                        Icon(Icons.table_rows_outlined,
+                            size: 13,
+                            color: _viewMode == 'rows'
+                                ? const Color(0xFF0F172A)
+                                : const Color(0xFF64748B)),
                         const SizedBox(width: 4),
                         Text(
                           'Rows',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: _viewMode == 'rows' ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                            color: _viewMode == 'rows'
+                                ? const Color(0xFF0F172A)
+                                : const Color(0xFF64748B),
                           ),
                         ),
                       ],
@@ -616,24 +740,38 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                   onTap: () => setState(() => _viewMode = 'columns'),
                   borderRadius: BorderRadius.circular(4),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: _viewMode == 'columns' ? Colors.white : Colors.transparent,
+                      color: _viewMode == 'columns'
+                          ? Colors.white
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(4),
                       boxShadow: _viewMode == 'columns'
-                          ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 2, offset: Offset(0, 1))]
+                          ? const [
+                              BoxShadow(
+                                  color: Color(0x0A000000),
+                                  blurRadius: 2,
+                                  offset: Offset(0, 1))
+                            ]
                           : null,
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.view_week_outlined, size: 13, color: _viewMode == 'columns' ? const Color(0xFF0F172A) : const Color(0xFF64748B)),
+                        Icon(Icons.view_week_outlined,
+                            size: 13,
+                            color: _viewMode == 'columns'
+                                ? const Color(0xFF0F172A)
+                                : const Color(0xFF64748B)),
                         const SizedBox(width: 4),
                         Text(
                           'Columns',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: _viewMode == 'columns' ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                            color: _viewMode == 'columns'
+                                ? const Color(0xFF0F172A)
+                                : const Color(0xFF64748B),
                           ),
                         ),
                       ],
@@ -649,7 +787,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           InkWell(
             onTap: () {
               setState(() {
-                _zoomLevel = _zoomLevel == 100 ? 120 : (_zoomLevel == 120 ? 85 : 100);
+                _zoomLevel =
+                    _zoomLevel == 100 ? 120 : (_zoomLevel == 120 ? 85 : 100);
               });
             },
             borderRadius: BorderRadius.circular(6),
@@ -668,7 +807,10 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                   const SizedBox(width: 4),
                   Text(
                     '$_zoomLevel%',
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF334155)),
                   ),
                 ],
               ),
@@ -692,10 +834,14 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: _selectedRepId == 'all' ? const Color(0xFF0F172A) : Colors.white,
+                color: _selectedRepId == 'all'
+                    ? const Color(0xFF0F172A)
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: _selectedRepId == 'all' ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+                  color: _selectedRepId == 'all'
+                      ? const Color(0xFF0F172A)
+                      : const Color(0xFFE2E8F0),
                 ),
               ),
               child: Text(
@@ -703,7 +849,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: _selectedRepId == 'all' ? Colors.white : const Color(0xFF334155),
+                  color: _selectedRepId == 'all'
+                      ? Colors.white
+                      : const Color(0xFF334155),
                 ),
               ),
             ),
@@ -718,15 +866,19 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: InkWell(
-                onTap: () => setState(() => _selectedRepId = isSel ? 'all' : rep['id']),
+                onTap: () =>
+                    setState(() => _selectedRepId = isSel ? 'all' : rep['id']),
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: isSel ? const Color(0xFF0F172A) : Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isSel ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+                      color: isSel
+                          ? const Color(0xFF0F172A)
+                          : const Color(0xFFE2E8F0),
                     ),
                   ),
                   child: Row(
@@ -737,7 +889,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                         height: 7,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isBusy ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                          color: isBusy
+                              ? const Color(0xFFEF4444)
+                              : const Color(0xFF10B981),
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -778,7 +932,10 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
               SizedBox(height: 12),
               Text(
                 'No sales representatives found for this branch selection.',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B)),
               ),
             ],
           ),
@@ -812,7 +969,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: const [
-          BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
+          BoxShadow(
+              color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
         ],
       ),
       child: SingleChildScrollView(
@@ -836,7 +994,11 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     alignment: Alignment.centerLeft,
                     child: const Text(
                       'SALES REP',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF64748B),
+                          letterSpacing: 0.5),
                     ),
                   ),
 
@@ -846,10 +1008,15 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     return Container(
                       width: cellWidth,
                       decoration: BoxDecoration(
-                        color: isNow ? const Color(0xFFFFFBEB) : Colors.transparent,
+                        color: isNow
+                            ? const Color(0xFFFFFBEB)
+                            : Colors.transparent,
                         border: Border(
                           left: const BorderSide(color: Color(0xFFE2E8F0)),
-                          right: isNow ? const BorderSide(color: Color(0xFFDC2626), width: 2) : BorderSide.none,
+                          right: isNow
+                              ? const BorderSide(
+                                  color: Color(0xFFDC2626), width: 2)
+                              : BorderSide.none,
                         ),
                       ),
                       alignment: Alignment.center,
@@ -860,19 +1027,27 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                             slot.replaceAll(' AM', '').replaceAll(' PM', ''),
                             style: TextStyle(
                               fontSize: 11.5,
-                              fontWeight: isNow ? FontWeight.w800 : FontWeight.w500,
-                              color: isNow ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+                              fontWeight:
+                                  isNow ? FontWeight.w800 : FontWeight.w500,
+                              color: isNow
+                                  ? const Color(0xFFDC2626)
+                                  : const Color(0xFF64748B),
                             ),
                           ),
                           if (isNow) ...[
                             const SizedBox(width: 4),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 1),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFDC2626),
                                 borderRadius: BorderRadius.circular(3),
                               ),
-                              child: const Text('NOW', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                              child: const Text('NOW',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ],
@@ -887,11 +1062,15 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             ...reps.map((rep) {
               final repName = rep['name'] ?? 'Executive';
               final isBusy = rep['status'] == 'Busy';
-              final avatarLetter = repName.isNotEmpty ? repName[0].toUpperCase() : 'R';
-              
+              final avatarLetter =
+                  repName.isNotEmpty ? repName[0].toUpperCase() : 'R';
+
               // Associated active sessions for this rep
-              final repSessions = sessions.where((s) => s['sales_exec_id'] == rep['id']).toList();
-              final currentSession = repSessions.isNotEmpty ? repSessions.first : null;
+              final repSessions = sessions
+                  .where((s) => s['sales_exec_id'] == rep['id'])
+                  .toList();
+              final currentSession =
+                  repSessions.isNotEmpty ? repSessions.first : null;
               final customerName = currentSession?['customer_name'] ?? 'Guest';
 
               return Container(
@@ -903,13 +1082,16 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                   children: [
                     // Rep Info Tile (Left Pinned) matching prototype
                     Tooltip(
-                      message: 'Sales Rep: $repName\nStatus: ${isBusy ? 'With $customerName' : 'Available'}\nActive Sessions: ${repSessions.length}',
+                      message:
+                          'Sales Rep: $repName\nStatus: ${isBusy ? 'With $customerName' : 'Available'}\nActive Sessions: ${repSessions.length}',
                       child: Container(
                         width: 200,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
                         decoration: const BoxDecoration(
                           color: Colors.white,
-                          border: Border(right: BorderSide(color: Color(0xFFE2E8F0))),
+                          border: Border(
+                              right: BorderSide(color: Color(0xFFE2E8F0))),
                         ),
                         child: Row(
                           children: [
@@ -970,26 +1152,39 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
 
                     // Time Slot Cells for this Rep
                     ..._timeSlots.map((slot) {
-                      final isNow = nowSlotTarget != null && slot == nowSlotTarget;
+                      final isNow =
+                          nowSlotTarget != null && slot == nowSlotTarget;
 
                       // Display session block if slot matches representative's session
-                      final matchingSession = _findSessionForSlot(repSessions, slot);
+                      final matchingSession =
+                          _findSessionForSlot(repSessions, slot);
                       final bool isAttendingSlot = matchingSession != null &&
-                          (matchingSession['status'] == 'ACTIVE' || matchingSession['status'] == 'OPEN' || isBusy);
+                          (matchingSession['status'] == 'ACTIVE' ||
+                              matchingSession['status'] == 'OPEN' ||
+                              isBusy);
 
                       return Container(
                         width: cellWidth,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          color: isNow ? const Color(0xFFFFFBEB).withValues(alpha: 0.6) : Colors.white,
+                          color: isNow
+                              ? const Color(0xFFFFFBEB).withValues(alpha: 0.6)
+                              : Colors.white,
                           border: Border(
                             left: const BorderSide(color: Color(0xFFF1F5F9)),
-                            right: isNow ? const BorderSide(color: Color(0xFFDC2626), width: 2) : BorderSide.none,
+                            right: isNow
+                                ? const BorderSide(
+                                    color: Color(0xFFDC2626), width: 2)
+                                : BorderSide.none,
                           ),
                         ),
                         child: matchingSession != null
-                            ? _buildSessionBlock(matchingSession, repName, isAttending: isAttendingSlot)
-                            : _buildEmptySlot(repId: rep['id']?.toString(), repName: repName, slot: slot),
+                            ? _buildSessionBlock(matchingSession, repName,
+                                isAttending: isAttendingSlot)
+                            : _buildEmptySlot(
+                                repId: rep['id']?.toString(),
+                                repName: repName,
+                                slot: slot),
                       );
                     }),
                   ],
@@ -1018,7 +1213,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: const [
-          BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
+          BoxShadow(
+              color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
         ],
       ),
       child: SingleChildScrollView(
@@ -1041,11 +1237,15 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     alignment: Alignment.centerLeft,
                     decoration: const BoxDecoration(
-                      border: Border(right: BorderSide(color: Color(0xFFE2E8F0))),
+                      border:
+                          Border(right: BorderSide(color: Color(0xFFE2E8F0))),
                     ),
                     child: const Text(
                       'Time',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF475569)),
                     ),
                   ),
 
@@ -1053,19 +1253,27 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                   ...reps.map((rep) {
                     final repName = rep['name'] ?? 'Executive';
                     final isBusy = rep['status'] == 'Busy';
-                    final avatarLetter = repName.isNotEmpty ? repName[0].toUpperCase() : 'R';
-                    
-                    final repSessions = sessions.where((s) => s['sales_exec_id'] == rep['id']).toList();
-                    final currentSession = repSessions.isNotEmpty ? repSessions.first : null;
-                    final customerName = currentSession?['customer_name'] ?? 'Guest';
+                    final avatarLetter =
+                        repName.isNotEmpty ? repName[0].toUpperCase() : 'R';
+
+                    final repSessions = sessions
+                        .where((s) => s['sales_exec_id'] == rep['id'])
+                        .toList();
+                    final currentSession =
+                        repSessions.isNotEmpty ? repSessions.first : null;
+                    final customerName =
+                        currentSession?['customer_name'] ?? 'Guest';
 
                     return Tooltip(
-                      message: 'Sales Rep: $repName\nStatus: ${isBusy ? 'Attending $customerName' : 'Available (Idle)'}\nActive Sessions: ${repSessions.length}',
+                      message:
+                          'Sales Rep: $repName\nStatus: ${isBusy ? 'Attending $customerName' : 'Available (Idle)'}\nActive Sessions: ${repSessions.length}',
                       child: Container(
                         width: repColWidth,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: const BoxDecoration(
-                          border: Border(right: BorderSide(color: Color(0xFFE2E8F0))),
+                          border: Border(
+                              right: BorderSide(color: Color(0xFFE2E8F0))),
                         ),
                         child: Row(
                           children: [
@@ -1074,7 +1282,10 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                               backgroundColor: const Color(0xFFF1F5F9),
                               child: Text(
                                 avatarLetter,
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF475569)),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -1086,16 +1297,24 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                                   Text(
                                     repName,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF0F172A)),
                                   ),
                                   const SizedBox(height: 2),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 5, vertical: 1.5),
                                     decoration: BoxDecoration(
-                                      color: isBusy ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+                                      color: isBusy
+                                          ? const Color(0xFFF0FDF4)
+                                          : const Color(0xFFF8FAFC),
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                        color: isBusy ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
+                                        color: isBusy
+                                            ? const Color(0xFFBBF7D0)
+                                            : const Color(0xFFE2E8F0),
                                       ),
                                     ),
                                     child: Row(
@@ -1106,18 +1325,24 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                                           height: 5,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
-                                            color: isBusy ? const Color(0xFF16A34A) : const Color(0xFF22C55E),
+                                            color: isBusy
+                                                ? const Color(0xFF16A34A)
+                                                : const Color(0xFF22C55E),
                                           ),
                                         ),
                                         const SizedBox(width: 4),
                                         Flexible(
                                           child: Text(
-                                            isBusy ? 'Busy: $customerName' : 'Idle',
+                                            isBusy
+                                                ? 'Busy: $customerName'
+                                                : 'Idle',
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               fontSize: 9,
                                               fontWeight: FontWeight.w600,
-                                              color: isBusy ? const Color(0xFF15803D) : const Color(0xFF64748B),
+                                              color: isBusy
+                                                  ? const Color(0xFF15803D)
+                                                  : const Color(0xFF64748B),
                                             ),
                                           ),
                                         ),
@@ -1152,10 +1377,14 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                       width: timeColWidth,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
-                        color: isNow ? const Color(0xFFFFFBEB) : const Color(0xFFF8FAFC),
+                        color: isNow
+                            ? const Color(0xFFFFFBEB)
+                            : const Color(0xFFF8FAFC),
                         border: Border(
                           right: BorderSide(
-                            color: isNow ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
+                            color: isNow
+                                ? const Color(0xFFDC2626)
+                                : const Color(0xFFE2E8F0),
                             width: isNow ? 2 : 1,
                           ),
                         ),
@@ -1168,21 +1397,28 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                             slot,
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: isNow ? FontWeight.w800 : FontWeight.w600,
-                              color: isNow ? const Color(0xFFDC2626) : const Color(0xFF475569),
+                              fontWeight:
+                                  isNow ? FontWeight.w800 : FontWeight.w600,
+                              color: isNow
+                                  ? const Color(0xFFDC2626)
+                                  : const Color(0xFF475569),
                             ),
                           ),
                           if (isNow) ...[
                             const SizedBox(width: 4),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 3, vertical: 1),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFDC2626),
                                 borderRadius: BorderRadius.circular(3),
                               ),
                               child: const Text(
                                 'NOW',
-                                style: TextStyle(color: Colors.white, fontSize: 7.5, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 7.5,
+                                    fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],
@@ -1194,23 +1430,34 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     ...reps.map((rep) {
                       final repName = rep['name'] ?? 'Executive';
                       final isBusy = rep['status'] == 'Busy';
-                      final repSessions = sessions.where((s) => s['sales_exec_id'] == rep['id']).toList();
-                      final matchingSession = _findSessionForSlot(repSessions, slot);
+                      final repSessions = sessions
+                          .where((s) => s['sales_exec_id'] == rep['id'])
+                          .toList();
+                      final matchingSession =
+                          _findSessionForSlot(repSessions, slot);
                       final bool isAttendingSlot = matchingSession != null &&
-                          (matchingSession['status'] == 'ACTIVE' || matchingSession['status'] == 'OPEN' || isBusy);
+                          (matchingSession['status'] == 'ACTIVE' ||
+                              matchingSession['status'] == 'OPEN' ||
+                              isBusy);
 
                       return Container(
                         width: repColWidth,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
-                          color: isNow ? const Color(0xFFFFFBEB).withValues(alpha: 0.6) : Colors.white,
+                          color: isNow
+                              ? const Color(0xFFFFFBEB).withValues(alpha: 0.6)
+                              : Colors.white,
                           border: const Border(
                             right: BorderSide(color: Color(0xFFF1F5F9)),
                           ),
                         ),
                         child: matchingSession != null
-                            ? _buildSessionBlock(matchingSession, repName, isAttending: isAttendingSlot)
-                            : _buildEmptySlot(repId: rep['id']?.toString(), repName: repName, slot: slot),
+                            ? _buildSessionBlock(matchingSession, repName,
+                                isAttending: isAttendingSlot)
+                            : _buildEmptySlot(
+                                repId: rep['id']?.toString(),
+                                repName: repName,
+                                slot: slot),
                       );
                     }),
                   ],
@@ -1224,11 +1471,16 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   }
 
   // --- Session Block matching prototype screenshot ---
-  Widget _buildSessionBlock(Map<String, dynamic> session, String repName, {bool isAttending = true}) {
+  Widget _buildSessionBlock(Map<String, dynamic> session, String repName,
+      {bool isAttending = true}) {
     final customer = session['customer_name'] ?? 'Guest';
     final vehicle = session['vehicle_name'] ?? 'Honda Model';
-    final isBooked = session['status'] == 'CUSTOMER_BOUGHT' || session['status'] == 'BOOKED';
-    final isInProgress = !isBooked && (isAttending || session['status'] == 'ACTIVE' || session['status'] == 'IN_PROGRESS');
+    final isBooked =
+        session['status'] == 'CUSTOMER_BOUGHT' || session['status'] == 'BOOKED';
+    final isInProgress = !isBooked &&
+        (isAttending ||
+            session['status'] == 'ACTIVE' ||
+            session['status'] == 'IN_PROGRESS');
 
     // 1. Quoted: Amber (#FEF3C7 / #FDE68A)
     // 2. In progress: Rose/Red (#FEE2E2 / #FECACA)
@@ -1246,12 +1498,12 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         ? const Color(0xFF059669)
         : (isInProgress ? const Color(0xFFDC2626) : const Color(0xFFB45309));
 
-    final String statusLabel = isBooked
-        ? 'Booked'
-        : (isInProgress ? 'In progress' : 'Quote');
+    final String statusLabel =
+        isBooked ? 'Booked' : (isInProgress ? 'In progress' : 'Quote');
 
     return Tooltip(
-      message: 'Customer: $customer\nInterested Model: $vehicle\nShowroom Rep: $repName\nStage: $statusLabel\nTime: ${_formatSessionTime(session["created_at"])}\nClick to inspect details',
+      message:
+          'Customer: $customer\nInterested Model: $vehicle\nShowroom Rep: $repName\nStage: $statusLabel\nTime: ${_formatSessionTime(session["created_at"])}\nClick to inspect details',
       child: InkWell(
         onTap: () => _showSessionDetails(session, repName),
         borderRadius: BorderRadius.circular(6),
@@ -1331,7 +1583,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         _buildLegendItem(
           'In progress',
           const Color(0xFFDC2626),
-          tooltip: 'Customer consultation or test ride actively underway on showroom floor',
+          tooltip:
+              'Customer consultation or test ride actively underway on showroom floor',
         ),
         const SizedBox(width: 16),
         _buildLegendItem(
@@ -1347,13 +1600,18 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         ),
         const SizedBox(width: 16),
         Tooltip(
-          message: 'Real-time timeline guideline corresponding to current clock time',
+          message:
+              'Real-time timeline guideline corresponding to current clock time',
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(width: 2, height: 12, color: const Color(0xFFDC2626)),
               const SizedBox(width: 6),
-              const Text('Current Time', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+              const Text('Current Time',
+                  style: TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w500)),
             ],
           ),
         ),
@@ -1375,7 +1633,10 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+            style: const TextStyle(
+                fontSize: 11.5,
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -1391,7 +1652,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         builder: (ctx, setDialogState) {
           final rawMobile = session['customer_mobile']?.toString() ?? 'N/A';
           final hasMobile = rawMobile != 'N/A' && rawMobile.isNotEmpty;
-          final displayMobile = (isMobileRevealed || !hasMobile) ? rawMobile : MaskUtil.maskMobile(rawMobile);
+          final displayMobile = (isMobileRevealed || !hasMobile)
+              ? rawMobile
+              : MaskUtil.maskMobile(rawMobile);
 
           return AlertDialog(
             title: Row(
@@ -1402,13 +1665,15 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     color: const Color(0xFFFEE2E2),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(Icons.receipt_long, color: AppColors.primary, size: 18),
+                  child: const Icon(Icons.receipt_long,
+                      color: AppColors.primary, size: 18),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     session['enquiryNumber'] ?? 'Enquiry Session',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -1417,17 +1682,21 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildDetailRow('Customer Name', session['customer_name'] ?? 'Walk-in'),
+                _buildDetailRow(
+                    'Customer Name', session['customer_name'] ?? 'Walk-in'),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Mobile Number', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                      const Text('Mobile Number',
+                          style: TextStyle(
+                              fontSize: 12, color: Color(0xFF64748B))),
                       InkWell(
                         onTap: () {
                           if (hasMobile) {
-                            setDialogState(() => isMobileRevealed = !isMobileRevealed);
+                            setDialogState(
+                                () => isMobileRevealed = !isMobileRevealed);
                           }
                         },
                         child: Row(
@@ -1438,16 +1707,22 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: isMobileRevealed ? const Color(0xFF0F172A) : const Color(0xFF475569),
+                                color: isMobileRevealed
+                                    ? const Color(0xFF0F172A)
+                                    : const Color(0xFF475569),
                                 letterSpacing: isMobileRevealed ? 0 : 0.6,
                               ),
                             ),
                             if (hasMobile) ...[
                               const SizedBox(width: 4),
                               Icon(
-                                isMobileRevealed ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                isMobileRevealed
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
                                 size: 13,
-                                color: isMobileRevealed ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                                color: isMobileRevealed
+                                    ? const Color(0xFFDC2626)
+                                    : const Color(0xFF94A3B8),
                               ),
                             ],
                           ],
@@ -1456,17 +1731,22 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     ],
                   ),
                 ),
-                _buildDetailRow('Vehicle Model', session['vehicle_name'] ?? 'Model'),
-                if (session['colour'] != null && session['colour'].toString().isNotEmpty)
+                _buildDetailRow(
+                    'Vehicle Model', session['vehicle_name'] ?? 'Model'),
+                if (session['colour'] != null &&
+                    session['colour'].toString().isNotEmpty)
                   _buildDetailRow('Colour', session['colour']),
                 if (session['grand_total'] != null)
-                  _buildDetailRow('Quoted Amount', CurrencyFormatter.format(session['grand_total'])),
+                  _buildDetailRow('Quoted Amount',
+                      CurrencyFormatter.format(session['grand_total'])),
                 _buildDetailRow('Sales Executive', repName),
                 _buildDetailRow('Status', session['status'] ?? 'Active'),
               ],
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Close')),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(ctx);
@@ -1487,8 +1767,13 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+          Text(label,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+          Text(value,
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0F172A))),
         ],
       ),
     );
@@ -1501,5 +1786,9 @@ class _MetricCol {
   final Color color;
   final String? tooltip;
 
-  _MetricCol({required this.label, required this.value, required this.color, this.tooltip});
+  _MetricCol(
+      {required this.label,
+      required this.value,
+      required this.color,
+      this.tooltip});
 }
