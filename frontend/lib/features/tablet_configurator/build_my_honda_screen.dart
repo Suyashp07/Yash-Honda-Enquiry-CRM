@@ -274,7 +274,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   void initState() {
     super.initState();
     _selectedRepId = widget.initialRepId;
-    _selectedVehicle = _defaultCatalog.first;
+    _selectedCategory = null;
+    _selectedVehicle = null;
     _fetchBackendData();
   }
 
@@ -401,10 +402,12 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           }
         }
 
-        // Sync initial vehicle
-        final currentPool = _currentCategoryVehicles;
-        if (currentPool.isNotEmpty) {
-          _selectedVehicle = currentPool.first;
+        // Sync initial vehicle only if category is already selected
+        if (_selectedCategory != null) {
+          final currentPool = _currentCategoryVehicles;
+          if (currentPool.isNotEmpty) {
+            _selectedVehicle = currentPool.first;
+          }
         }
       });
     } catch (_) {}
@@ -443,6 +446,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   }
 
   List<Map<String, dynamic>> get _currentCategoryVehicles {
+    if (_selectedCategory == null) return [];
     final source =
         _backendVehicles.isNotEmpty ? _backendVehicles : _defaultCatalog;
     List<Map<String, dynamic>> pool = source
@@ -450,13 +454,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         .toList();
 
     if (_selectedCcFilter != 'All' && _selectedCcFilter != 'On Road') {
-      pool = pool.where((v) => v['ccCategory'] == _selectedCcFilter).toList();
-    }
-    if (pool.isEmpty) {
-      pool = source
-          .where((v) =>
-              _matchesCategory(v['category']?.toString(), _selectedCategory))
-          .toList();
+      final filtered = pool.where((v) => v['ccCategory'] == _selectedCcFilter).toList();
+      if (filtered.isNotEmpty) pool = filtered;
     }
     return pool;
   }
@@ -546,8 +545,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFF1F5F9), // Matching cool slate background
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -563,16 +561,16 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   Expanded(
                     flex: 7,
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(28, 16, 20, 24),
+                      padding: const EdgeInsets.fromLTRB(36, 20, 24, 24),
                       child: _buildCurrentStepStage(),
                     ),
                   ),
 
                   // Floating Quotation Sidebar Card (matching prototype screenshots)
                   SizedBox(
-                    width: 330,
+                    width: 320,
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 16, 28, 24),
+                      padding: const EdgeInsets.fromLTRB(8, 20, 36, 24),
                       child: _buildQuotationSummaryCard(),
                     ),
                   ),
@@ -764,30 +762,51 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
           const SizedBox(width: 24),
 
-          // Right: Fast Form Switcher + User Profile Avatar + Close
-          OutlinedButton.icon(
-            onPressed: () => context.go('/tablet'),
-            icon:
-                const Icon(Icons.flash_on, size: 14, color: Color(0xFFDC2626)),
-            label: const Text('Quick Form',
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFDC2626))),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Color(0xFFFCA5A5)),
-              backgroundColor: const Color(0xFFFEF2F2),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+          // Right: User Profile Avatar & Exit (matching Figma prototype)
+          PopupMenuButton<String>(
+            tooltip: 'Profile & Actions',
+            offset: const Offset(0, 44),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            onSelected: (val) {
+              if (val == 'quick_form') context.go('/tablet');
+              if (val == 'exit') context.go('/dashboard');
+            },
+            itemBuilder: (ctx) => [
+              const PopupMenuItem(
+                value: 'quick_form',
+                child: Row(
+                  children: [
+                    Icon(Icons.flash_on, size: 16, color: Color(0xFFDC2626)),
+                    SizedBox(width: 8),
+                    Text('Switch to Classic Form', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'exit',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout_rounded, size: 16, color: Color(0xFF64748B)),
+                    SizedBox(width: 8),
+                    Text('Exit to Floor Dashboard', style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                  ],
+                ),
+              ),
+            ],
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFF334155), width: 1.5),
+              ),
+              child: const Icon(
+                Icons.person_outline_rounded,
+                color: Color(0xFF334155),
+                size: 22,
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          IconButton(
-            onPressed: () => context.go('/dashboard'),
-            icon: const Icon(Icons.close_rounded,
-                size: 20, color: Color(0xFF64748B)),
-            tooltip: 'Exit to Floor Dashboard',
           ),
         ],
       ),
@@ -828,52 +847,76 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         RichText(
           text: const TextSpan(
             style: TextStyle(
-                fontSize: 28,
+                fontSize: 32,
                 fontWeight: FontWeight.w900,
                 color: Color(0xFF0F172A),
                 letterSpacing: -0.5),
             children: [
               TextSpan(text: 'CHOOSE YOUR '),
               TextSpan(
-                  text: 'RIDE', style: TextStyle(color: Color(0xFFDC2626))),
+                text: 'RIDE',
+                style: TextStyle(
+                  color: Color(0xFFDC2626),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ],
           ),
         ),
         const SizedBox(height: 6),
         const Text(
           'Select your two-wheeler category to explore custom configurations',
-          style: TextStyle(fontSize: 13.5, color: Color(0xFF64748B)),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF64748B),
+          ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 28),
         Expanded(
-          child: Row(
-            children: [
-              // 1. MOTORCYCLES (MC)
-              Expanded(
-                child: _buildCategoryCard(
-                  code: 'MC',
-                  imagePath: 'assets/configurator/cat_mc.jpg',
-                ),
-              ),
-              const SizedBox(width: 18),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 510),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 1. MOTORCYCLES (MC)
+                  Flexible(
+                    child: AspectRatio(
+                      aspectRatio: 500 / 736,
+                      child: _buildCategoryCard(
+                        code: 'MC',
+                        imagePath: 'assets/configurator/cat_mc_hq.jpg',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 22),
 
-              // 2. SCOOTERS
-              Expanded(
-                child: _buildCategoryCard(
-                  code: 'Scooter',
-                  imagePath: 'assets/configurator/cat_scooter.jpg',
-                ),
-              ),
-              const SizedBox(width: 18),
+                  // 2. SCOOTERS
+                  Flexible(
+                    child: AspectRatio(
+                      aspectRatio: 500 / 736,
+                      child: _buildCategoryCard(
+                        code: 'Scooter',
+                        imagePath: 'assets/configurator/cat_scooter_hq.jpg',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 22),
 
-              // 3. BIG BIKES
-              Expanded(
-                child: _buildCategoryCard(
-                  code: 'BigBike',
-                  imagePath: 'assets/configurator/cat_bigbike.jpg',
-                ),
+                  // 3. BIG BIKES
+                  Flexible(
+                    child: AspectRatio(
+                      aspectRatio: 500 / 736,
+                      child: _buildCategoryCard(
+                        code: 'BigBike',
+                        imagePath: 'assets/configurator/cat_bigbike_hq.jpg',
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ],
@@ -886,76 +929,47 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   }) {
     final isSelected = _selectedCategory == code;
 
-    return InkWell(
-      onTap: () {
-        final wasSelected = _selectedCategory == code;
-        setState(() {
-          _selectedCategory = code;
-          final pool = _currentCategoryVehicles;
-          if (pool.isNotEmpty) _selectedVehicle = pool.first;
-        });
-        if (wasSelected) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedCategory = code;
+            final pool = _currentCategoryVehicles;
+            if (pool.isNotEmpty) _selectedVehicle = pool.first;
+          });
+        },
+        onDoubleTap: () {
+          setState(() {
+            _selectedCategory = code;
+            final pool = _currentCategoryVehicles;
+            if (pool.isNotEmpty) _selectedVehicle = pool.first;
+          });
           _nextStep();
-        }
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? const Color(0xFFDC2626) : Colors.transparent,
-            width: isSelected ? 3.0 : 1.0,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: isSelected
-                  ? const Color(0x33DC2626)
-                  : const Color(0x15000000),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isSelected ? const Color(0xFFDC2626) : const Color(0xFFF1F5F9),
+              width: isSelected ? 2.8 : 1.0,
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _buildSafeImage(imagePath, fit: BoxFit.cover),
-
-              // Bottom-Right Action Button
-              Positioned(
-                bottom: 16,
-                right: 16,
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      _selectedCategory = code;
-                      final pool = _currentCategoryVehicles;
-                      if (pool.isNotEmpty) _selectedVehicle = pool.first;
-                    });
-                    _nextStep();
-                  },
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                            color: Color(0x22000000),
-                            blurRadius: 6,
-                            offset: Offset(0, 2)),
-                      ],
-                    ),
-                    child: const Icon(Icons.arrow_forward_rounded,
-                        color: Color(0xFFDC2626), size: 18),
-                  ),
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: isSelected
+                    ? const Color(0x33DC2626)
+                    : const Color(0x0F000000),
+                blurRadius: isSelected ? 24 : 14,
+                offset: isSelected ? const Offset(0, 8) : const Offset(0, 4),
               ),
             ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: _buildSafeImage(imagePath, fit: BoxFit.fill),
           ),
         ),
       ),
@@ -1035,21 +1049,23 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   _selectedVehicle?['code'] == v['code'];
 
               return SizedBox(
-                width: 250,
+                width: 280,
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                        color: isSel
-                            ? const Color(0xFFDC2626)
-                            : const Color(0xFFE2E8F0),
-                        width: isSel ? 2.5 : 1),
-                    boxShadow: const [
+                      color: isSel
+                          ? const Color(0xFFDC2626)
+                          : const Color(0xFFF1F5F9),
+                      width: isSel ? 2.5 : 1,
+                    ),
+                    boxShadow: [
                       BoxShadow(
-                          color: Color(0x08000000),
-                          blurRadius: 10,
-                          offset: Offset(0, 4)),
+                        color: isSel ? const Color(0x28DC2626) : const Color(0x0C000000),
+                        blurRadius: isSel ? 16 : 10,
+                        offset: const Offset(0, 4),
+                      ),
                     ],
                   ),
                   child: Column(
@@ -1058,7 +1074,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       Expanded(
                         child: ClipRRect(
                           borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(20)),
+                              top: Radius.circular(22)),
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
@@ -1070,20 +1086,20 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 bottom: 12,
                                 right: 12,
                                 child: Container(
-                                  width: 28,
-                                  height: 28,
+                                  width: 32,
+                                  height: 32,
                                   decoration: const BoxDecoration(
                                     color: Colors.white,
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                          color: Color(0x1A000000),
-                                          blurRadius: 4,
-                                          offset: Offset(0, 1)),
+                                          color: Color(0x22000000),
+                                          blurRadius: 6,
+                                          offset: Offset(0, 2)),
                                     ],
                                   ),
                                   child: const Icon(Icons.chevron_right,
-                                      color: Color(0xFFDC2626), size: 18),
+                                      color: Color(0xFFDC2626), size: 20),
                                 ),
                               ),
                             ],
@@ -1093,7 +1109,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
                       // Bottom Price & Customise Button
                       Padding(
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         child: Row(
                           children: [
                             Expanded(
@@ -1101,18 +1117,21 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    CurrencyFormatter.format(
-                                        v['exShowroom'] ?? 68767),
+                                    '${CurrencyFormatter.format(v['exShowroom'] ?? 68767)}*',
                                     style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
                                       color: Color(0xFF0F172A),
+                                      letterSpacing: -0.3,
                                     ),
                                   ),
+                                  const SizedBox(height: 2),
                                   const Text(
                                     'Ex-Showroom Price',
                                     style: TextStyle(
-                                        fontSize: 10, color: Color(0xFF94A3B8)),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF94A3B8)),
                                   ),
                                 ],
                               ),
@@ -1120,12 +1139,12 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                             OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 side:
-                                    const BorderSide(color: Color(0xFFDC2626)),
+                                    const BorderSide(color: Color(0xFFDC2626), width: 1.5),
                                 foregroundColor: const Color(0xFFDC2626),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(20)),
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
+                                    horizontal: 14, vertical: 8),
                               ),
                               onPressed: () {
                                 setState(() {
@@ -1143,10 +1162,10 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 children: [
                                   Text('Customise',
                                       style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700)),
-                                  SizedBox(width: 3),
-                                  Icon(Icons.arrow_forward, size: 12),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800)),
+                                  SizedBox(width: 4),
+                                  Icon(Icons.arrow_forward_rounded, size: 14),
                                 ],
                               ),
                             ),
@@ -2597,8 +2616,10 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           _buildQuotationItem(
             icon: Icons.two_wheeler_outlined,
             label: 'Vehicle',
-            value: v != null ? (v['name'] as String) : '—',
-            isComplete: _currentStep >= 2,
+            value: (_selectedCategory != null && v != null)
+                ? (v['name'] as String)
+                : '—',
+            isComplete: _selectedCategory != null,
           ),
           const SizedBox(height: 14),
 
@@ -2643,14 +2664,14 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           // Estimated Price section
           const Text('Estimated Price',
               style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF64748B))),
           const SizedBox(height: 2),
           Text(
-            _currentStep == 1
-                ? '₹0'
-                : CurrencyFormatter.format(_estimatedGrandTotal),
+            _selectedCategory == null
+                ? '₹ --,---'
+                : '${CurrencyFormatter.format(_estimatedGrandTotal)}*',
             style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w900,
@@ -2660,40 +2681,41 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           ),
           const SizedBox(height: 18),
 
-          // Big Red Continue / Submit Pill Button
+          // Big Red Continue / Submit Pill Button (matching Figma mockup)
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: 52,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: canContinue ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
-                foregroundColor: canContinue ? Colors.white : const Color(0xFF94A3B8),
-                elevation: 0,
+                backgroundColor: canContinue
+                    ? const Color(0xFFDC2626)
+                    : const Color(0xFFF4A5A5),
+                foregroundColor: Colors.white,
+                elevation: canContinue ? 4 : 0,
+                shadowColor: canContinue ? const Color(0x33DC2626) : Colors.transparent,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24)),
+                    borderRadius: BorderRadius.circular(26)),
               ),
               onPressed: canContinue ? _nextStep : null,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    !canContinue
-                        ? 'Select Category to Continue'
-                        : (_currentStep == 7 ? 'Complete Enquiry' : 'Continue'),
-                    style: TextStyle(
-                      fontSize: 14,
+                    _currentStep == 7 ? 'Complete Enquiry' : 'Continue',
+                    style: const TextStyle(
+                      fontSize: 15,
                       fontWeight: FontWeight.w800,
-                      color: canContinue ? Colors.white : const Color(0xFF94A3B8),
+                      color: Colors.white,
                     ),
                   ),
-                  if (canContinue) ...[
-                    const SizedBox(width: 8),
-                    Icon(
-                        _currentStep == 7
-                            ? Icons.check_circle_outline
-                            : Icons.arrow_forward_rounded,
-                        size: 18),
-                  ],
+                  const SizedBox(width: 8),
+                  Icon(
+                    _currentStep == 7
+                        ? Icons.check_circle_outline
+                        : Icons.arrow_forward_rounded,
+                    size: 18,
+                    color: Colors.white,
+                  ),
                 ],
               ),
             ),
