@@ -21,6 +21,7 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
   DateTime _selectedDate = DateTime.now();
   String _selectedBranch = 'all';
   bool _swapRowsCols = false;
+  String _transposedFilter = 'all';
 
   bool _isLoading = true;
   Map<String, dynamic>? _summaryData;
@@ -414,7 +415,22 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
     final branchIds = [...branches.map((b) => b['id'].toString()), 'all'];
 
     if (_swapRowsCols) {
-      return _buildTransposedMatrix(branches, branchIds, totalLeads, totalBk, conversion, modeBreakup, sourceBreakup);
+      return _buildTransposedMatrix(
+        branches: branches,
+        branchIds: branchIds,
+        totalLeads: totalLeads,
+        totalBk: totalBk,
+        conversion: conversion,
+        modeBreakup: modeBreakup,
+        sourceBreakup: sourceBreakup,
+        modelWiseLeads: modelWiseLeads,
+        modelWiseBk: modelWiseBk,
+        salesExWiseBk: salesExWiseBk,
+        mtdModelConv: mtdModelConv,
+        mtdSalesExConv: mtdSalesExConv,
+        mtdSourceConv: mtdSourceConv,
+        mtdModeConv: mtdModeConv,
+      );
     }
 
     return Container(
@@ -533,79 +549,374 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
     );
   }
 
-  Widget _buildTransposedMatrix(
-    List branches,
-    List<String> branchIds,
-    Map totalLeads,
-    Map totalBk,
-    Map conversion,
-    List modeBreakup,
-    List sourceBreakup,
-  ) {
+  Widget _buildTransposedMatrix({
+    required List branches,
+    required List<String> branchIds,
+    required Map totalLeads,
+    required Map totalBk,
+    required Map conversion,
+    required List modeBreakup,
+    required List sourceBreakup,
+    required List modelWiseLeads,
+    required List modelWiseBk,
+    required List salesExWiseBk,
+    required List mtdModelConv,
+    required List mtdSalesExConv,
+    required List mtdSourceConv,
+    required List mtdModeConv,
+  }) {
+    // Build list of all available transposed metric columns
+    final List<Map<String, dynamic>> allColumns = [
+      // 1. Core KPIs
+      {
+        'section': 'core',
+        'sectionTitle': 'AS ON DATE',
+        'label': 'TOTAL LEADS',
+        'width': 120.0,
+        'getValue': (String id) => (totalLeads[id] ?? 0).toString(),
+        'color': const Color(0xFF2563EB),
+        'isBold': true,
+      },
+      {
+        'section': 'core',
+        'sectionTitle': 'AS ON DATE',
+        'label': 'TOTAL BK',
+        'width': 110.0,
+        'getValue': (String id) => (totalBk[id] ?? 0).toString(),
+        'color': const Color(0xFF16A34A),
+        'isBold': true,
+      },
+      {
+        'section': 'core',
+        'sectionTitle': 'AS ON DATE',
+        'label': 'CONVERSION',
+        'width': 120.0,
+        'getValue': (String id) => (conversion[id] ?? '0.00%').toString(),
+        'color': const Color(0xFFDC2626),
+        'isBold': true,
+      },
+
+      // 2. Modes
+      ...modeBreakup.map((row) => {
+        'section': 'mode',
+        'sectionTitle': 'MODE BREAK UP',
+        'label': (row['label'] ?? '').toString(),
+        'width': 110.0,
+        'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
+        'color': const Color(0xFF0F172A),
+        'isBold': false,
+      }),
+
+      // 3. Sources
+      ...sourceBreakup.map((row) => {
+        'section': 'source',
+        'sectionTitle': 'SOURCE',
+        'label': (row['label'] ?? '').toString(),
+        'width': 150.0,
+        'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
+        'color': const Color(0xFF0F172A),
+        'isBold': false,
+      }),
+
+      // 4. Model Wise Leads
+      ...modelWiseLeads.map((row) => {
+        'section': 'model',
+        'sectionTitle': 'MODEL LEADS',
+        'label': (row['label'] ?? '').toString(),
+        'width': 140.0,
+        'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
+        'color': const Color(0xFF0F172A),
+        'isBold': false,
+      }),
+
+      // 5. Model Wise Bookings
+      ...modelWiseBk.map((row) => {
+        'section': 'model',
+        'sectionTitle': 'MODEL BK',
+        'label': '${row['label'] ?? ''} (BK)',
+        'width': 140.0,
+        'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
+        'color': const Color(0xFF16A34A),
+        'isBold': true,
+      }),
+
+      // 6. Sales Executive Wise Bookings
+      ...salesExWiseBk.map((row) => {
+        'section': 'sales',
+        'sectionTitle': 'SALES EX BK',
+        'label': (row['label'] ?? '').toString(),
+        'width': 145.0,
+        'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
+        'color': const Color(0xFF0F172A),
+        'isBold': false,
+      }),
+
+      // 7. MTD Model Conversion
+      ...mtdModelConv.map((row) => {
+        'section': 'mtd',
+        'sectionTitle': 'MTD MODEL CONV',
+        'label': '${row['label'] ?? ''} (MTD)',
+        'width': 155.0,
+        'getValue': (String id) => (row['values']?[id] ?? '-').toString(),
+        'color': const Color(0xFF0F172A),
+        'isBold': false,
+      }),
+
+      // 8. MTD Sales Executive Conversion
+      ...mtdSalesExConv.map((row) => {
+        'section': 'mtd',
+        'sectionTitle': 'MTD REP CONV',
+        'label': '${row['label'] ?? ''} (MTD)',
+        'width': 155.0,
+        'getValue': (String id) => (row['values']?[id] ?? '-').toString(),
+        'color': const Color(0xFF0F172A),
+        'isBold': false,
+      }),
+
+      // 9. MTD Source Conversion
+      ...mtdSourceConv.map((row) => {
+        'section': 'mtd',
+        'sectionTitle': 'MTD SOURCE CONV',
+        'label': '${row['label'] ?? ''} (MTD)',
+        'width': 160.0,
+        'getValue': (String id) => (row['values']?[id] ?? '-').toString(),
+        'color': const Color(0xFF0F172A),
+        'isBold': false,
+      }),
+
+      // 10. MTD Mode Conversion
+      ...mtdModeConv.map((row) => {
+        'section': 'mtd',
+        'sectionTitle': 'MTD MODE CONV',
+        'label': '${row['label'] ?? ''} (MTD)',
+        'width': 150.0,
+        'getValue': (String id) => (row['values']?[id] ?? '-').toString(),
+        'color': const Color(0xFF0F172A),
+        'isBold': false,
+      }),
+    ];
+
+    final filteredColumns = _transposedFilter == 'all'
+        ? allColumns
+        : allColumns.where((col) => col['section'] == _transposedFilter).toList();
+
+    final filterTabs = [
+      {'id': 'all', 'label': 'All Details (${allColumns.length})'},
+      {'id': 'core', 'label': 'Core KPIs (3)'},
+      {'id': 'mode', 'label': 'Payment Modes (${modeBreakup.length})'},
+      {'id': 'source', 'label': 'Lead Sources (${sourceBreakup.length})'},
+      {'id': 'model', 'label': 'Models (${modelWiseLeads.length + modelWiseBk.length})'},
+      {'id': 'sales', 'label': 'Sales Reps (${salesExWiseBk.length})'},
+      {'id': 'mtd', 'label': 'MTD Conversions (${mtdModelConv.length + mtdSalesExConv.length + mtdSourceConv.length + mtdModeConv.length})'},
+    ];
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Transposed Header
-            Container(
-              height: 44,
-              color: const Color(0xFFF1F5F9),
-              child: const Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section Filter Bar above transposed matrix
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8FAFC),
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(9)),
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
                 children: [
-                  SizedBox(width: 220, child: Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('LOCATION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155))))),
-                  SizedBox(width: 120, child: Center(child: Text('TOTAL LEADS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF2563EB))))),
-                  SizedBox(width: 120, child: Center(child: Text('TOTAL BK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF16A34A))))),
-                  SizedBox(width: 120, child: Center(child: Text('CONVERSION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFFDC2626))))),
-                  SizedBox(width: 100, child: Center(child: Text('CASH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155))))),
-                  SizedBox(width: 100, child: Center(child: Text('FINANCE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155))))),
-                  SizedBox(width: 100, child: Center(child: Text('EXCHANGE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155))))),
-                  SizedBox(width: 100, child: Center(child: Text('WALK IN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155))))),
-                  SizedBox(width: 100, child: Center(child: Text('TELE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155))))),
+                  const Text('FILTER METRICS: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF64748B), letterSpacing: 0.5)),
+                  const SizedBox(width: 8),
+                  ...filterTabs.map((tab) {
+                    final isSelected = _transposedFilter == tab['id'];
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: InkWell(
+                        onTap: () => setState(() => _transposedFilter = tab['id'] as String),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFFDC2626) : Colors.white,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: isSelected ? const Color(0xFFDC2626) : const Color(0xFFCBD5E1)),
+                          ),
+                          child: Text(
+                            tab['label'] as String,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isSelected ? Colors.white : const Color(0xFF334155),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),
-            ...branchIds.map((bId) {
-              final isAll = bId == 'all';
-              final b = branches.firstWhere((element) => element['id'].toString() == bId, orElse: () => {'name': 'Consolidated Dealerships'});
-              return Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isAll ? const Color(0xFFFEF3C7) : Colors.white,
-                  border: const Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
-                ),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 220,
-                      child: Padding(
+          ),
+
+          // Transposed Matrix Table
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Transposed Header: LOCATION + All Filtered Columns
+                Container(
+                  height: 48,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF1F5F9),
+                    border: Border(bottom: BorderSide(color: Color(0xFFCBD5E1), width: 1.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 220,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          isAll ? 'CONSOLIDATED (All Dealerships)' : (b['name'] ?? ''),
-                          style: TextStyle(fontSize: 12, fontWeight: isAll ? FontWeight.w900 : FontWeight.w600, color: isAll ? const Color(0xFFB45309) : const Color(0xFF0F172A)),
+                        alignment: Alignment.centerLeft,
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('LOCATION', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+                            Text('Showroom Branch', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                          ],
                         ),
                       ),
-                    ),
-                    SizedBox(width: 120, child: Center(child: Text('${totalLeads[bId] ?? 0}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))))),
-                    SizedBox(width: 120, child: Center(child: Text('${totalBk[bId] ?? 0}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))))),
-                    SizedBox(width: 120, child: Center(child: Text('${conversion[bId] ?? "0.00%"}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFFDC2626))))),
-                    SizedBox(width: 100, child: Center(child: Text('${_findBreakupVal(modeBreakup, "CASH", bId)}', style: const TextStyle(fontSize: 12)))),
-                    SizedBox(width: 100, child: Center(child: Text('${_findBreakupVal(modeBreakup, "FINANCE", bId)}', style: const TextStyle(fontSize: 12)))),
-                    SizedBox(width: 100, child: Center(child: Text('${_findBreakupVal(modeBreakup, "EXCHANGE", bId)}', style: const TextStyle(fontSize: 12)))),
-                    SizedBox(width: 100, child: Center(child: Text('${_findBreakupVal(sourceBreakup, "WALK IN", bId)}', style: const TextStyle(fontSize: 12)))),
-                    SizedBox(width: 100, child: Center(child: Text('${_findBreakupVal(sourceBreakup, "TELE", bId)}', style: const TextStyle(fontSize: 12)))),
-                  ],
+                      ...filteredColumns.map((col) {
+                        return Container(
+                          width: col['width'] as double,
+                          decoration: const BoxDecoration(
+                            border: Border(left: BorderSide(color: Color(0xFFE2E8F0))),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                (col['sectionTitle'] ?? '').toString(),
+                                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.3),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                (col['label'] ?? '').toString(),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: col['color'] as Color? ?? const Color(0xFF0F172A),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
                 ),
-              );
-            }),
-          ],
-        ),
+
+                // Data Rows: 1 Row per Branch + Consolidated
+                ...branchIds.map((bId) {
+                  final isAll = bId == 'all';
+                  final b = branches.firstWhere(
+                    (element) => element['id'].toString() == bId,
+                    orElse: () => {'name': 'Consolidated Dealerships', 'code': 'ALL'},
+                  );
+                  final bName = isAll ? 'CONSOLIDATED (All Dealerships)' : (b['name'] ?? '');
+                  final bCode = isAll ? '' : (b['code'] ?? '');
+
+                  return Container(
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: isAll ? const Color(0xFFFEF3C7) : Colors.white,
+                      border: const Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 220,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  bName,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isAll ? FontWeight.w900 : FontWeight.w600,
+                                    color: isAll ? const Color(0xFFB45309) : const Color(0xFF0F172A),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (bCode.isNotEmpty)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    bCode,
+                                    style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        ...filteredColumns.map((col) {
+                          final getter = col['getValue'] as String Function(String);
+                          final val = getter(bId);
+                          final isBold = isAll || (col['isBold'] as bool? ?? false);
+                          final color = isAll
+                              ? const Color(0xFFB45309)
+                              : (col['color'] as Color? ?? const Color(0xFF334155));
+
+                          return Container(
+                            width: col['width'] as double,
+                            decoration: const BoxDecoration(
+                              border: Border(left: BorderSide(color: Color(0xFFF1F5F9))),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            alignment: Alignment.center,
+                            child: Text(
+                              val,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isBold ? FontWeight.w800 : FontWeight.w500,
+                                color: color,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
