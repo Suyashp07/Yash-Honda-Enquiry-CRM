@@ -52,7 +52,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   }
 
   Future<void> _syncLiveFloorSession() async {
-    if (_selectedRepId == null) return;
+    if (_selectedRepId == null || _selectedVehicle == null) return;
     final name = _nameController.text.trim();
     final mobile = _mobileController.text.trim();
     final vehicle = _selectedVehicle?['name'] ?? 'Honda Model';
@@ -109,7 +109,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   // Selected State
   String? _selectedVehicleId;
   Map<String, dynamic>? _selectedVehicle;
-  String _selectedColour = 'Black';
+  String? _selectedColour;
   String? _selectedBranchId;
   String _selectedType = 'Walk-in';
   String? _selectedSourceId;
@@ -182,19 +182,17 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       // Filter sales reps
       final reps = users.where((u) => u['role'] == 'SALES_EXEC' || u['role'] == 'BRANCH_MANAGER').toList();
 
-      // Initial vehicle selection
+      // Initial vehicle selection: ONLY pre-select if explicitly passed via widget.vehicle
       Map<String, dynamic>? initialVehicle;
       if (widget.vehicle.isNotEmpty && widget.vehicle['id'] != null) {
         initialVehicle = widget.vehicle;
-      } else if (vehicles.isNotEmpty) {
-        initialVehicle = vehicles.first;
       }
 
       String? initialVehicleId = initialVehicle?['id']?.toString();
-      String initialColour = 'Black';
+      String? initialColour;
       final vColours = (initialVehicle?['colours'] as List?) ?? [];
       if (vColours.isNotEmpty) {
-        initialColour = vColours.first['colour']?['name'] ?? 'Black';
+        initialColour = vColours.first['colour']?['name']?.toString() ?? 'Black';
       }
 
       // Initial branch selection
@@ -234,15 +232,18 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         _selectedBranchId = initialBranchId;
         _salesReps = reps;
 
-        if (leadSources.isNotEmpty) _selectedSourceId = leadSources.first['id'].toString();
-        if (areas.isNotEmpty) _selectedAreaId = areas.first['id'].toString();
+        // Start from scratch: leave source, area, financier unselected
+        _selectedSourceId = null;
+        _selectedAreaId = null;
         _selectedRepId = initialRepId ?? (reps.isNotEmpty ? reps.first['id'].toString() : null);
-        if (financiers.isNotEmpty) _selectedFinancierId = financiers.first['id'].toString();
+        _selectedFinancierId = null;
 
         _isLoadingMasters = false;
       });
 
-      _calculateQuote();
+      if (initialVehicleId != null) {
+        _calculateQuote();
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingMasters = false);
@@ -284,13 +285,21 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   }
 
   void _onVehicleChanged(String? newVehicleId) {
-    if (newVehicleId == null) return;
+    if (newVehicleId == null) {
+      setState(() {
+        _selectedVehicleId = null;
+        _selectedVehicle = null;
+        _selectedColour = null;
+        _liveCalculation = null;
+      });
+      return;
+    }
     final found = _vehicles.firstWhere((v) => v['id'].toString() == newVehicleId, orElse: () => null);
     if (found != null) {
-      String newColour = 'Black';
+      String? newColour;
       final vColours = (found['colours'] as List?) ?? [];
       if (vColours.isNotEmpty) {
-        newColour = vColours.first['colour']?['name'] ?? 'Black';
+        newColour = vColours.first['colour']?['name']?.toString() ?? 'Black';
       }
 
       setState(() {
@@ -492,28 +501,49 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+              if (_selectedVehicle != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$vehicleName + add-ons/charges',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        CurrencyFormatter.format(grandTotal),
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primary),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.two_wheeler_outlined, size: 14, color: Color(0xFF94A3B8)),
+                      SizedBox(width: 6),
+                      Text(
+                        'Select a vehicle to configure quotation',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '$vehicleName + add-ons/charges',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      CurrencyFormatter.format(grandTotal),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primary),
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(width: 10),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
@@ -605,6 +635,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
               child: _buildDropdownField<String>(
                 label: 'Source',
                 value: _selectedSourceId,
+                hintText: 'Select source',
                 items: _leadSources.map((ls) {
                   return DropdownMenuItem(value: ls['id'].toString(), child: Text(ls['name']));
                 }).toList(),
@@ -616,6 +647,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
               child: _buildDropdownField<String>(
                 label: 'Buying When',
                 value: _buyingWhen,
+                hintText: 'Select timeline',
                 items: const [
                   DropdownMenuItem(value: 'Immediate', child: Text('Immediate')),
                   DropdownMenuItem(value: 'Within 7 Days', child: Text('Within 7 Days')),
@@ -630,6 +662,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
               child: _buildDropdownField<String>(
                 label: 'Sales Rep',
                 value: _selectedRepId,
+                hintText: 'Select sales rep',
                 items: _salesReps.map((r) {
                   return DropdownMenuItem(value: r['id'].toString(), child: Text(r['name'] ?? 'Rep'));
                 }).toList(),
@@ -665,6 +698,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
               child: _buildDropdownField<String>(
                 label: 'Vehicle *',
                 value: _selectedVehicleId,
+                hintText: 'Select vehicle model',
+                highlightBorder: _selectedVehicleId == null,
                 items: _vehicles.map((v) {
                   return DropdownMenuItem(value: v['id'].toString(), child: Text(v['name']));
                 }).toList(),
@@ -677,19 +712,19 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
               child: _buildDropdownField<String>(
                 label: 'Colour',
                 value: _selectedColour,
-                highlightBorder: true,
+                hintText: _selectedVehicle == null ? 'Select vehicle first' : 'Select colour',
                 items: vColours.isEmpty
-                    ? <DropdownMenuItem<String>>[
-                        const DropdownMenuItem<String>(value: 'Black', child: Text('Black'))
-                      ]
+                    ? <DropdownMenuItem<String>>[]
                     : vColours.map<DropdownMenuItem<String>>((vc) {
-                        final cName = vc['colour']?['name']?.toString() ?? 'Black';
+                        final cName = vc['colour']?['name']?.toString() ?? 'Colour';
                         return DropdownMenuItem<String>(value: cName, child: Text(cName));
                       }).toList(),
-                onChanged: (val) {
-                  setState(() => _selectedColour = val ?? 'Black');
-                  _calculateQuote();
-                },
+                onChanged: _selectedVehicle == null
+                    ? null
+                    : (val) {
+                        setState(() => _selectedColour = val);
+                        _calculateQuote();
+                      },
               ),
             ),
             const SizedBox(width: 10),
@@ -914,19 +949,29 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     final upiId = _settings?['upiId'] ?? 'yashhonda@hdfcbank';
 
     final rawEx = _liveCalculation?['exShowroom'];
-    final exShowroom = rawEx is num ? rawEx.toDouble() : (double.tryParse(rawEx?.toString() ?? '') ?? 0.0);
+    final exShowroom = _selectedVehicle != null
+        ? (rawEx is num ? rawEx.toDouble() : (double.tryParse(rawEx?.toString() ?? '') ?? 0.0))
+        : 0.0;
 
     final rawTax = _liveCalculation?['roadTax'];
-    final roadTax = rawTax is num ? rawTax.toDouble() : (double.tryParse(rawTax?.toString() ?? '') ?? 0.0);
+    final roadTax = _selectedVehicle != null
+        ? (rawTax is num ? rawTax.toDouble() : (double.tryParse(rawTax?.toString() ?? '') ?? 0.0))
+        : 0.0;
 
     final rawIns = _liveCalculation?['insurance'];
-    final insurance = rawIns is num ? rawIns.toDouble() : (double.tryParse(rawIns?.toString() ?? '') ?? 0.0);
+    final insurance = _selectedVehicle != null
+        ? (rawIns is num ? rawIns.toDouble() : (double.tryParse(rawIns?.toString() ?? '') ?? 0.0))
+        : 0.0;
 
     final rawStd = _liveCalculation?['stdAccessories'];
-    final stdAccessories = rawStd is num ? rawStd.toDouble() : (double.tryParse(rawStd?.toString() ?? '') ?? 1800.0);
+    final stdAccessories = _selectedVehicle != null
+        ? (rawStd is num ? rawStd.toDouble() : (double.tryParse(rawStd?.toString() ?? '') ?? 1800.0))
+        : 0.0;
 
     final rawTotal = _liveCalculation?['grandTotal'];
-    final grandTotal = rawTotal is num ? rawTotal.toDouble() : (double.tryParse(rawTotal?.toString() ?? '') ?? 0.0);
+    final grandTotal = _selectedVehicle != null
+        ? (rawTotal is num ? rawTotal.toDouble() : (double.tryParse(rawTotal?.toString() ?? '') ?? 0.0))
+        : 0.0;
 
     final calcAccessories = (_liveCalculation?['accessories'] as List?) ?? [];
 
@@ -945,7 +990,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
                 ),
                 Text(
-                  vehicleName,
+                  _selectedVehicle != null ? vehicleName : 'No vehicle selected',
                   style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                 ),
               ],
@@ -1075,12 +1120,12 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   Row(
                     children: [
                       Text(
-                        vehicleName,
+                        _selectedVehicle != null ? vehicleName : '—',
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Color: $_selectedColour',
+                        'Color: ${_selectedColour ?? '—'}',
                         style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
                       ),
                       const SizedBox(width: 8),
@@ -1092,22 +1137,56 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Itemized Price List
-                  _buildPriceRow('Ex-showroom', CurrencyFormatter.format(exShowroom)),
-                  _buildPriceRow('Road Tax', CurrencyFormatter.format(roadTax)),
-                  _buildPriceRow('Insurance', CurrencyFormatter.format(insurance)),
-                  _buildPriceRow('Standard Accessories', CurrencyFormatter.format(stdAccessories)),
+                  if (_selectedVehicle == null) ...[
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.touch_app_outlined, size: 20, color: Color(0xFFDC2626)),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'No vehicle selected',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Choose a model from the left to calculate real-time on-road prices, road tax, and insurance.',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    // Itemized Price List
+                    _buildPriceRow('Ex-showroom', CurrencyFormatter.format(exShowroom)),
+                    _buildPriceRow('Road Tax', CurrencyFormatter.format(roadTax)),
+                    _buildPriceRow('Insurance', CurrencyFormatter.format(insurance)),
+                    _buildPriceRow('Standard Accessories', CurrencyFormatter.format(stdAccessories)),
 
-                  // Add-on Accessories List
-                  ...calcAccessories.map((acc) {
-                    final rawAmt = acc['amount'];
-                    final amt = rawAmt is num ? rawAmt.toDouble() : (double.tryParse(rawAmt?.toString() ?? '') ?? 0.0);
-                    return _buildPriceRow(acc['name'] ?? 'Accessory', CurrencyFormatter.format(amt));
-                  }),
+                    // Add-on Accessories List
+                    ...calcAccessories.map((acc) {
+                      final rawAmt = acc['amount'];
+                      final amt = rawAmt is num ? rawAmt.toDouble() : (double.tryParse(rawAmt?.toString() ?? '') ?? 0.0);
+                      return _buildPriceRow(acc['name'] ?? 'Accessory', CurrencyFormatter.format(amt));
+                    }),
 
-                  // Hypothecation Charge if Finance
-                  if (_purchaseMode == 'Finance')
-                    _buildPriceRow('Hypothecation Charge', '₹1,500'),
+                    // Hypothecation Charge if Finance
+                    if (_purchaseMode == 'Finance')
+                      _buildPriceRow('Hypothecation Charge', '₹1,500'),
+                  ],
 
                   const Divider(height: 20, color: Color(0xFFE2E8F0)),
 

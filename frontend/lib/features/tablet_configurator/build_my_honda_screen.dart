@@ -21,7 +21,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   int _currentStep = 1;
 
   // Selected State
-  String _selectedCategory = 'MC'; // 'MC', 'Scooter', 'BigBike'
+  String? _selectedCategory; // Null initially: start from scratch!
   String _selectedCcFilter =
       'All'; // 'All', '100 CC', '125 CC', '150 CC', 'On Road'
   Map<String, dynamic>? _selectedVehicle;
@@ -426,8 +426,9 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     return Icons.inventory_2_outlined;
   }
 
-  bool _matchesCategory(String? itemCat, String targetCat) {
+  bool _matchesCategory(String? itemCat, String? targetCat) {
     if (itemCat == null) return false;
+    if (targetCat == null) return true;
     final itemLower = itemCat.toLowerCase();
     if (targetCat == 'MC') {
       return itemCat == 'MC' || itemLower.contains('motorcycle') || itemLower == 'mc';
@@ -2559,6 +2560,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   // ==========================================
   Widget _buildQuotationSummaryCard() {
     final v = _selectedVehicle;
+    final bool canContinue = !(_currentStep == 1 && _selectedCategory == null);
 
     return Container(
       padding: const EdgeInsets.all(22),
@@ -2664,27 +2666,34 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             height: 48,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626),
-                foregroundColor: Colors.white,
+                backgroundColor: canContinue ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
+                foregroundColor: canContinue ? Colors.white : const Color(0xFF94A3B8),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24)),
               ),
-              onPressed: _nextStep,
+              onPressed: canContinue ? _nextStep : null,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    _currentStep == 7 ? 'Complete Enquiry' : 'Continue',
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w800),
+                    !canContinue
+                        ? 'Select Category to Continue'
+                        : (_currentStep == 7 ? 'Complete Enquiry' : 'Continue'),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: canContinue ? Colors.white : const Color(0xFF94A3B8),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Icon(
-                      _currentStep == 7
-                          ? Icons.check_circle_outline
-                          : Icons.arrow_forward_rounded,
-                      size: 18),
+                  if (canContinue) ...[
+                    const SizedBox(width: 8),
+                    Icon(
+                        _currentStep == 7
+                            ? Icons.check_circle_outline
+                            : Icons.arrow_forward_rounded,
+                        size: 18),
+                  ],
                 ],
               ),
             ),
