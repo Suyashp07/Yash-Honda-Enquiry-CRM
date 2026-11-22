@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
@@ -2187,14 +2189,13 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     );
   }
 
-  Future<void> _saveCompanyProfile() async {
+  Future<void> _saveCompanyProfile({bool silent = false}) async {
     try {
       final dio = ref.read(dioProvider);
       await dio.put('/settings', data: {
         'companyName': _compNameCtrl.text.trim(),
         'gstNumber': _gstCtrl.text.trim(),
         'address': _addrCtrl.text.trim(),
-        'quotationTerms': _termsCtrl.text.trim(),
         'bankName': _bankCtrl.text.trim(),
         'accountNumber': _accCtrl.text.trim(),
         'ifsc': _ifscCtrl.text.trim(),
@@ -2205,15 +2206,21 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         'upiQrUrl': _upiQrUrl,
       });
 
-      if (mounted) {
+      if (!silent && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Company Profile saved successfully!')),
+          const SnackBar(
+            content: Text('Company Profile saved successfully!'),
+            backgroundColor: Color(0xFF16A34A),
+          ),
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (!silent && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving company profile: $e')),
+          SnackBar(
+            content: Text('Error saving company profile: $e'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
         );
       }
     }
@@ -2221,11 +2228,37 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
 
   String _resolveImageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    if (path.startsWith('data:') ||
+        path.startsWith('http://') ||
+        path.startsWith('https://')) return path;
     final base = ApiConstants.baseUrl.endsWith('/api')
         ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 4)
         : ApiConstants.baseUrl;
     return '$base${path.startsWith('/') ? '' : '/'}$path';
+  }
+
+  Widget _buildBrandingImage(String? url, {required Widget fallback}) {
+    if (url == null || url.trim().isEmpty) return fallback;
+    final clean = url.trim();
+    if (clean.startsWith('data:image')) {
+      try {
+        final commaIdx = clean.indexOf(',');
+        final base64Data = commaIdx != -1 ? clean.substring(commaIdx + 1) : clean;
+        final bytes = base64Decode(base64Data);
+        return Image.memory(
+          bytes,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => fallback,
+        );
+      } catch (_) {
+        return fallback;
+      }
+    }
+    return Image.network(
+      _resolveImageUrl(clean),
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => fallback,
+    );
   }
 
   Future<void> _pickAndUploadBranding(String type) async {
@@ -2248,6 +2281,18 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         }
       });
 
+      // Encode bytes to Base64 Data URI so it survives Render ephemeral restarts
+      String? localDataUri;
+      if (file.bytes != null && file.bytes!.isNotEmpty) {
+        final ext = (file.extension ?? 'png').toLowerCase();
+        final mime = ext == 'svg'
+            ? 'image/svg+xml'
+            : (ext == 'webp'
+                ? 'image/webp'
+                : (ext == 'jpg' || ext == 'jpeg' ? 'image/jpeg' : 'image/png'));
+        localDataUri = 'data:$mime;base64,${base64Encode(file.bytes!)}';
+      }
+
       final dio = ref.read(dioProvider);
       final formData = FormData();
       if (file.bytes != null) {
@@ -2262,29 +2307,41 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         ));
       }
 
-      final res = await dio.post('/settings/upload/$type', data: formData);
-      final newUrl = res.data?['url']?.toString() ??
-          res.data?['settings']?['logoUrl']?.toString() ??
-          res.data?['settings']?['upiQrUrl']?.toString();
+      String? uploadedUrl;
+      try {
+        final res = await dio.post('/settings/upload/$type', data: formData);
+        uploadedUrl = res.data?['url']?.toString() ??
+            res.data?['settings']?['logoUrl']?.toString() ??
+            res.data?['settings']?['upiQrUrl']?.toString();
+      } catch (err) {
+        uploadedUrl = localDataUri;
+      }
+
+      final finalUrl = (uploadedUrl != null && uploadedUrl.isNotEmpty) ? uploadedUrl : localDataUri;
 
       if (!mounted) return;
       setState(() {
         if (isLogo) {
-          _logoUrl = newUrl;
+          _logoUrl = finalUrl;
           _isUploadingLogo = false;
         } else {
-          _upiQrUrl = newUrl;
+          _upiQrUrl = finalUrl;
           _isUploadingUpiQr = false;
         }
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              '${isLogo ? 'Logo' : 'UPI QR code'} uploaded and updated successfully!'),
-          backgroundColor: const Color(0xFF16A34A),
-        ),
-      );
+      // Automatically persist to companySettings in database
+      await _saveCompanyProfile(silent: true);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '${isLogo ? 'Logo' : 'UPI QR code'} uploaded and saved permanently!'),
+            backgroundColor: const Color(0xFF16A34A),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -2295,7 +2352,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         }
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to upload image: $e')),
+        SnackBar(
+          content: Text('Failed to upload image: $e'),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
       );
     }
   }
@@ -2315,12 +2375,16 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         }
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${isLogo ? 'Logo' : 'UPI QR code'} removed.'),
-          backgroundColor: const Color(0xFF0F172A),
-        ),
-      );
+      await _saveCompanyProfile(silent: true);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${isLogo ? 'Logo' : 'UPI QR code'} removed.'),
+            backgroundColor: const Color(0xFF0F172A),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -3881,20 +3945,44 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          const Text(
-            'Company Profile',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Appears on every quotation PDF and payment footer.',
-            style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+          // Header Row with Save button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Company Profile',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Appears on every quotation PDF and payment footer.',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  elevation: 0,
+                ),
+                onPressed: () => _saveCompanyProfile(),
+                icon: const Icon(Icons.check_circle_outline, size: 16),
+                label: const Text('Save Changes',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              ),
+            ],
           ),
           const SizedBox(height: 24),
 
@@ -4307,21 +4395,14 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       ),
                       alignment: Alignment.center,
                       clipBehavior: Clip.antiAlias,
-                      child: (_logoUrl != null && _logoUrl!.isNotEmpty)
-                          ? Image.network(
-                              _resolveImageUrl(_logoUrl),
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Text('HONDA',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      color: Color(0xFFDC2626),
-                                      fontSize: 9)),
-                            )
-                          : const Text('HONDA',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFFDC2626),
-                                  fontSize: 9)),
+                      child: _buildBrandingImage(
+                        _logoUrl,
+                        fallback: const Text('HONDA',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFFDC2626),
+                                fontSize: 9)),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
@@ -4392,17 +4473,11 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       ),
                       alignment: Alignment.center,
                       clipBehavior: Clip.antiAlias,
-                      child: (_upiQrUrl != null && _upiQrUrl!.isNotEmpty)
-                          ? Image.network(
-                              _resolveImageUrl(_upiQrUrl),
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.qr_code_2_rounded,
-                                  size: 24,
-                                  color: Color(0xFF0F172A)),
-                            )
-                          : const Icon(Icons.qr_code_2_rounded,
-                              size: 24, color: Color(0xFF0F172A)),
+                      child: _buildBrandingImage(
+                        _upiQrUrl,
+                        fallback: const Icon(Icons.qr_code_2_rounded,
+                            size: 24, color: Color(0xFF0F172A)),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(

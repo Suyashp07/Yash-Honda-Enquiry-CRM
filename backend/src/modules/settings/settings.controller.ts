@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagg
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { SettingsService } from './settings.service';
 import { UpdateSettingsDto } from './dto/settings.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -62,8 +62,20 @@ export class SettingsController {
     if (!file) {
       throw new BadRequestException('Please provide an image file');
     }
-    const brandingUrl = `/api/uploads/branding/${file.filename}`;
     const normalizedType = type === 'logo' ? 'logo' : 'upi-qr';
+
+    let dataUri = '';
+    try {
+      if (file.path && existsSync(file.path)) {
+        const buf = readFileSync(file.path);
+        const mime = file.mimetype || (normalizedType === 'logo' ? 'image/png' : 'image/png');
+        dataUri = `data:${mime};base64,${buf.toString('base64')}`;
+      }
+    } catch (e) {
+      console.warn('Could not encode uploaded branding to data URI:', e);
+    }
+
+    const brandingUrl = dataUri || `/api/uploads/branding/${file.filename}`;
     const updated = await this.settingsService.updateBranding(normalizedType, brandingUrl);
     return {
       success: true,

@@ -37,6 +37,11 @@ export class UpdateSettingsDto {
   @IsOptional()
   upiId?: string;
 
+  @ApiProperty({ example: 'Terms and conditions', required: false })
+  @IsString()
+  @IsOptional()
+  quotationTerms?: string;
+
   @ApiProperty({ example: '/api/uploads/branding/logo.png', required: false })
   @IsString()
   @IsOptional()

@@ -1272,11 +1272,35 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
 
   String _resolveImageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) return path;
     final base = ApiConstants.baseUrl.endsWith('/api')
         ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 4)
         : ApiConstants.baseUrl;
     return '$base${path.startsWith('/') ? '' : '/'}$path';
+  }
+
+  Widget _buildBrandingImage(String? url, {required Widget fallback}) {
+    if (url == null || url.trim().isEmpty) return fallback;
+    final clean = url.trim();
+    if (clean.startsWith('data:image')) {
+      try {
+        final commaIdx = clean.indexOf(',');
+        final base64Data = commaIdx != -1 ? clean.substring(commaIdx + 1) : clean;
+        final bytes = base64Decode(base64Data);
+        return Image.memory(
+          bytes,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => fallback,
+        );
+      } catch (_) {
+        return fallback;
+      }
+    }
+    return Image.network(
+      _resolveImageUrl(clean),
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => fallback,
+    );
   }
 
   Widget _buildQuoteLogo() {
@@ -1285,11 +1309,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       return Container(
         constraints: const BoxConstraints(maxHeight: 38, maxWidth: 110),
         alignment: Alignment.centerRight,
-        child: Image.network(
-          _resolveImageUrl(logoUrl),
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const HondaWingLogo(),
-        ),
+        child: _buildBrandingImage(logoUrl, fallback: const HondaWingLogo()),
       );
     }
     return const HondaWingLogo();
@@ -1310,10 +1330,9 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
             border: Border.all(color: const Color(0xFFCBD5E1)),
           ),
           clipBehavior: Clip.antiAlias,
-          child: Image.network(
-            _resolveImageUrl(upiQrUrl),
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => _buildDynamicUpiQr(upiId, grandTotal),
+          child: _buildBrandingImage(
+            upiQrUrl,
+            fallback: _buildDynamicUpiQr(upiId, grandTotal),
           ),
         ),
       );

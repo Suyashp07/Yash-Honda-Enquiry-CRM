@@ -22,9 +22,10 @@ export class SettingsService {
 
   async updateSettings(dto: UpdateSettingsDto) {
     const existing = await this.getSettings();
+    const { quotationTerms, ...data } = dto as any;
     return this.prisma.companySettings.update({
       where: { id: existing.id },
-      data: dto,
+      data,
     });
   }
 
