@@ -917,53 +917,70 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         ),
         const SizedBox(width: 10),
 
-        // Zoom Dropdown matching prototype: 🔍 100% ⌄
-        PopupMenuButton<int>(
-          initialValue: _zoomLevel,
-          onSelected: (val) => setState(() => _zoomLevel = val),
-          tooltip: 'Zoom timeline view',
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          itemBuilder: (context) => [75, 90, 100, 110, 125, 150]
-              .map((z) => PopupMenuItem<int>(
-                    value: z,
+        // Zoom Controls: Plus (+) and Minus (-) buttons
+        Container(
+          height: 32,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 2,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Zoom Out (-) Button
+              Tooltip(
+                message: 'Zoom out timeline (-)',
+                child: InkWell(
+                  onTap: _zoomLevel > 60
+                      ? () => setState(() => _zoomLevel = math.max(60, _zoomLevel - 15))
+                      : null,
+                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
+                  child: Container(
+                    width: 32,
                     height: 32,
-                    child: Text('$z%',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight:
-                              z == _zoomLevel ? FontWeight.w700 : FontWeight.w500,
-                          color: z == _zoomLevel
-                              ? const Color(0xFFDC2626)
-                              : const Color(0xFF0F172A),
-                        )),
-                  ))
-              .toList(),
-          child: Container(
-            height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.search, size: 14, color: Color(0xFF64748B)),
-                const SizedBox(width: 5),
-                Text(
-                  '$_zoomLevel%',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF0F172A),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.remove_rounded,
+                      size: 17,
+                      color: _zoomLevel > 60
+                          ? const Color(0xFF334155)
+                          : const Color(0xFFCBD5E1),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 4),
-                const Icon(Icons.keyboard_arrow_down_rounded,
-                    size: 16, color: Color(0xFF64748B)),
-              ],
-            ),
+              ),
+              Container(width: 1, height: 16, color: const Color(0xFFE2E8F0)),
+              // Zoom In (+) Button
+              Tooltip(
+                message: 'Zoom in timeline (+)',
+                child: InkWell(
+                  onTap: _zoomLevel < 160
+                      ? () => setState(() => _zoomLevel = math.min(160, _zoomLevel + 15))
+                      : null,
+                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.add_rounded,
+                      size: 17,
+                      color: _zoomLevel < 160
+                          ? const Color(0xFF334155)
+                          : const Color(0xFFCBD5E1),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
