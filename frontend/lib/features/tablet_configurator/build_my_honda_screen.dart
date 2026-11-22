@@ -510,19 +510,32 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
   Widget _buildSafeImage(String path,
       {BoxFit fit = BoxFit.contain, double? width, double? height}) {
+    final cleanPath = path.startsWith('assets/') ? path.replaceFirst('assets/', '') : path;
     return Image.asset(
       path,
       fit: fit,
       width: width,
       height: height,
-      errorBuilder: (_, __, ___) => Image.network(
-        path,
+      errorBuilder: (_, __, ___) => Image.asset(
+        'assets/$cleanPath',
         fit: fit,
         width: width,
         height: height,
-        errorBuilder: (_, __, ___) => const Center(
-          child: Icon(Icons.two_wheeler_outlined,
-              size: 48, color: Color(0xFFCBD5E1)),
+        errorBuilder: (_, __, ___) => Image.network(
+          'assets/$cleanPath',
+          fit: fit,
+          width: width,
+          height: height,
+          errorBuilder: (_, __, ___) => Image.network(
+            'assets/assets/$cleanPath',
+            fit: fit,
+            width: width,
+            height: height,
+            errorBuilder: (_, __, ___) => const Center(
+              child: Icon(Icons.two_wheeler_outlined,
+                  size: 48, color: Color(0xFFCBD5E1)),
+            ),
+          ),
         ),
       ),
     );
@@ -886,7 +899,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       aspectRatio: 500 / 736,
                       child: _buildCategoryCard(
                         code: 'MC',
-                        imagePath: 'assets/configurator/cat_mc_hq.jpg',
+                        imagePath: 'assets/configurator/cat_mc.jpg',
                       ),
                     ),
                   ),
@@ -898,7 +911,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       aspectRatio: 500 / 736,
                       child: _buildCategoryCard(
                         code: 'Scooter',
-                        imagePath: 'assets/configurator/cat_scooter_hq.jpg',
+                        imagePath: 'assets/configurator/cat_scooter.jpg',
                       ),
                     ),
                   ),
@@ -910,7 +923,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       aspectRatio: 500 / 736,
                       child: _buildCategoryCard(
                         code: 'BigBike',
-                        imagePath: 'assets/configurator/cat_bigbike_hq.jpg',
+                        imagePath: 'assets/configurator/cat_bigbike.jpg',
                       ),
                     ),
                   ),
