@@ -434,7 +434,9 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     if (targetCat == null) return true;
     final itemLower = itemCat.toLowerCase();
     if (targetCat == 'MC') {
-      return itemCat == 'MC' || itemLower.contains('motorcycle') || itemLower == 'mc';
+      return itemCat == 'MC' ||
+          itemLower.contains('motorcycle') ||
+          itemLower == 'mc';
     }
     if (targetCat == 'Scooter') {
       return itemLower.contains('scooter');
@@ -450,11 +452,13 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     final source =
         _backendVehicles.isNotEmpty ? _backendVehicles : _defaultCatalog;
     List<Map<String, dynamic>> pool = source
-        .where((v) => _matchesCategory(v['category']?.toString(), _selectedCategory))
+        .where((v) =>
+            _matchesCategory(v['category']?.toString(), _selectedCategory))
         .toList();
 
     if (_selectedCcFilter != 'All' && _selectedCcFilter != 'On Road') {
-      final filtered = pool.where((v) => v['ccCategory'] == _selectedCcFilter).toList();
+      final filtered =
+          pool.where((v) => v['ccCategory'] == _selectedCcFilter).toList();
       if (filtered.isNotEmpty) pool = filtered;
     }
     return pool;
@@ -510,7 +514,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
   Widget _buildSafeImage(String path,
       {BoxFit fit = BoxFit.contain, double? width, double? height}) {
-    final cleanPath = path.startsWith('assets/') ? path.replaceFirst('assets/', '') : path;
+    final cleanPath =
+        path.startsWith('assets/') ? path.replaceFirst('assets/', '') : path;
     return Image.asset(
       path,
       fit: fit,
@@ -779,7 +784,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           PopupMenuButton<String>(
             tooltip: 'Profile & Actions',
             offset: const Offset(0, 44),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             onSelected: (val) {
               if (val == 'quick_form') context.go('/tablet');
               if (val == 'exit') context.go('/dashboard');
@@ -791,7 +797,9 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   children: [
                     Icon(Icons.flash_on, size: 16, color: Color(0xFFDC2626)),
                     SizedBox(width: 8),
-                    Text('Switch to Classic Form', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('Switch to Classic Form',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -800,9 +808,12 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                 value: 'exit',
                 child: Row(
                   children: [
-                    Icon(Icons.logout_rounded, size: 16, color: Color(0xFF64748B)),
+                    Icon(Icons.logout_rounded,
+                        size: 16, color: Color(0xFF64748B)),
                     SizedBox(width: 8),
-                    Text('Exit to Floor Dashboard', style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                    Text('Exit to Floor Dashboard',
+                        style:
+                            TextStyle(fontSize: 13, color: Color(0xFF64748B))),
                   ],
                 ),
               ),
@@ -967,7 +978,9 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: isSelected ? const Color(0xFFDC2626) : const Color(0xFFF1F5F9),
+              color: isSelected
+                  ? const Color(0xFFDC2626)
+                  : const Color(0xFFF1F5F9),
               width: isSelected ? 2.8 : 1.0,
             ),
             boxShadow: [
@@ -1075,7 +1088,9 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: isSel ? const Color(0x28DC2626) : const Color(0x0C000000),
+                        color: isSel
+                            ? const Color(0x28DC2626)
+                            : const Color(0x0C000000),
                         blurRadius: isSel ? 16 : 10,
                         offset: const Offset(0, 4),
                       ),
@@ -1122,7 +1137,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
                       // Bottom Price & Customise Button
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
                         child: Row(
                           children: [
                             Expanded(
@@ -1151,8 +1167,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                             ),
                             OutlinedButton(
                               style: OutlinedButton.styleFrom(
-                                side:
-                                    const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+                                side: const BorderSide(
+                                    color: Color(0xFFDC2626), width: 1.5),
                                 foregroundColor: const Color(0xFFDC2626),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(20)),
@@ -2705,7 +2721,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                     : const Color(0xFFF4A5A5),
                 foregroundColor: Colors.white,
                 elevation: canContinue ? 4 : 0,
-                shadowColor: canContinue ? const Color(0x33DC2626) : Colors.transparent,
+                shadowColor:
+                    canContinue ? const Color(0x33DC2626) : Colors.transparent,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(26)),
               ),

@@ -475,47 +475,59 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     final quoted = outcomes['quoted'] ?? 14;
     final booked = outcomes['booked'] ?? (summary['bookingsToday'] ?? 4);
 
+    final selectedBranch = ref.watch(selectedBranchIdProvider);
+    final isAllBranches = selectedBranch == 'all' || selectedBranch.isEmpty;
+
     final authUser = ref.watch(authStateProvider).user;
     final isManager = authUser?.isBranchManager == true ||
         authUser?.role.toLowerCase().contains('manager') == true;
-    final showAllDealerships =
-        (authUser?.isSuperAdmin == true || authUser?.isOwner == true) &&
-        !isManager;
+
+    // When "All branches" is selected, "CURRENT DEALERSHIP" makes no sense to show.
+    // It should only be shown when a specific dealership is selected.
+    final showCurrentDealership = !isAllBranches;
+
+    // "ALL DEALERSHIPS" is shown whenever "All branches" is selected, OR
+    // for Super Admin / Owner viewing a specific branch (for comparison).
+    final showAllDealerships = isAllBranches ||
+        ((authUser?.isSuperAdmin == true || authUser?.isOwner == true) &&
+            !isManager);
 
     return Row(
       children: [
-        // Card 1: CURRENT DEALERSHIP
-        Expanded(
-          child: _buildMetricCard(
-            title: 'CURRENT DEALERSHIP',
-            tooltip:
-                'Live inquiries logged today for the actively selected showroom',
-            columns: [
-              _MetricCol(
-                  label: 'Total',
-                  value: currentTotal.toString(),
-                  color: const Color(0xFF0F172A),
-                  tooltip:
-                      'Total customer leads recorded today at this branch'),
-              _MetricCol(
-                  label: 'Walk-ins',
-                  value: currentWalkIns.toString(),
-                  color: const Color(0xFF0F172A),
-                  tooltip:
-                      'Physical customer visits to the showroom floor today'),
-              _MetricCol(
-                  label: 'Calls',
-                  value: currentCalls.toString(),
-                  color: const Color(0xFF0F172A),
-                  tooltip:
-                      'Inbound telephonic customer inquiries handled today'),
-            ],
+        // Card 1: CURRENT DEALERSHIP (Only shown when a specific branch is selected)
+        if (showCurrentDealership) ...[
+          Expanded(
+            child: _buildMetricCard(
+              title: 'CURRENT DEALERSHIP',
+              tooltip:
+                  'Live inquiries logged today for the actively selected showroom',
+              columns: [
+                _MetricCol(
+                    label: 'Total',
+                    value: currentTotal.toString(),
+                    color: const Color(0xFF0F172A),
+                    tooltip:
+                        'Total customer leads recorded today at this branch'),
+                _MetricCol(
+                    label: 'Walk-ins',
+                    value: currentWalkIns.toString(),
+                    color: const Color(0xFF0F172A),
+                    tooltip:
+                        'Physical customer visits to the showroom floor today'),
+                _MetricCol(
+                    label: 'Calls',
+                    value: currentCalls.toString(),
+                    color: const Color(0xFF0F172A),
+                    tooltip:
+                        'Inbound telephonic customer inquiries handled today'),
+              ],
+            ),
           ),
-        ),
-
-        // Card 2: ALL DEALERSHIPS (Visible ONLY to Super Admin and Owner)
-        if (showAllDealerships) ...[
           const SizedBox(width: 14),
+        ],
+
+        // Card 2: ALL DEALERSHIPS (Visible on "All branches" or for Super Admin/Owner)
+        if (showAllDealerships) ...[
           Expanded(
             child: _buildMetricCard(
               title: 'ALL DEALERSHIPS',
@@ -543,8 +555,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
               ],
             ),
           ),
+          const SizedBox(width: 14),
         ],
-        const SizedBox(width: 14),
 
         // Card 3: SALES REPS · LIVE
         Expanded(
