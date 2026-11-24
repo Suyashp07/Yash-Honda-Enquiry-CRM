@@ -207,10 +207,38 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   Future<void> _fetchBackendData() async {
     try {
       final dio = ref.read(dioProvider);
-      final res = await dio.get('/vehicles/configurator-bootstrap');
-      if (!mounted) return;
+      Map<String, dynamic>? data;
 
-      final data = res.data as Map<String, dynamic>;
+      try {
+        final bootRes = await dio.get('/vehicles/configurator-bootstrap');
+        if (bootRes.data is Map<String, dynamic>) {
+          data = bootRes.data as Map<String, dynamic>;
+        }
+      } catch (_) {
+        // Fallback for authenticated sessions if bootstrap endpoint isn't deployed yet
+        final results = await Future.wait([
+          dio.get('/vehicles').catchError((_) =>
+              Response(requestOptions: RequestOptions(path: ''), data: [])),
+          dio.get('/accessories').catchError((_) =>
+              Response(requestOptions: RequestOptions(path: ''), data: [])),
+          dio.get('/financiers').catchError((_) =>
+              Response(requestOptions: RequestOptions(path: ''), data: [])),
+          dio.get('/branches').catchError((_) =>
+              Response(requestOptions: RequestOptions(path: ''), data: [])),
+          dio.get('/vehicles/colours').catchError((_) =>
+              Response(requestOptions: RequestOptions(path: ''), data: [])),
+        ]);
+        data = {
+          'vehicles': results[0].data is List ? results[0].data : [],
+          'accessories': results[1].data is List ? results[1].data : [],
+          'financiers': results[2].data is List ? results[2].data : [],
+          'branches': results[3].data is List ? results[3].data : [],
+          'colours': results[4].data is List ? results[4].data : [],
+        };
+      }
+
+      if (!mounted || data == null) return;
+
       final rawVehicles = (data['vehicles'] as List? ?? []);
       final rawAccessories = (data['accessories'] as List? ?? []);
       final rawFinanciers = (data['financiers'] as List? ?? []);
@@ -221,6 +249,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         _backendVehicles = rawVehicles.map((raw) {
           final bv = Map<String, dynamic>.from(raw as Map);
           final code = bv['code']?.toString() ?? '';
+          final nameStr = bv['name']?.toString() ?? 'Honda Vehicle';
           final exShow =
               double.tryParse(bv['exShowroomPrice']?.toString() ?? '0') ??
                   68767;
@@ -247,15 +276,18 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             }
           }
 
+          int? ccVal = bv['ccDisplacement'] is int
+              ? bv['ccDisplacement'] as int
+              : int.tryParse(bv['ccDisplacement']?.toString() ?? '');
+          ccVal ??= _inferCcFromCode(code, nameStr);
+
           return {
             'id': bv['id']?.toString() ?? code,
             'code': code,
-            'name': bv['name']?.toString() ?? 'Honda Vehicle',
+            'name': nameStr,
             'category': normCat,
             'modelGroup': bv['modelGroup']?['name']?.toString() ?? 'RedWing',
-            'ccDisplacement': bv['ccDisplacement'] is int
-                ? bv['ccDisplacement']
-                : int.tryParse(bv['ccDisplacement']?.toString() ?? ''),
+            'ccDisplacement': ccVal,
             'exShowroomPrice': exShow,
             'onRoadPrice': onRoad,
             'listingImageUrl': bv['listingImageUrl']?.toString(),
@@ -264,18 +296,21 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           };
         }).toList();
 
-        _backendAccessories = rawAccessories.map((raw) {
-          final acc = Map<String, dynamic>.from(raw as Map);
-          return {
-            'id': acc['id']?.toString() ?? '',
-            'name': acc['name']?.toString() ?? '',
-            'price':
-                double.tryParse(acc['defaultPrice']?.toString() ?? '0') ?? 0,
-            'isStandard': acc['isStandard'] == true,
-            'imageUrl': acc['imageUrl']?.toString(),
-            'isPriceEditable': acc['isPriceEditable'] == true,
-          };
-        }).toList();
+        _backendAccessories = rawAccessories
+            .map((raw) {
+              final acc = Map<String, dynamic>.from(raw as Map);
+              return {
+                'id': acc['id']?.toString() ?? '',
+                'name': acc['name']?.toString() ?? '',
+                'price':
+                    double.tryParse(acc['defaultPrice']?.toString() ?? '0') ?? 0,
+                'isStandard': acc['isStandard'] == true,
+                'imageUrl': acc['imageUrl']?.toString(),
+                'isPriceEditable': acc['isPriceEditable'] == true,
+              };
+            })
+            .where((a) => a['name'].toString().isNotEmpty)
+            .toList();
 
         _backendFinanciers = rawFinanciers
             .map((e) => Map<String, dynamic>.from(e as Map))
@@ -308,6 +343,19 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         setState(() => _isLoadingCatalog = false);
       }
     }
+  }
+
+  int? _inferCcFromCode(String code, String name) {
+    final s = '$code $name'.toUpperCase();
+    if (s.contains('350')) return 350;
+    if (s.contains('300')) return 300;
+    if (s.contains('200')) return 200;
+    if (s.contains('160')) return 160;
+    if (s.contains('150')) return 150;
+    if (s.contains('125')) return 125;
+    if (s.contains('110') || s.contains('6G')) return 110;
+    if (s.contains('100')) return 100;
+    return null;
   }
 
   String _normalizeCategory(String? rawCat, String? modelGroupName) {
@@ -360,11 +408,23 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     return pool.where((v) => v['ccDisplacement'] == numOnly).toList();
   }
 
+  List<Map<String, dynamic>> get _effectiveAccessories =>
+      _backendAccessories.isNotEmpty ? _backendAccessories : _fallbackAccessories;
+
+  static const List<Map<String, dynamic>> _fallbackAccessories = [
+    {'id': 'acc-ceramic', 'name': 'Ceramic Coating (2-Year)', 'price': 3500, 'isStandard': false},
+    {'id': 'acc-warranty', 'name': 'Extended Warranty (3+3 Yrs)', 'price': 2200, 'isStandard': false},
+    {'id': 'acc-helmet', 'name': 'Helmet (Studds/Honda ISI)', 'price': 1250, 'isStandard': false},
+    {'id': 'acc-seat', 'name': 'Designer Seat Cover', 'price': 650, 'isStandard': false},
+    {'id': 'acc-mat', 'name': 'Floor Mat Premium', 'price': 450, 'isStandard': false},
+    {'id': 'acc-rsa', 'name': 'RSA (Roadside Assistance - 1 Yr)', 'price': 1499, 'isStandard': false},
+  ];
+
   List<Map<String, dynamic>> get _standardAccessories =>
-      _backendAccessories.where((a) => a['isStandard'] == true).toList();
+      _effectiveAccessories.where((a) => a['isStandard'] == true).toList();
 
   List<Map<String, dynamic>> get _optionalAccessories =>
-      _backendAccessories.where((a) => a['isStandard'] != true).toList();
+      _effectiveAccessories.where((a) => a['isStandard'] != true).toList();
 
   double get _selectedOptionalAccessoriesTotal {
     double sum = 0;
