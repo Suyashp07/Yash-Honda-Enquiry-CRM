@@ -11,29 +11,6 @@ export class EnquiriesService {
     private quotationsService: QuotationsService,
   ) {}
 
-  async createFromConfigurator(dto: CreateEnquiryDto) {
-    // Resolve target user for attribution if assignedToId omitted (kiosk self-serve mode)
-    let creatorId = dto.assignedToId;
-    if (!creatorId && dto.branchId) {
-      const branchStaff = await this.prisma.userBranch.findFirst({
-        where: { branchId: dto.branchId, user: { status: 'Active' } },
-        select: { userId: true },
-      });
-      creatorId = branchStaff?.userId;
-    }
-    if (!creatorId) {
-      const fallbackUser = await this.prisma.user.findFirst({
-        where: { status: 'Active' },
-        select: { id: true },
-      });
-      if (!fallbackUser) {
-        throw new BadRequestException('No active showroom staff found to attribute self-serve enquiry.');
-      }
-      creatorId = fallbackUser.id;
-    }
-    return this.create({ ...dto, assignedToId: dto.assignedToId || creatorId }, creatorId);
-  }
-
   async create(dto: CreateEnquiryDto, userId: string) {
     return this.prisma.$transaction(async (tx) => {
       // 1. Resolve or create customer

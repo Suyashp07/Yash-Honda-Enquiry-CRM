@@ -2909,6 +2909,33 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   // STEP 7 ACTIONS: CAPTURE CUSTOMER DETAILS -> CREATE REAL QUOTE -> DISPATCH
   // ==========================================================
   Future<void> _handleAction(String actionType) async {
+    final authState = ref.read(authStateProvider);
+    if (!authState.isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+              'Please sign in on this showroom tablet before creating & sending official quotations.'),
+          action: SnackBarAction(
+            label: 'Sign in',
+            textColor: Colors.white,
+            onPressed: () => context.go('/login'),
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (_backendVehicles.isEmpty ||
+        (_selectedVehicle?['id']?.toString().startsWith('v-') ?? true)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Preview mode only (live dealership catalog offline). Reload when connected before submitting a quote.'),
+        ),
+      );
+      return;
+    }
+
     if (_createdEnquiryId != null && _createdQuotationId != null) {
       await _executeDispatchAction(actionType);
       return;
@@ -2916,7 +2943,6 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
     // Prompt customer details cleanly
     final needsEmail = actionType == 'email';
-    final authState = ref.read(authStateProvider);
     final user = authState.user;
 
     String? chosenBranchId = _selectedBranchId;
@@ -3129,9 +3155,11 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
       final v = _selectedVehicle!;
       final quoteAccessories = <Map<String, dynamic>>[
         for (final acc in _standardAccessories)
-          {'accessoryId': acc['id'], 'amount': 0},
+          if (!acc['id'].toString().startsWith('acc-'))
+            {'accessoryId': acc['id'], 'amount': 0},
         for (final acc in _optionalAccessories)
-          if (_selectedOptionalAccessoryIds.contains(acc['id'].toString()))
+          if (_selectedOptionalAccessoryIds.contains(acc['id'].toString()) &&
+              !acc['id'].toString().startsWith('acc-'))
             {'accessoryId': acc['id'], 'amount': acc['price']},
       ];
 
@@ -3165,10 +3193,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         },
       };
 
-      final endpoint = authState.isAuthenticated
-          ? '/enquiries'
-          : '/enquiries/public-configurator';
-      final res = await dio.post(endpoint, data: payload);
+      final res = await dio.post('/enquiries', data: payload);
 
       final created = res.data as Map<String, dynamic>;
       final quotes = (created['quotations'] as List? ?? []);
@@ -3221,7 +3246,6 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
   Future<void> _executeDispatchAction(String actionType) async {
     final dio = ref.read(dioProvider);
-    final isAuthed = ref.read(authStateProvider).isAuthenticated;
     final quoteNo = _createdQuoteNumber ?? _createdQuotationId ?? '';
 
     if (actionType == 'print' || actionType == 'download') {
@@ -3251,10 +3275,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         return;
       }
       try {
-        final endpoint = isAuthed
-            ? '/communications/email'
-            : '/communications/configurator-email';
-        final res = await dio.post(endpoint, data: {
+        final res = await dio.post('/communications/email', data: {
           'enquiryId': _createdEnquiryId,
           'recipientEmail': email,
           'subject':
@@ -3281,10 +3302,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
     if (actionType == 'whatsapp') {
       try {
-        final endpoint = isAuthed
-            ? '/communications/whatsapp'
-            : '/communications/configurator-whatsapp';
-        final res = await dio.post(endpoint, data: {
+        final res = await dio.post('/communications/whatsapp', data: {
           'enquiryId': _createdEnquiryId,
           'templateName': 'quotation_send',
           'quotationId': _createdQuotationId,
