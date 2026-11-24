@@ -8,7 +8,7 @@ export class AccessoriesService {
 
   async findAll() {
     return this.prisma.accessory.findMany({
-      orderBy: { name: 'asc' },
+      orderBy: [{ isStandard: 'desc' }, { sortOrder: 'asc' }, { name: 'asc' }],
     });
   }
 
@@ -36,6 +36,14 @@ export class AccessoriesService {
     });
   }
 
+  async updateImage(id: string, imageUrl: string | null) {
+    await this.findOne(id);
+    return this.prisma.accessory.update({
+      where: { id },
+      data: { imageUrl },
+    });
+  }
+
   async remove(id: string) {
     await this.findOne(id);
     return this.prisma.accessory.update({
@@ -44,4 +52,3 @@ export class AccessoriesService {
     });
   }
 }
-

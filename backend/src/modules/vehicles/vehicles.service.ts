@@ -1,14 +1,82 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateVehicleDto, UpdateVehicleDto, CreateModelGroupDto, UpdateModelGroupDto, CreateColourDto, UpdateColourDto } from './dto/vehicle.dto';
+import {
+  CreateVehicleDto,
+  UpdateVehicleDto,
+  CreateModelGroupDto,
+  UpdateModelGroupDto,
+  CreateColourDto,
+  UpdateColourDto,
+} from './dto/vehicle.dto';
 
 @Injectable()
 export class VehiclesService {
   constructor(private prisma: PrismaService) {}
 
+  private normalizeCategory(raw: string | null | undefined, modelGroupName?: string): string {
+    const low = (raw || '').toLowerCase();
+    const mgLow = (modelGroupName || '').toLowerCase();
+    if (low.includes('scooter')) return 'Scooter';
+    if (low.includes('big') || low.includes('wing') || mgLow.includes('big')) return 'BigBike';
+    return 'MC';
+  }
+
+  // Public bootstrap endpoint for Build My Honda (works logged-in OR unauthenticated kiosk)
+  async getConfiguratorBootstrap(category?: string, cc?: number) {
+    const [vehicles, accessories, financiers, branches, colours] = await Promise.all([
+      this.prisma.vehicle.findMany({
+        where: { status: 'Active' },
+        include: {
+          modelGroup: true,
+          colours: { include: { colour: true } },
+        },
+        orderBy: [{ ccDisplacement: 'asc' }, { exShowroomPrice: 'asc' }],
+      }),
+      this.prisma.accessory.findMany({
+        where: { status: 'Active' },
+        orderBy: [{ isStandard: 'desc' }, { sortOrder: 'asc' }, { name: 'asc' }],
+      }),
+      this.prisma.financier.findMany({
+        where: { status: 'Active' },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.branch.findMany({
+        where: { status: 'Active' },
+        select: { id: true, code: true, name: true, wing: true, address: true },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.colour.findMany({
+        where: { status: 'Active' },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
+
+    let filteredVehicles = vehicles.map((v) => ({
+      ...v,
+      normalizedCategory: this.normalizeCategory(v.category, v.modelGroup?.name),
+    }));
+
+    if (category) {
+      filteredVehicles = filteredVehicles.filter(
+        (v) => v.normalizedCategory.toLowerCase() === category.toLowerCase(),
+      );
+    }
+    if (cc && Number.isFinite(cc)) {
+      filteredVehicles = filteredVehicles.filter((v) => v.ccDisplacement === cc);
+    }
+
+    return {
+      vehicles: filteredVehicles,
+      accessories,
+      financiers,
+      branches,
+      colours,
+    };
+  }
+
   // Vehicles
   async findAllVehicles(category?: string) {
-    return this.prisma.vehicle.findMany({
+    const list = await this.prisma.vehicle.findMany({
       where: category ? { category, status: 'Active' } : undefined,
       include: {
         modelGroup: true,
@@ -20,6 +88,7 @@ export class VehiclesService {
       },
       orderBy: { name: 'asc' },
     });
+    return list;
   }
 
   async findOneVehicle(id: string) {
@@ -75,12 +144,21 @@ export class VehiclesService {
     const { colourIds, ...data } = dto;
 
     return this.prisma.$transaction(async (tx) => {
-      const vehicle = await tx.vehicle.update({
+      await tx.vehicle.update({
         where: { id },
         data,
       });
 
       if (colourIds !== undefined) {
+        // Preserve existing per-colour uploaded images for retained colours
+        const existingLinks = await tx.vehicleColour.findMany({
+          where: { vehicleId: id },
+        });
+        const existingImagesByColourId = new Map<string, string | null>();
+        for (const link of existingLinks) {
+          existingImagesByColourId.set(link.colourId, link.colourImageUrl);
+        }
+
         await tx.vehicleColour.deleteMany({
           where: { vehicleId: id },
         });
@@ -90,6 +168,7 @@ export class VehiclesService {
             data: colourIds.map((cid) => ({
               vehicleId: id,
               colourId: cid,
+              colourImageUrl: existingImagesByColourId.get(cid) ?? null,
             })),
           });
         }
@@ -100,6 +179,34 @@ export class VehiclesService {
         include: { modelGroup: true, colours: { include: { colour: true } } },
       });
     });
+  }
+
+  async updateVehicleImage(id: string, slot: 'listing' | 'detail', imageUrl: string | null) {
+    await this.findOneVehicle(id);
+    const data = slot === 'listing' ? { listingImageUrl: imageUrl } : { detailImageUrl: imageUrl };
+    return this.prisma.vehicle.update({
+      where: { id },
+      data,
+      include: { modelGroup: true, colours: { include: { colour: true } } },
+    });
+  }
+
+  async updateVehicleColourImage(vehicleId: string, colourId: string, colourImageUrl: string | null) {
+    await this.findOneVehicle(vehicleId);
+    const colour = await this.prisma.colour.findUnique({ where: { id: colourId } });
+    if (!colour) {
+      throw new NotFoundException(`Colour with ID ${colourId} not found`);
+    }
+
+    await this.prisma.vehicleColour.upsert({
+      where: {
+        vehicleId_colourId: { vehicleId, colourId },
+      },
+      update: { colourImageUrl },
+      create: { vehicleId, colourId, colourImageUrl },
+    });
+
+    return this.findOneVehicle(vehicleId);
   }
 
   async removeVehicle(id: string) {
@@ -164,4 +271,3 @@ export class VehiclesService {
     });
   }
 }
-

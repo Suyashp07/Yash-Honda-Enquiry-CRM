@@ -4,6 +4,7 @@ import { EnquiriesService } from './enquiries.service';
 import { CreateEnquiryDto, UpdateEnquiryStatusDto, AssignEnquiryDto } from './dto/enquiry.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { EnquiryStatus } from '@prisma/client';
 
 @ApiTags('enquiries')
@@ -17,6 +18,13 @@ export class EnquiriesController {
   @ApiOperation({ summary: 'Create new enquiry (supports atomic quotation in Unified Flow)' })
   create(@Body() dto: CreateEnquiryDto, @CurrentUser('id') userId: string) {
     return this.enquiriesService.create(dto, userId);
+  }
+
+  @Public()
+  @Post('public-configurator')
+  @ApiOperation({ summary: 'Self-serve customer configurator enquiry & quotation generation (supports kiosk mode)' })
+  createFromConfigurator(@Body() dto: CreateEnquiryDto) {
+    return this.enquiriesService.createFromConfigurator(dto);
   }
 
   @Get()

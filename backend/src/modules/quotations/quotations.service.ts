@@ -67,7 +67,7 @@ export class QuotationsService {
         if (!acc || acc.status !== 'Active') continue;
 
         let finalPrice = Number(acc.defaultPrice);
-        if (acc.isPriceEditable && item.amount !== undefined) {
+        if ((acc.isPriceEditable || acc.isStandard) && item.amount !== undefined) {
           finalPrice = Number(item.amount);
         }
 

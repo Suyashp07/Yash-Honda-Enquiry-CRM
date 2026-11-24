@@ -97,6 +97,21 @@ export class CreateVehicleDto {
   @IsString()
   @IsOptional()
   brochureUrl?: string;
+
+  @ApiProperty({ example: 110, required: false })
+  @IsNumber()
+  @IsOptional()
+  ccDisplacement?: number;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  listingImageUrl?: string | null;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  detailImageUrl?: string | null;
 }
 
 export class UpdateVehicleDto {
@@ -123,7 +138,22 @@ export class UpdateVehicleDto {
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
-  brochureUrl?: string;
+  brochureUrl?: string | null;
+
+  @ApiProperty({ required: false })
+  @IsNumber()
+  @IsOptional()
+  ccDisplacement?: number | null;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  listingImageUrl?: string | null;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  detailImageUrl?: string | null;
 
   @ApiProperty({ required: false })
   @IsString()
@@ -135,4 +165,3 @@ export class UpdateVehicleDto {
   @IsOptional()
   colourIds?: string[];
 }
-

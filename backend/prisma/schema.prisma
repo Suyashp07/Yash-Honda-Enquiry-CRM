@@ -87,19 +87,22 @@ model ModelGroup {
 }
 
 model Vehicle {
-  id              String          @id @default(cuid())
-  code            String          @unique // CD110, CB650R
-  name            String
-  category        String // MC | Scooter | BigBike (tablet UI filter)
-  modelGroupId    String
-  modelGroup      ModelGroup      @relation(fields: [modelGroupId], references: [id])
-  exShowroomPrice Decimal
-  onRoadPrice     Decimal // stored & manually edited, no formula (RESOLVED)
-  brochureUrl     String?
-  status          String          @default("Active")
-  colours         VehicleColour[]
-  quotationItems  QuotationItem[]
-  quotations      Quotation[]
+  id               String          @id @default(cuid())
+  code             String          @unique // CD110, CB650R
+  name             String
+  category         String // MC | Scooter | BigBike (tablet UI filter)
+  modelGroupId     String
+  modelGroup       ModelGroup      @relation(fields: [modelGroupId], references: [id])
+  exShowroomPrice  Decimal
+  onRoadPrice      Decimal // stored & manually edited, no formula (RESOLVED)
+  brochureUrl      String?
+  listingImageUrl  String? // Step 2 card image (4:3 landscape)
+  detailImageUrl   String? // Step 3-7 large left panel (default colour image)
+  ccDisplacement   Int? // 100, 110, 125, 150, 160, 300, 650 (CC filter)
+  status           String          @default("Active")
+  colours          VehicleColour[]
+  quotationItems   QuotationItem[]
+  quotations       Quotation[]
 }
 
 model Colour {
@@ -111,11 +114,12 @@ model Colour {
 }
 
 model VehicleColour {
-  id        String  @id @default(cuid())
-  vehicleId String
-  colourId  String
-  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
-  colour    Colour  @relation(fields: [colourId], references: [id])
+  id             String  @id @default(cuid())
+  vehicleId      String
+  colourId       String
+  colourImageUrl String? // Vehicle image in this specific colour (for Step 3 swap)
+  vehicle        Vehicle @relation(fields: [vehicleId], references: [id])
+  colour         Colour  @relation(fields: [colourId], references: [id])
 
   @@unique([vehicleId, colourId])
 }
@@ -125,6 +129,9 @@ model Accessory {
   name                 String               @unique // Ceramic Coating, RSA, etc.
   defaultPrice         Decimal
   isPriceEditable      Boolean              @default(false) // false = FIX tag, true = rep can edit amount
+  isStandard           Boolean              @default(false) // true = pre-checked (Standard/Included), admin-controlled
+  imageUrl             String? // Product thumbnail image (1:1 square, shown in Step 4 grid)
+  sortOrder            Int                  @default(0) // Control display order in configurator
   status               String               @default("Active")
   quotationAccessories QuotationAccessory[]
 }

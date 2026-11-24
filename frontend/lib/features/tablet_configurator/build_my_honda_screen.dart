@@ -1,11 +1,15 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dio/dio.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../core/constants/api_constants.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/providers/branch_provider.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../admin/widgets/configurator_media_dialogs.dart';
 import '../auth/auth_notifier.dart';
 
 class BuildMyHondaScreen extends ConsumerStatefulWidget {
@@ -17,132 +21,114 @@ class BuildMyHondaScreen extends ConsumerStatefulWidget {
 }
 
 class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
-  // Stepper: 1: Choose Ride, 2: Vehicle, 3: Colour, 4: Accessories, 5: Finance, 6: Exchange, 7: Summary
+  // 1: Choose Ride, 2: Vehicle, 3: Colour, 4: Accessories, 5: Finance, 6: Exchange, 7: Summary
   int _currentStep = 1;
 
-  // Selected State
-  String? _selectedCategory; // Null initially: start from scratch!
-  String _selectedCcFilter =
-      'All'; // 'All', '100 CC', '125 CC', '150 CC', 'On Road'
+  // Step 1-2 Selection State (Start fresh — nothing pre-selected)
+  String? _selectedCategory; // 'MC' | 'Scooter' | 'BigBike'
+  String _selectedCcFilter = 'All';
+  bool _showOnRoadPrice = false;
   Map<String, dynamic>? _selectedVehicle;
+  final ScrollController _vehicleCarouselCtrl = ScrollController();
+  int _carouselDotIndex = 0;
 
-  // Colour State
+  // Step 3 Colour State
   String _selectedColourName = 'Sports Red';
   Color _selectedColourValue = const Color(0xFFDC2626);
+  String? _selectedColourImageUrl;
 
-  // Accessories State
-  final Set<String> _selectedOptionalAccessories = {};
+  // Step 4 Accessories State (admin-controlled Standard vs Optional)
+  final Set<String> _selectedOptionalAccessoryIds = {};
 
-  // Finance State
-  String _paymentMode = 'Cash'; // 'Cash' or 'Finance'
-  String _selectedFinanceType =
-      'Bank Loan'; // 'Bank Loan', 'Dealer Finance', 'Flexi EMI Plans'
+  // Step 5 Finance State (Display only — does not affect price per spec)
+  String _paymentMode = 'Cash'; // 'Cash' | 'Finance'
+  String _selectedFinanceType = 'Bank Loan';
+  String? _selectedFinancierId;
   String? _selectedFinancierName;
 
-  // Exchange State
+  // Step 6 Exchange State
   bool _wantExchange = false;
   final _exchangeModelController = TextEditingController();
-  String _exchangeYear = '2022';
+  String _exchangeYear = 'Select Year';
   final _exchangeKmsController = TextEditingController();
   final _exchangeOfferedPriceController = TextEditingController();
   final _exchangeExpectedPriceController = TextEditingController();
 
-  // Customer Enquiry Submission State
+  // Step 7 Customer Info & Generated Quote Cache
   final _customerNameController = TextEditingController();
   final _customerMobileController = TextEditingController();
+  final _customerEmailController = TextEditingController();
+  String? _selectedBranchId;
   String? _selectedRepId;
   bool _isSubmitting = false;
+  String? _createdEnquiryId;
+  String? _createdQuotationId;
+  String? _createdQuoteNumber;
 
   // Backend Data Collections
+  bool _isLoadingCatalog = true;
   List<Map<String, dynamic>> _backendVehicles = [];
   List<Map<String, dynamic>> _backendAccessories = [];
   List<Map<String, dynamic>> _backendFinanciers = [];
+  List<Map<String, dynamic>> _backendBranches = [];
+  List<Map<String, dynamic>> _backendColours = [];
 
-  // High-Resolution Local Image Mappings (Zero CORS, 100% Reliability)
-  static const Map<String, String> _vehicleLocalImages = {
+  // Fallback Local Asset Paths (used ONLY when admin hasn't uploaded vehicle/colour photos yet)
+  static const Map<String, String> _vehicleFallbackImages = {
     'SHN100': 'assets/configurator/v_shine100.jpg',
     'SP125': 'assets/configurator/v_sp125.jpg',
     'SHN125': 'assets/configurator/v_shine125.jpg',
     'CB300F': 'assets/configurator/v_cb300f.jpg',
-    'CB350H': 'assets/configurator/v_cb300f.jpg',
-    'CB300R': 'assets/configurator/v_cb300f.jpg',
+    'CB350H': 'assets/configurator/hero_bigbike.png',
+    'CB350RS': 'assets/configurator/hero_cb300f_full.webp',
+    'CB300R': 'assets/configurator/hero_bike_black.png',
     'ACT110DLX': 'assets/configurator/v_activa110.jpg',
     'ACT6G': 'assets/configurator/v_activa110.jpg',
-    'DIO125': 'assets/configurator/v_activa110.jpg',
+    'DIO125': 'assets/configurator/hero_scooter.png',
   };
 
-  // Seed Catalog (used when backend is offline or populating initial defaults)
-  final List<Map<String, dynamic>> _defaultCatalog = [
-    // Motorcycles (MC)
+  final List<Map<String, dynamic>> _fallbackCatalog = [
     {
-      'id': 'v-shine100',
-      'name': 'Shine 100',
-      'code': 'SHN100',
+      'id': 'v-shine125',
+      'name': 'Shine 125 Disc',
+      'code': 'SHN125',
       'category': 'MC',
-      'ccCategory': '100 CC',
-      'exShowroom': 68767,
-      'roadTax': 7500,
-      'insurance': 5200,
-      'onRoad': 81467,
-      'image': 'assets/configurator/v_shine100.jpg',
-      'colours': ['Sports Red', 'Black', 'Decent Blue Metallic'],
+      'ccDisplacement': 125,
+      'exShowroomPrice': 84000,
+      'onRoadPrice': 99500,
+      'colours': [
+        {'name': 'Rebel Red Metallic', 'hex': '#DC2626'},
+        {'name': 'Pearl Nightstar Black', 'hex': '#111827'},
+        {'name': 'Decent Blue Metallic', 'hex': '#2563EB'},
+      ],
     },
     {
       'id': 'v-sp125',
       'name': 'SP 125 Disc',
       'code': 'SP125',
       'category': 'MC',
-      'ccCategory': '125 CC',
-      'exShowroom': 73400,
-      'roadTax': 8200,
-      'insurance': 5600,
-      'onRoad': 87200,
-      'image': 'assets/configurator/v_sp125.jpg',
-      'colours': ['Sports Red', 'Matte Axis Grey Metallic', 'Pearl Siren Blue'],
+      'ccDisplacement': 125,
+      'exShowroomPrice': 90000,
+      'onRoadPrice': 106000,
+      'colours': [
+        {'name': 'Pearl Siren Blue', 'hex': '#1E3A8A'},
+        {'name': 'Matte Axis Grey Metallic', 'hex': '#4B5563'},
+        {'name': 'Pearl Nightstar Black', 'hex': '#111827'},
+      ],
     },
-    {
-      'id': 'v-shine125',
-      'name': 'Shine 125 Disc',
-      'code': 'SHN125',
-      'category': 'MC',
-      'ccCategory': '125 CC',
-      'exShowroom': 78500,
-      'roadTax': 8700,
-      'insurance': 5800,
-      'onRoad': 93000,
-      'image': 'assets/configurator/v_shine125.jpg',
-      'colours': ['Black', 'Decent Blue Metallic', 'Rebel Red Metallic'],
-    },
-    {
-      'id': 'v-cb300f',
-      'name': 'CB300F Sports',
-      'code': 'CB300F',
-      'category': 'MC',
-      'ccCategory': '150 CC',
-      'exShowroom': 170000,
-      'roadTax': 18000,
-      'insurance': 11000,
-      'onRoad': 199000,
-      'image': 'assets/configurator/v_cb300f.jpg',
-      'colours': ['Sports Red', 'Matte Steel Black'],
-    },
-    // Scooters
     {
       'id': 'v-activa110',
       'name': 'Activa 110 Dlx',
       'code': 'ACT110DLX',
       'category': 'Scooter',
-      'ccCategory': '100 CC',
-      'exShowroom': 82450,
-      'roadTax': 9890,
-      'insurance': 6240,
-      'onRoad': 100380,
-      'image': 'assets/configurator/v_activa110.jpg',
+      'ccDisplacement': 110,
+      'exShowroomPrice': 82450,
+      'onRoadPrice': 100380,
       'colours': [
-        'Black',
-        'Pearl Siren Blue',
-        'Rebel Red Metallic',
-        'Pearl Night White'
+        {'name': 'Black', 'hex': '#111827'},
+        {'name': 'Pearl Siren Blue', 'hex': '#1E3A8A'},
+        {'name': 'Rebel Red Metallic', 'hex': '#DC2626'},
+        {'name': 'Pearl Night White', 'hex': '#F8FAFC'},
       ],
     },
     {
@@ -150,16 +136,13 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
       'name': 'Activa 6G DLX',
       'code': 'ACT6G',
       'category': 'Scooter',
-      'ccCategory': '100 CC',
-      'exShowroom': 79000,
-      'roadTax': 9480,
-      'insurance': 6020,
-      'onRoad': 94500,
-      'image': 'assets/configurator/v_activa110.jpg',
+      'ccDisplacement': 110,
+      'exShowroomPrice': 79000,
+      'onRoadPrice': 94500,
       'colours': [
-        'Pearl Siren Blue',
-        'Rebel Red Metallic',
-        'Pearl Night White'
+        {'name': 'Pearl Siren Blue', 'hex': '#1E3A8A'},
+        {'name': 'Rebel Red Metallic', 'hex': '#DC2626'},
+        {'name': 'Pearl Night White', 'hex': '#F8FAFC'},
       ],
     },
     {
@@ -167,106 +150,28 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
       'name': 'Dio 125 Smart',
       'code': 'DIO125',
       'category': 'Scooter',
-      'ccCategory': '125 CC',
-      'exShowroom': 85000,
-      'roadTax': 10100,
-      'insurance': 6400,
-      'onRoad': 103200,
-      'image': 'assets/configurator/v_activa110.jpg',
+      'ccDisplacement': 125,
+      'exShowroomPrice': 85000,
+      'onRoadPrice': 101000,
       'colours': [
-        'Matte Axis Grey Metallic',
-        'Pearl Siren Blue',
-        'Rebel Red Metallic'
+        {'name': 'Matte Axis Grey Metallic', 'hex': '#4B5563'},
+        {'name': 'Pearl Siren Blue', 'hex': '#1E3A8A'},
+        {'name': 'Rebel Red Metallic', 'hex': '#DC2626'},
       ],
     },
-    // Big Bikes
     {
-      'id': 'v-cb350hness',
+      'id': 'v-cb350h',
       'name': 'Hness CB350 DLX Pro',
       'code': 'CB350H',
       'category': 'BigBike',
-      'ccCategory': 'On Road',
-      'exShowroom': 215000,
-      'roadTax': 24000,
-      'insurance': 14000,
-      'onRoad': 255000,
-      'image': 'assets/configurator/v_cb300f.jpg',
+      'ccDisplacement': 350,
+      'exShowroomPrice': 215000,
+      'onRoadPrice': 262000,
       'colours': [
-        'Pearl Nightstar Black',
-        'Rebel Red Metallic',
-        'Decent Blue Metallic'
+        {'name': 'Pearl Nightstar Black', 'hex': '#111827'},
+        {'name': 'Rebel Red Metallic', 'hex': '#DC2626'},
+        {'name': 'Decent Blue Metallic', 'hex': '#2563EB'},
       ],
-    },
-    {
-      'id': 'v-cb300r',
-      'name': 'CB300R Matte Steel',
-      'code': 'CB300R',
-      'category': 'BigBike',
-      'ccCategory': 'On Road',
-      'exShowroom': 240000,
-      'roadTax': 27000,
-      'insurance': 15500,
-      'onRoad': 284500,
-      'image': 'assets/configurator/v_cb300f.jpg',
-      'colours': ['Matte Steel Black', 'Pearl Siren Blue'],
-    },
-  ];
-
-  // Default Fallback Accessories from Backend Spec
-  final List<Map<String, dynamic>> _defaultAccessories = [
-    {
-      'id': 'acc-1',
-      'name': 'Ceramic Coating',
-      'price': 3500,
-      'icon': Icons.auto_awesome_outlined
-    },
-    {
-      'id': 'acc-2',
-      'name': 'Designer Seat Cover',
-      'price': 650,
-      'icon': Icons.airline_seat_recline_normal_outlined
-    },
-    {
-      'id': 'acc-3',
-      'name': 'Extended Warranty',
-      'price': 2200,
-      'icon': Icons.verified_outlined
-    },
-    {
-      'id': 'acc-4',
-      'name': 'Floor Mat Premium',
-      'price': 450,
-      'icon': Icons.layers_outlined
-    },
-    {
-      'id': 'acc-5',
-      'name': 'Grip Covers & Lever Sleeves',
-      'price': 250,
-      'icon': Icons.sports_motorsports_outlined
-    },
-    {
-      'id': 'acc-6',
-      'name': 'Helmet (Studds/Honda ISI)',
-      'price': 1250,
-      'icon': Icons.sports_motorsports
-    },
-    {
-      'id': 'acc-7',
-      'name': 'Optional Accessories',
-      'price': 1500,
-      'icon': Icons.add_circle_outline
-    },
-    {
-      'id': 'acc-8',
-      'name': 'PDI Charges',
-      'price': 850,
-      'icon': Icons.fact_check_outlined
-    },
-    {
-      'id': 'acc-9',
-      'name': 'RSA (Roadside Assistance - 1 Yr)',
-      'price': 1499,
-      'icon': Icons.emergency_outlined
     },
   ];
 
@@ -274,283 +179,307 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   void initState() {
     super.initState();
     _selectedRepId = widget.initialRepId;
-    _selectedCategory = null;
-    _selectedVehicle = null;
+    _vehicleCarouselCtrl.addListener(_onCarouselScroll);
     _fetchBackendData();
+  }
+
+  void _onCarouselScroll() {
+    if (!_vehicleCarouselCtrl.hasClients) return;
+    final idx = (_vehicleCarouselCtrl.offset / 285).round().clamp(0, 10);
+    if (idx != _carouselDotIndex) {
+      setState(() => _carouselDotIndex = idx);
+    }
   }
 
   @override
   void dispose() {
+    _vehicleCarouselCtrl.dispose();
     _exchangeModelController.dispose();
     _exchangeKmsController.dispose();
     _exchangeOfferedPriceController.dispose();
     _exchangeExpectedPriceController.dispose();
     _customerNameController.dispose();
     _customerMobileController.dispose();
+    _customerEmailController.dispose();
     super.dispose();
   }
 
   Future<void> _fetchBackendData() async {
     try {
       final dio = ref.read(dioProvider);
-
-      // Fetch Vehicles, Accessories, Financiers, and Colours in parallel
-      final results = await Future.wait([
-        dio.get('/vehicles').catchError((_) =>
-            Response(requestOptions: RequestOptions(path: ''), data: [])),
-        dio.get('/accessories').catchError((_) =>
-            Response(requestOptions: RequestOptions(path: ''), data: [])),
-        dio.get('/financiers').catchError((_) =>
-            Response(requestOptions: RequestOptions(path: ''), data: [])),
-        dio.get('/vehicles/colours').catchError((_) =>
-            Response(requestOptions: RequestOptions(path: ''), data: [])),
-      ]);
-
+      final res = await dio.get('/vehicles/configurator-bootstrap');
       if (!mounted) return;
 
+      final data = res.data as Map<String, dynamic>;
+      final rawVehicles = (data['vehicles'] as List? ?? []);
+      final rawAccessories = (data['accessories'] as List? ?? []);
+      final rawFinanciers = (data['financiers'] as List? ?? []);
+      final rawBranches = (data['branches'] as List? ?? []);
+      final rawColours = (data['colours'] as List? ?? []);
+
       setState(() {
-        // 1. Process Vehicles
-        if (results[0].data is List && (results[0].data as List).isNotEmpty) {
-          final rawVehicles = List<Map<String, dynamic>>.from(results[0].data);
-          _backendVehicles = rawVehicles.map((bv) {
-            final code = bv['code']?.toString() ?? '';
-            final exShowroom =
-                double.tryParse(bv['exShowroomPrice']?.toString() ?? '0') ??
-                    68767;
-            final onRoad =
-                double.tryParse(bv['onRoadPrice']?.toString() ?? '0') ??
-                    (exShowroom * 1.18);
-            final rawCat = bv['category']?.toString() ?? 'MC';
-            String category = 'MC';
-            if (rawCat.toLowerCase().contains('scooter')) {
-              category = 'Scooter';
-            } else if (rawCat.toLowerCase().contains('big') ||
-                rawCat.toLowerCase().contains('wing')) {
-              category = 'BigBike';
-            } else {
-              category = 'MC';
-            }
+        _backendVehicles = rawVehicles.map((raw) {
+          final bv = Map<String, dynamic>.from(raw as Map);
+          final code = bv['code']?.toString() ?? '';
+          final exShow =
+              double.tryParse(bv['exShowroomPrice']?.toString() ?? '0') ??
+                  68767;
+          final onRoad =
+              double.tryParse(bv['onRoadPrice']?.toString() ?? '0') ??
+                  (exShow * 1.18);
 
-            // Find matching local high-res visual
-            String localImg = _vehicleLocalImages[code] ??
-                'assets/configurator/v_shine100.jpg';
-            if (category == 'Scooter')
-              localImg = 'assets/configurator/v_activa110.jpg';
-            if (category == 'BigBike')
-              localImg = 'assets/configurator/v_cb300f.jpg';
+          final normCat = bv['normalizedCategory']?.toString() ??
+              _normalizeCategory(
+                  bv['category']?.toString(), bv['modelGroup']?['name']?.toString());
 
-            // Extract Colours from relation
-            List<String> colours = [];
-            if (bv['colours'] is List) {
-              for (final cRel in bv['colours']) {
-                final cName = cRel['colour']?['name']?.toString();
-                if (cName != null) colours.add(cName);
+          final parsedColours = <Map<String, dynamic>>[];
+          if (bv['colours'] is List) {
+            for (final rel in bv['colours']) {
+              final cObj = rel['colour'];
+              if (cObj != null) {
+                parsedColours.add({
+                  'id': cObj['id']?.toString() ?? '',
+                  'name': cObj['name']?.toString() ?? 'Standard',
+                  'hex': cObj['hex']?.toString() ?? '#111827',
+                  'colourImageUrl': rel['colourImageUrl']?.toString(),
+                });
               }
             }
-            if (colours.isEmpty)
-              colours = [
-                'Sports Red',
-                'Black',
-                'Pearl Siren Blue',
-                'Pearl Night White'
-              ];
-
-            String ccCat = '100 CC';
-            if (code.contains('125') ||
-                (bv['name']?.toString().contains('125') ?? false))
-              ccCat = '125 CC';
-            if (code.contains('300') || code.contains('350')) ccCat = '150 CC';
-            if (category == 'BigBike') ccCat = 'On Road';
-
-            return {
-              'id': bv['id']?.toString() ?? code,
-              'name': bv['name'] ?? 'Honda Two-Wheeler',
-              'code': code,
-              'category': category,
-              'ccCategory': ccCat,
-              'exShowroom': exShowroom,
-              'roadTax': (onRoad - exShowroom) * 0.6,
-              'insurance': (onRoad - exShowroom) * 0.4,
-              'onRoad': onRoad,
-              'image': localImg,
-              'colours': colours,
-            };
-          }).toList();
-        }
-
-        // 2. Process Accessories
-        if (results[1].data is List && (results[1].data as List).isNotEmpty) {
-          _backendAccessories =
-              List<Map<String, dynamic>>.from(results[1].data).map((acc) {
-            return {
-              'id': acc['id']?.toString() ?? '',
-              'name': acc['name']?.toString() ?? '',
-              'price':
-                  double.tryParse(acc['defaultPrice']?.toString() ?? '0') ??
-                      500,
-              'icon': _getAccessoryIcon(acc['name']?.toString() ?? ''),
-            };
-          }).toList();
-        }
-
-        // 3. Process Financiers
-        if (results[2].data is List && (results[2].data as List).isNotEmpty) {
-          _backendFinanciers = List<Map<String, dynamic>>.from(results[2].data);
-          if (_backendFinanciers.isNotEmpty) {
-            _selectedFinancierName =
-                _backendFinanciers.first['name']?.toString();
           }
+
+          return {
+            'id': bv['id']?.toString() ?? code,
+            'code': code,
+            'name': bv['name']?.toString() ?? 'Honda Vehicle',
+            'category': normCat,
+            'modelGroup': bv['modelGroup']?['name']?.toString() ?? 'RedWing',
+            'ccDisplacement': bv['ccDisplacement'] is int
+                ? bv['ccDisplacement']
+                : int.tryParse(bv['ccDisplacement']?.toString() ?? ''),
+            'exShowroomPrice': exShow,
+            'onRoadPrice': onRoad,
+            'listingImageUrl': bv['listingImageUrl']?.toString(),
+            'detailImageUrl': bv['detailImageUrl']?.toString(),
+            'colours': parsedColours,
+          };
+        }).toList();
+
+        _backendAccessories = rawAccessories.map((raw) {
+          final acc = Map<String, dynamic>.from(raw as Map);
+          return {
+            'id': acc['id']?.toString() ?? '',
+            'name': acc['name']?.toString() ?? '',
+            'price':
+                double.tryParse(acc['defaultPrice']?.toString() ?? '0') ?? 0,
+            'isStandard': acc['isStandard'] == true,
+            'imageUrl': acc['imageUrl']?.toString(),
+            'isPriceEditable': acc['isPriceEditable'] == true,
+          };
+        }).toList();
+
+        _backendFinanciers = rawFinanciers
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        if (_backendFinanciers.isNotEmpty) {
+          _selectedFinancierId = _backendFinanciers.first['id']?.toString();
+          _selectedFinancierName =
+              _backendFinanciers.first['name']?.toString();
         }
 
-        // Sync initial vehicle only if category is already selected
-        if (_selectedCategory != null) {
-          final currentPool = _currentCategoryVehicles;
-          if (currentPool.isNotEmpty) {
-            _selectedVehicle = currentPool.first;
-          }
+        _backendBranches = rawBranches
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        if (_backendBranches.isNotEmpty) {
+          final activeBranch = ref.read(selectedBranchIdProvider);
+          final matching = _backendBranches.any((b) => b['id'] == activeBranch);
+          _selectedBranchId = matching
+              ? activeBranch
+              : _backendBranches.first['id']?.toString();
         }
+
+        _backendColours = rawColours
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+
+        _isLoadingCatalog = false;
       });
-    } catch (_) {}
-  }
-
-  IconData _getAccessoryIcon(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('ceramic')) return Icons.auto_awesome_outlined;
-    if (lower.contains('seat'))
-      return Icons.airline_seat_recline_normal_outlined;
-    if (lower.contains('warranty')) return Icons.verified_outlined;
-    if (lower.contains('mat')) return Icons.layers_outlined;
-    if (lower.contains('grip') || lower.contains('lever'))
-      return Icons.sports_motorsports_outlined;
-    if (lower.contains('helmet')) return Icons.sports_motorsports;
-    if (lower.contains('rsa') || lower.contains('roadside'))
-      return Icons.emergency_outlined;
-    if (lower.contains('pdi')) return Icons.fact_check_outlined;
-    return Icons.inventory_2_outlined;
-  }
-
-  bool _matchesCategory(String? itemCat, String? targetCat) {
-    if (itemCat == null) return false;
-    if (targetCat == null) return true;
-    final itemLower = itemCat.toLowerCase();
-    if (targetCat == 'MC') {
-      return itemCat == 'MC' ||
-          itemLower.contains('motorcycle') ||
-          itemLower == 'mc';
-    }
-    if (targetCat == 'Scooter') {
-      return itemLower.contains('scooter');
-    }
-    if (targetCat == 'BigBike') {
-      return itemLower.contains('big') || itemLower.contains('wing');
-    }
-    return itemCat == targetCat;
-  }
-
-  List<Map<String, dynamic>> get _currentCategoryVehicles {
-    if (_selectedCategory == null) return [];
-    final source =
-        _backendVehicles.isNotEmpty ? _backendVehicles : _defaultCatalog;
-    List<Map<String, dynamic>> pool = source
-        .where((v) =>
-            _matchesCategory(v['category']?.toString(), _selectedCategory))
-        .toList();
-
-    if (_selectedCcFilter != 'All' && _selectedCcFilter != 'On Road') {
-      final filtered =
-          pool.where((v) => v['ccCategory'] == _selectedCcFilter).toList();
-      if (filtered.isNotEmpty) pool = filtered;
-    }
-    return pool;
-  }
-
-  List<Map<String, dynamic>> get _activeAccessories {
-    return _backendAccessories.isNotEmpty
-        ? _backendAccessories
-        : _defaultAccessories;
-  }
-
-  double get _totalAccessoriesPrice {
-    double total = 0;
-    for (final acc in _activeAccessories) {
-      if (_selectedOptionalAccessories.contains(acc['name'])) {
-        total += ((acc['price'] ?? 0) as num).toDouble();
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingCatalog = false);
       }
     }
-    return total;
   }
 
-  double get _estimatedGrandTotal {
-    final base = ((_selectedVehicle?['exShowroom'] ?? 68767) as num).toDouble();
-    final acc = _totalAccessoriesPrice;
-    final rto = ((_selectedVehicle?['roadTax'] ?? 7500) as num).toDouble();
-    final ins = ((_selectedVehicle?['insurance'] ?? 5200) as num).toDouble();
-    double total = base + acc + rto + ins;
-
-    if (_wantExchange) {
-      final exp =
-          double.tryParse(_exchangeExpectedPriceController.text.trim()) ?? 0;
-      total = total - exp;
-      if (total < 0) total = 0;
+  String _normalizeCategory(String? rawCat, String? modelGroupName) {
+    final c = (rawCat ?? '').toLowerCase();
+    final mg = (modelGroupName ?? '').toLowerCase();
+    if (c.contains('scooter')) return 'Scooter';
+    if (c.contains('big') || c.contains('wing') || mg.contains('big')) {
+      return 'BigBike';
     }
-    return total;
+    return 'MC';
   }
 
-  String get _heroBikeImage {
-    if (_selectedCategory == 'Scooter')
+  Color _parseColor(String? hexStr) {
+    if (hexStr == null || hexStr.isEmpty) return const Color(0xFFDC2626);
+    var cleaned = hexStr.replaceAll('#', '').trim();
+    if (cleaned.length == 6) cleaned = 'FF$cleaned';
+    try {
+      return Color(int.parse(cleaned, radix: 16));
+    } catch (_) {
+      return const Color(0xFFDC2626);
+    }
+  }
+
+  List<Map<String, dynamic>> get _allSourceVehicles =>
+      _backendVehicles.isNotEmpty ? _backendVehicles : _fallbackCatalog;
+
+  List<Map<String, dynamic>> get _categoryPool {
+    if (_selectedCategory == null) return [];
+    return _allSourceVehicles
+        .where((v) => v['category'] == _selectedCategory)
+        .toList();
+  }
+
+  List<String> get _availableCcChips {
+    final ccs = <int>{};
+    for (final v in _categoryPool) {
+      final cc = v['ccDisplacement'];
+      if (cc is int && cc > 0) ccs.add(cc);
+    }
+    final sorted = ccs.toList()..sort();
+    return ['All', ...sorted.map((c) => '$c CC')];
+  }
+
+  List<Map<String, dynamic>> get _filteredVehicles {
+    final pool = _categoryPool;
+    if (_selectedCcFilter == 'All') return pool;
+    final numOnly =
+        int.tryParse(_selectedCcFilter.replaceAll(RegExp(r'[^0-9]'), ''));
+    if (numOnly == null) return pool;
+    return pool.where((v) => v['ccDisplacement'] == numOnly).toList();
+  }
+
+  List<Map<String, dynamic>> get _standardAccessories =>
+      _backendAccessories.where((a) => a['isStandard'] == true).toList();
+
+  List<Map<String, dynamic>> get _optionalAccessories =>
+      _backendAccessories.where((a) => a['isStandard'] != true).toList();
+
+  double get _selectedOptionalAccessoriesTotal {
+    double sum = 0;
+    for (final acc in _optionalAccessories) {
+      if (_selectedOptionalAccessoryIds.contains(acc['id'].toString())) {
+        sum += ((acc['price'] ?? 0) as num).toDouble();
+      }
+    }
+    return sum;
+  }
+
+  double get _vehicleBasePrice {
+    if (_selectedVehicle == null) return 0;
+    if (_showOnRoadPrice) {
+      return ((_selectedVehicle!['onRoadPrice'] ?? 0) as num).toDouble();
+    }
+    return ((_selectedVehicle!['exShowroomPrice'] ?? 0) as num).toDouble();
+  }
+
+  double get _estimatedTotal {
+    if (_selectedVehicle == null) return 0;
+    return _vehicleBasePrice + _selectedOptionalAccessoriesTotal;
+  }
+
+  void _invalidateQuoteCache() {
+    _createdEnquiryId = null;
+    _createdQuotationId = null;
+    _createdQuoteNumber = null;
+  }
+
+  void _selectVehicle(Map<String, dynamic> v, {bool advance = false}) {
+    final cols = _getColoursForVehicle(v);
+    final firstCol = cols.isNotEmpty ? cols.first : null;
+    setState(() {
+      _selectedVehicle = v;
+      _selectedColourName = firstCol?['name']?.toString() ?? 'Sports Red';
+      _selectedColourValue = _parseColor(firstCol?['hex']?.toString());
+      _selectedColourImageUrl = firstCol?['colourImageUrl']?.toString();
+      _invalidateQuoteCache();
+    });
+    if (advance) _nextStep();
+  }
+
+  List<Map<String, dynamic>> _getColoursForVehicle(Map<String, dynamic>? v) {
+    final mapped = (v?['colours'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+    if (mapped.isNotEmpty) return mapped;
+    if (_backendColours.isNotEmpty) {
+      return _backendColours.take(4).toList();
+    }
+    return [
+      {'name': 'Sports Red', 'hex': '#DC2626'},
+      {'name': 'Black', 'hex': '#111827'},
+      {'name': 'Pearl Night White', 'hex': '#F1F5F9'},
+      {'name': 'Pearl Siren Blue', 'hex': '#1D4ED8'},
+    ];
+  }
+
+  String _resolveListingImage(Map<String, dynamic> v) {
+    final uploaded = v['listingImageUrl']?.toString();
+    if (uploaded != null && uploaded.isNotEmpty) return uploaded;
+    final detail = v['detailImageUrl']?.toString();
+    if (detail != null && detail.isNotEmpty) return detail;
+    final code = v['code']?.toString() ?? '';
+    if (_vehicleFallbackImages.containsKey(code)) {
+      return _vehicleFallbackImages[code]!;
+    }
+    if (v['category'] == 'Scooter') return 'assets/configurator/v_activa110.jpg';
+    if (v['category'] == 'BigBike') {
+      return 'assets/configurator/hero_cb300f_full.webp';
+    }
+    return 'assets/configurator/v_sp125.jpg';
+  }
+
+  String _resolveShowcaseImage() {
+    if (_selectedColourImageUrl != null && _selectedColourImageUrl!.isNotEmpty) {
+      return _selectedColourImageUrl!;
+    }
+    final detail = _selectedVehicle?['detailImageUrl']?.toString();
+    if (detail != null && detail.isNotEmpty) return detail;
+    final listing = _selectedVehicle?['listingImageUrl']?.toString();
+    if (listing != null && listing.isNotEmpty) return listing;
+
+    // Curated high-res fallback by category & selected colour
+    if (_selectedCategory == 'Scooter') {
       return 'assets/configurator/hero_scooter.png';
-    if (_selectedCategory == 'BigBike')
+    }
+    if (_selectedCategory == 'BigBike') {
       return 'assets/configurator/hero_bigbike.png';
-
-    // Motorcycle color variants
-    final lower = _selectedColourName.toLowerCase();
-    if (lower.contains('black'))
+    }
+    final cLow = _selectedColourName.toLowerCase();
+    if (cLow.contains('black') || cLow.contains('grey')) {
       return 'assets/configurator/hero_bike_black.png';
-    if (lower.contains('white'))
+    }
+    if (cLow.contains('white')) {
       return 'assets/configurator/hero_bike_white.png';
-    if (lower.contains('blue')) return 'assets/configurator/hero_bike_blue.png';
-    return 'assets/configurator/hero_bike_red.png';
-  }
-
-  Widget _buildSafeImage(String path,
-      {BoxFit fit = BoxFit.contain, double? width, double? height}) {
-    final cleanPath =
-        path.startsWith('assets/') ? path.replaceFirst('assets/', '') : path;
-    return Image.asset(
-      path,
-      fit: fit,
-      width: width,
-      height: height,
-      errorBuilder: (_, __, ___) => Image.asset(
-        'assets/$cleanPath',
-        fit: fit,
-        width: width,
-        height: height,
-        errorBuilder: (_, __, ___) => Image.network(
-          'assets/$cleanPath',
-          fit: fit,
-          width: width,
-          height: height,
-          errorBuilder: (_, __, ___) => Image.network(
-            'assets/assets/$cleanPath',
-            fit: fit,
-            width: width,
-            height: height,
-            errorBuilder: (_, __, ___) => const Center(
-              child: Icon(Icons.two_wheeler_outlined,
-                  size: 48, color: Color(0xFFCBD5E1)),
-            ),
-          ),
-        ),
-      ),
-    );
+    }
+    if (cLow.contains('blue')) {
+      return 'assets/configurator/hero_bike_blue.png';
+    }
+    return 'assets/configurator/hero_cb300f_full.webp';
   }
 
   void _nextStep() {
+    if (_currentStep == 1 && _selectedCategory == null) return;
+    if (_currentStep == 2 && _selectedVehicle == null) {
+      if (_filteredVehicles.isNotEmpty) {
+        _selectVehicle(_filteredVehicles.first);
+      } else {
+        return;
+      }
+    }
     if (_currentStep < 7) {
       setState(() => _currentStep++);
-    } else {
-      _showCustomerDetailsModal();
     }
   }
 
@@ -565,35 +494,52 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            // --- TOP NAVIGATION HEADER (Honda Logo + 7-Step Horizontal Stepper) ---
-            _buildTopHeader(),
-
-            // --- MAIN CONFIGURATOR STAGE + FLOATING QUOTATION CARD ---
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Main Configurator Stage (Steps 1 to 7)
-                  Expanded(
-                    flex: 7,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(36, 20, 24, 24),
-                      child: _buildCurrentStepStage(),
+            // Subtle light-grey Honda Wing watermark matching designer mockups
+            if (_currentStep <= 6)
+              Positioned(
+                top: 86,
+                left: MediaQuery.of(context).size.width * 0.38,
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: 0.06,
+                    child: CustomPaint(
+                      size: const Size(340, 170),
+                      painter: _HondaWingPainter(color: const Color(0xFF0F172A)),
                     ),
                   ),
-
-                  // Floating Quotation Sidebar Card (matching prototype screenshots)
-                  SizedBox(
-                    width: 320,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 20, 36, 24),
-                      child: _buildQuotationSummaryCard(),
-                    ),
-                  ),
-                ],
+                ),
               ),
+
+            Column(
+              children: [
+                _buildTopHeader(),
+                Expanded(
+                  child: _currentStep == 7
+                      ? _buildStep7Layout()
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(44, 24, 28, 24),
+                                child: _buildMainStage(),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 316,
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(4, 24, 40, 24),
+                                child: _buildQuotationSidebar(),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ],
             ),
           ],
         ),
@@ -601,11 +547,11 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     );
   }
 
-  // ==========================================
-  // 1. TOP HEADER WITH STEPPER (7 STEPS)
-  // ==========================================
+  // ==========================================================
+  // HEADER WITH OFFICIAL WING LOGO + 7-STEP STEPPER + PROFILE
+  // ==========================================================
   Widget _buildTopHeader() {
-    final steps = [
+    const steps = [
       {'num': 1, 'title': 'Choose Ride'},
       {'num': 2, 'title': 'Vehicle'},
       {'num': 3, 'title': 'Colour'},
@@ -616,202 +562,196 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     ];
 
     return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      height: 74,
+      padding: const EdgeInsets.symmetric(horizontal: 32),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
+        border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
       ),
       child: Row(
         children: [
-          // Honda Red Wing Logo + "Build My Honda"
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_currentStep > 1) ...[
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new,
-                      size: 16, color: Color(0xFF64748B)),
-                  onPressed: _prevStep,
-                  tooltip: 'Previous Step',
-                  splashRadius: 18,
-                ),
-                const SizedBox(width: 4),
-              ],
-              InkWell(
-                onTap: () => context.go('/dashboard'),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+          if (_currentStep > 1) ...[
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 16, color: Color(0xFF64748B)),
+              onPressed: _prevStep,
+              tooltip: 'Back',
+              splashRadius: 18,
+            ),
+            const SizedBox(width: 4),
+          ],
+
+          // Left: Red Honda Wing emblem + "HONDA" | "Build My Honda"
+          InkWell(
+            onTap: () => context.go('/dashboard'),
+            borderRadius: BorderRadius.circular(8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDC2626),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'H',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 19,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
+                    CustomPaint(
+                      size: const Size(44, 26),
+                      painter: _HondaWingPainter(color: const Color(0xFFDC2626)),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(height: 1),
                     const Text(
                       'HONDA',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 9,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFFDC2626),
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    Container(
-                      height: 22,
-                      width: 1,
-                      color: const Color(0xFFCBD5E1),
-                      margin: const EdgeInsets.symmetric(horizontal: 14),
-                    ),
-                    const Text(
-                      'Build My Honda',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                        letterSpacing: -0.2,
+                        letterSpacing: 1.1,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                Container(
+                  height: 28,
+                  width: 1,
+                  color: const Color(0xFFCBD5E1),
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+                const Text(
+                  'Build My Honda',
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          const SizedBox(width: 24),
+          const SizedBox(width: 36),
 
-          // 7-Step Stepper in Center
+          // Center: 7-Step Horizontal Stepper
           Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (int i = 0; i < steps.length; i++) ...[
-                  if (i > 0)
-                    Expanded(
-                      child: Container(
-                        height: 2,
-                        color: _currentStep > i
-                            ? const Color(0xFFDC2626)
-                            : const Color(0xFFE2E8F0),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                      ),
-                    ),
-                  InkWell(
-                    onTap: () {
-                      if (_currentStep > (steps[i]['num'] as int)) {
-                        setState(() => _currentStep = steps[i]['num'] as int);
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 2),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _currentStep > (steps[i]['num'] as int)
-                                  ? const Color(0xFFDC2626)
-                                  : (_currentStep == (steps[i]['num'] as int)
-                                      ? const Color(0xFFDC2626)
-                                      : Colors.white),
-                              border: Border.all(
-                                color: _currentStep >= (steps[i]['num'] as int)
-                                    ? const Color(0xFFDC2626)
-                                    : const Color(0xFFCBD5E1),
-                                width: 1.5,
-                              ),
-                            ),
-                            alignment: Alignment.center,
-                            child: _currentStep > (steps[i]['num'] as int)
-                                ? const Icon(Icons.check,
-                                    size: 14, color: Colors.white)
-                                : Text(
-                                    '${steps[i]['num']}',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      color: _currentStep ==
-                                              (steps[i]['num'] as int)
-                                          ? Colors.white
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Row(
+                  children: [
+                    for (int i = 0; i < steps.length; i++) ...[
+                      if (i > 0)
+                        Expanded(
+                          child: Container(
+                            height: 1.5,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            color: _currentStep > i
+                                ? const Color(0xFFDC2626)
+                                : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                      Builder(builder: (context) {
+                        final num = steps[i]['num'] as int;
+                        final title = steps[i]['title'] as String;
+                        final isCompleted = _currentStep > num;
+                        final isActive = _currentStep == num;
+
+                        return InkWell(
+                          onTap: isCompleted
+                              ? () => setState(() => _currentStep = num)
+                              : null,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: (isCompleted || isActive)
+                                        ? const Color(0xFFDC2626)
+                                        : Colors.white,
+                                    border: Border.all(
+                                      color: (isCompleted || isActive)
+                                          ? const Color(0xFFDC2626)
                                           : const Color(0xFF64748B),
+                                      width: 1.4,
                                     ),
                                   ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            steps[i]['title'] as String,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight:
-                                  _currentStep == (steps[i]['num'] as int)
-                                      ? FontWeight.w800
-                                      : FontWeight.w500,
-                              color: _currentStep == (steps[i]['num'] as int)
-                                  ? const Color(0xFFDC2626)
-                                  : const Color(0xFF64748B),
+                                  alignment: Alignment.center,
+                                  child: isCompleted
+                                      ? const Icon(Icons.check,
+                                          size: 13, color: Colors.white)
+                                      : Text(
+                                          '$num',
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: isActive
+                                                ? Colors.white
+                                                : const Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  title,
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: isActive
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    color: isActive
+                                        ? const Color(0xFFDC2626)
+                                        : const Color(0xFF475569),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+                        );
+                      }),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
 
           const SizedBox(width: 24),
 
-          // Right: User Profile Avatar & Exit (matching Figma prototype)
+          // Right: Profile Menu Avatar
           PopupMenuButton<String>(
-            tooltip: 'Profile & Actions',
+            tooltip: 'Menu',
             offset: const Offset(0, 44),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             onSelected: (val) {
-              if (val == 'quick_form') context.go('/tablet');
-              if (val == 'exit') context.go('/dashboard');
+              if (val == 'classic') context.go('/tablet');
+              if (val == 'dashboard') context.go('/dashboard');
             },
-            itemBuilder: (ctx) => [
-              const PopupMenuItem(
-                value: 'quick_form',
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'classic',
                 child: Row(
                   children: [
-                    Icon(Icons.flash_on, size: 16, color: Color(0xFFDC2626)),
+                    Icon(Icons.flash_on_outlined,
+                        size: 16, color: Color(0xFFDC2626)),
                     SizedBox(width: 8),
-                    Text('Switch to Classic Form',
+                    Text('Switch to Quick Form',
                         style: TextStyle(
                             fontSize: 13, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'exit',
+              PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'dashboard',
                 child: Row(
                   children: [
                     Icon(Icons.logout_rounded,
                         size: 16, color: Color(0xFF64748B)),
                     SizedBox(width: 8),
-                    Text('Exit to Floor Dashboard',
+                    Text('Exit to CRM Dashboard',
                         style:
                             TextStyle(fontSize: 13, color: Color(0xFF64748B))),
                   ],
@@ -823,11 +763,11 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               height: 38,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF334155), width: 1.5),
+                border: Border.all(color: const Color(0xFF0F172A), width: 1.4),
               ),
               child: const Icon(
                 Icons.person_outline_rounded,
-                color: Color(0xFF334155),
+                color: Color(0xFF0F172A),
                 size: 22,
               ),
             ),
@@ -837,10 +777,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     );
   }
 
-  // ==========================================
-  // 2. CURRENT STEP ROUTING
-  // ==========================================
-  Widget _buildCurrentStepStage() {
+  Widget _buildMainStage() {
     switch (_currentStep) {
       case 1:
         return _buildStep1ChooseRide();
@@ -854,87 +791,93 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         return _buildStep5PaymentOption();
       case 6:
         return _buildStep6ExchangeRide();
-      case 7:
-        return _buildStep7BuildSummary();
       default:
         return _buildStep1ChooseRide();
     }
   }
 
-  // ==========================================
-  // STEP 1: CHOOSE YOUR RIDE (3 CARDS)
-  // ==========================================
-  Widget _buildStep1ChooseRide() {
+  Widget _buildHeroHeadline(String first, String redPart,
+      {String? subtitle}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         RichText(
-          text: const TextSpan(
-            style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF0F172A),
-                letterSpacing: -0.5),
+          text: TextSpan(
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              fontStyle: FontStyle.italic,
+              color: Color(0xFF0F172A),
+              letterSpacing: -0.6,
+              height: 1.08,
+            ),
             children: [
-              TextSpan(text: 'CHOOSE YOUR '),
+              TextSpan(text: first),
               TextSpan(
-                text: 'RIDE',
-                style: TextStyle(
-                  color: Color(0xFFDC2626),
-                  fontStyle: FontStyle.italic,
-                ),
+                text: redPart,
+                style: const TextStyle(color: Color(0xFFDC2626)),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 6),
-        const Text(
-          'Select your two-wheeler category to explore custom configurations',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF64748B),
+        if (subtitle != null && subtitle.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF475569),
+            ),
           ),
-        ),
-        const SizedBox(height: 28),
+        ],
+      ],
+    );
+  }
+
+  // ==========================================================
+  // STEP 1: CHOOSE YOUR RIDE (EXACT 3 PORTRAIT CARDS)
+  // ==========================================================
+  Widget _buildStep1ChooseRide() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeroHeadline('CHOOSE YOUR ', 'RIDE'),
+        const SizedBox(height: 26),
         Expanded(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 510),
+              constraints: const BoxConstraints(maxHeight: 530),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // 1. MOTORCYCLES (MC)
                   Flexible(
                     child: AspectRatio(
                       aspectRatio: 500 / 736,
                       child: _buildCategoryCard(
                         code: 'MC',
-                        imagePath: 'assets/configurator/cat_mc.jpg',
+                        imagePath: 'assets/configurator/cat_mc_hq.jpg',
                       ),
                     ),
                   ),
                   const SizedBox(width: 22),
-
-                  // 2. SCOOTERS
                   Flexible(
                     child: AspectRatio(
                       aspectRatio: 500 / 736,
                       child: _buildCategoryCard(
                         code: 'Scooter',
-                        imagePath: 'assets/configurator/cat_scooter.jpg',
+                        imagePath: 'assets/configurator/cat_scooter_hq.jpg',
                       ),
                     ),
                   ),
                   const SizedBox(width: 22),
-
-                  // 3. BIG BIKES
                   Flexible(
                     child: AspectRatio(
                       aspectRatio: 500 / 736,
                       child: _buildCategoryCard(
                         code: 'BigBike',
-                        imagePath: 'assets/configurator/cat_bigbike.jpg',
+                        imagePath: 'assets/configurator/cat_bigbike_hq.jpg',
                       ),
                     ),
                   ),
@@ -959,336 +902,447 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         onTap: () {
           setState(() {
             _selectedCategory = code;
-            final pool = _currentCategoryVehicles;
-            if (pool.isNotEmpty) _selectedVehicle = pool.first;
+            _selectedCcFilter = 'All';
+            _selectedVehicle = null;
+            _invalidateQuoteCache();
           });
         },
         onDoubleTap: () {
           setState(() {
             _selectedCategory = code;
-            final pool = _currentCategoryVehicles;
-            if (pool.isNotEmpty) _selectedVehicle = pool.first;
+            _selectedCcFilter = 'All';
+            _selectedVehicle = null;
+            _invalidateQuoteCache();
           });
           _nextStep();
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
+          duration: const Duration(milliseconds: 180),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: isSelected
                   ? const Color(0xFFDC2626)
-                  : const Color(0xFFF1F5F9),
-              width: isSelected ? 2.8 : 1.0,
+                  : const Color(0xFFE2E8F0),
+              width: isSelected ? 2.5 : 1.0,
             ),
             boxShadow: [
               BoxShadow(
                 color: isSelected
-                    ? const Color(0x33DC2626)
-                    : const Color(0x0F000000),
-                blurRadius: isSelected ? 24 : 14,
-                offset: isSelected ? const Offset(0, 8) : const Offset(0, 4),
+                    ? const Color(0x2ADC2626)
+                    : const Color(0x0D000000),
+                blurRadius: isSelected ? 22 : 12,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(22),
-            child: _buildSafeImage(imagePath, fit: BoxFit.fill),
+            borderRadius: BorderRadius.circular(20),
+            child: SmartMediaImage(source: imagePath, fit: BoxFit.fill),
           ),
         ),
       ),
     );
   }
 
-  // ==========================================
-  // STEP 2: SELECT YOUR VEHICLE (CARDS CAROUSEL)
-  // ==========================================
+  // ==========================================================
+  // STEP 2: SELECT YOUR VEHICLE (CC FILTER + CAROUSEL)
+  // ==========================================================
   Widget _buildStep2SelectVehicle() {
-    final vehicles = _currentCategoryVehicles;
+    final vehicles = _filteredVehicles;
+    final ccChips = _availableCcChips;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title
-        RichText(
-          text: const TextSpan(
-            style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF0F172A),
-                letterSpacing: -0.5),
-            children: [
-              TextSpan(text: 'SELECT YOUR '),
-              TextSpan(
-                  text: 'VEHICLE', style: TextStyle(color: Color(0xFFDC2626))),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
+        _buildHeroHeadline('SELECT YOUR ', 'VEHICLE'),
+        const SizedBox(height: 16),
 
-        // Filter Chips Row (100 CC, 125 CC, 150 CC, On Road)
-        Row(
-          children: ['All', '100 CC', '125 CC', '150 CC', 'On Road'].map((f) {
-            final isSel = _selectedCcFilter == f;
-            return Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: InkWell(
-                onTap: () => setState(() => _selectedCcFilter = f),
+        // Filter Chips Row (All, 110 CC, 125 CC, ... + On Road toggle)
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              ...ccChips.map((label) {
+                final isSel = _selectedCcFilter == label;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: InkWell(
+                    onTap: () => setState(() => _selectedCcFilter = label),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSel
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: isSel ? Colors.white : const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              // On Road price toggle pill matching Mockup 2
+              InkWell(
+                onTap: () =>
+                    setState(() => _showOnRoadPrice = !_showOnRoadPrice),
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isSel ? const Color(0xFFDC2626) : Colors.white,
+                    color: _showOnRoadPrice
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: isSel
-                            ? const Color(0xFFDC2626)
-                            : const Color(0xFFE2E8F0)),
                   ),
                   child: Text(
-                    f,
+                    'On Road',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 12.5,
                       fontWeight: FontWeight.w700,
-                      color: isSel ? Colors.white : const Color(0xFF475569),
+                      color: _showOnRoadPrice
+                          ? Colors.white
+                          : const Color(0xFF0F172A),
                     ),
                   ),
                 ),
               ),
-            );
-          }).toList(),
+            ],
+          ),
         ),
         const SizedBox(height: 20),
 
-        // Horizontal Row of Vehicle Cards
+        // Horizontal Vehicle Cards Carousel
         Expanded(
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: vehicles.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 18),
-            itemBuilder: (context, index) {
-              final v = vehicles[index];
-              final isSel = _selectedVehicle?['id'] == v['id'] ||
-                  _selectedVehicle?['code'] == v['code'];
-
-              return SizedBox(
-                width: 280,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isSel
-                          ? const Color(0xFFDC2626)
-                          : const Color(0xFFF1F5F9),
-                      width: isSel ? 2.5 : 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isSel
-                            ? const Color(0x28DC2626)
-                            : const Color(0x0C000000),
-                        blurRadius: isSel ? 16 : 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Vehicle Visual Card with real photo
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(22)),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              _buildSafeImage(
-                                  v['image'] ??
-                                      'assets/configurator/v_shine100.jpg',
-                                  fit: BoxFit.cover),
-                              Positioned(
-                                bottom: 12,
-                                right: 12,
-                                child: Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                          color: Color(0x22000000),
-                                          blurRadius: 6,
-                                          offset: Offset(0, 2)),
-                                    ],
-                                  ),
-                                  child: const Icon(Icons.chevron_right,
-                                      color: Color(0xFFDC2626), size: 20),
-                                ),
-                              ),
-                            ],
+          child: _isLoadingCatalog
+              ? const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFDC2626)),
+                )
+              : vehicles.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.two_wheeler_outlined,
+                              size: 48, color: Color(0xFFCBD5E1)),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'No vehicles match this CC filter.',
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF64748B)),
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () =>
+                                setState(() => _selectedCcFilter = 'All'),
+                            child: const Text('Show all models',
+                                style: TextStyle(color: Color(0xFFDC2626))),
+                          ),
+                        ],
                       ),
+                    )
+                  : ListView.separated(
+                      controller: _vehicleCarouselCtrl,
+                      scrollDirection: Axis.horizontal,
+                      itemCount: vehicles.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 18),
+                      itemBuilder: (context, index) {
+                        final v = vehicles[index];
+                        final isSel = _selectedVehicle?['id'] == v['id'] ||
+                            _selectedVehicle?['code'] == v['code'];
+                        final displayPrice = _showOnRoadPrice
+                            ? (v['onRoadPrice'] ?? 0)
+                            : (v['exShowroomPrice'] ?? 0);
+                        final cc = v['ccDisplacement'];
 
-                      // Bottom Price & Customise Button
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        child: Row(
-                          children: [
-                            Expanded(
+                        return SizedBox(
+                          width: 278,
+                          child: InkWell(
+                            onTap: () => _selectVehicle(v),
+                            borderRadius: BorderRadius.circular(22),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(
+                                  color: isSel
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFFF1F5F9),
+                                  width: isSel ? 2.2 : 1.0,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isSel
+                                        ? const Color(0x26DC2626)
+                                        : const Color(0x0D000000),
+                                    blurRadius: isSel ? 18 : 12,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    '${CurrencyFormatter.format(v['exShowroom'] ?? 68767)}*',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w900,
-                                      color: Color(0xFF0F172A),
-                                      letterSpacing: -0.3,
+                                  // Top Card Image
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius:
+                                          const BorderRadius.vertical(
+                                              top: Radius.circular(20)),
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          Container(
+                                            color: const Color(0xFFF8FAFC),
+                                            child: SmartMediaImage(
+                                              source: _resolveListingImage(v),
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                          if (cc != null)
+                                            Positioned(
+                                              top: 12,
+                                              left: 12,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.65),
+                                                  borderRadius:
+                                                      BorderRadius.circular(14),
+                                                ),
+                                                child: Text(
+                                                  '$cc CC',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10.5,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          Positioned(
+                                            bottom: 12,
+                                            right: 12,
+                                            child: InkWell(
+                                              onTap: () => _selectVehicle(v,
+                                                  advance: true),
+                                              child: Container(
+                                                width: 34,
+                                                height: 34,
+                                                decoration: const BoxDecoration(
+                                                  color: Colors.white,
+                                                  shape: BoxShape.circle,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Color(0x26000000),
+                                                      blurRadius: 8,
+                                                      offset: Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: const Icon(
+                                                    Icons.chevron_right_rounded,
+                                                    color: Color(0xFFDC2626),
+                                                    size: 22),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  const Text(
-                                    'Ex-Showroom Price',
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: Color(0xFF94A3B8)),
+
+                                  // Bottom Price + Customise CTA Bar (Mockup 2)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        16, 12, 14, 14),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                v['name']?.toString() ?? '',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Color(0xFF334155),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '${CurrencyFormatter.format(displayPrice)}*',
+                                                style: const TextStyle(
+                                                  fontSize: 19,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Color(0xFF0F172A),
+                                                  letterSpacing: -0.4,
+                                                ),
+                                              ),
+                                              Text(
+                                                _showOnRoadPrice
+                                                    ? 'On-Road Price (Pune)'
+                                                    : 'Ex-Showroom Price',
+                                                style: const TextStyle(
+                                                  fontSize: 10.5,
+                                                  color: Color(0xFF94A3B8),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        OutlinedButton(
+                                          style: OutlinedButton.styleFrom(
+                                            side: const BorderSide(
+                                                color: Color(0xFFDC2626),
+                                                width: 1.3),
+                                            foregroundColor:
+                                                const Color(0xFFDC2626),
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(20)),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 14, vertical: 9),
+                                          ),
+                                          onPressed: () => _selectVehicle(v,
+                                              advance: true),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text('Customise',
+                                                  style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w700)),
+                                              SizedBox(width: 4),
+                                              Icon(Icons.arrow_forward_rounded,
+                                                  size: 14),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                            OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                    color: Color(0xFFDC2626), width: 1.5),
-                                foregroundColor: const Color(0xFFDC2626),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20)),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 8),
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _selectedVehicle = v;
-                                  if (v['colours'] is List &&
-                                      (v['colours'] as List).isNotEmpty) {
-                                    _selectedColourName =
-                                        (v['colours'] as List).first.toString();
-                                  }
-                                });
-                                _nextStep();
-                              },
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text('Customise',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800)),
-                                  SizedBox(width: 4),
-                                  Icon(Icons.arrow_forward_rounded, size: 14),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+                          ),
+                        );
+                      },
+                    ),
         ),
 
-        const SizedBox(height: 12),
-        // Dots indicator
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-              vehicles.length.clamp(1, 5),
-              (i) => Container(
-                    width: i == 0 ? 16 : 6,
-                    height: 6,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    decoration: BoxDecoration(
-                      color: i == 0
-                          ? const Color(0xFFDC2626)
-                          : const Color(0xFFCBD5E1),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  )),
-        ),
+        const SizedBox(height: 14),
+        // Pagination Dots matching Mockup 2
+        if (vehicles.isNotEmpty)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(vehicles.length.clamp(1, 6), (i) {
+              final active = i == _carouselDotIndex.clamp(0, vehicles.length - 1);
+              return Container(
+                width: active ? 8 : 6,
+                height: active ? 8 : 6,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: active
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFFCBD5E1),
+                ),
+              );
+            }),
+          ),
       ],
     );
   }
 
-  // ==========================================
-  // STEP 3: CHOOSE YOUR COLOUR (HERO + SWATCHES)
-  // ==========================================
+  // ==========================================================
+  // STEP 3: CHOOSE YOUR COLOUR (BIG SHOWCASE + GLOSSY SWATCHES)
+  // ==========================================================
   Widget _buildStep3ChooseColour() {
-    final v = _selectedVehicle ?? _defaultCatalog.first;
-
-    // Colour Swatches to offer
-    final List<Map<String, dynamic>> swatches = [
-      {'name': 'Sports Red', 'color': const Color(0xFFDC2626)},
-      {'name': 'Black', 'color': const Color(0xFF0F172A)},
-      {'name': 'Pearl Night White', 'color': const Color(0xFFF1F5F9)},
-      {'name': 'Pearl Siren Blue', 'color': const Color(0xFF1D4ED8)},
-    ];
+    final v = _selectedVehicle;
+    final swatches = _getColoursForVehicle(v);
 
     return Row(
       children: [
-        // Left: Hero Render of Vehicle in selected colour
         Expanded(
-          flex: 6,
+          flex: 7,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              RichText(
-                text: const TextSpan(
-                  style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: -0.5),
-                  children: [
-                    TextSpan(text: 'CHOOSE YOUR '),
-                    TextSpan(
-                        text: 'COLOUR',
-                        style: TextStyle(color: Color(0xFFDC2626))),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text('Make it truly yours.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+              _buildHeroHeadline('CHOOSE YOUR ', 'COLOUR',
+                  subtitle: 'Make it truly yours.'),
               const Spacer(),
-
-              // Big Vehicle Display
               Center(
                 child: SizedBox(
-                  height: 310,
-                  child: _buildSafeImage(_heroBikeImage, fit: BoxFit.contain),
+                  height: 360,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 240),
+                    child: SmartMediaImage(
+                      key: ValueKey(
+                          '${_selectedVehicle?['id']}-$_selectedColourName'),
+                      source: _resolveShowcaseImage(),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
               ),
-
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Center(
-                child: Text(
-                  '${v['name']} · $_selectedColourName',
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF334155)),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: _selectedColourValue,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${v?['name'] ?? ''} · $_selectedColourName',
+                        style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF334155)),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const Spacer(),
@@ -1296,51 +1350,57 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           ),
         ),
 
-        const SizedBox(width: 30),
+        const SizedBox(width: 24),
 
-        // Right Column: / COLOUR SWATCHES
+        // Center-Right Column: / COLOUR + Vertical Glossy Swatches (Mockup 3)
         Expanded(
-          flex: 5,
+          flex: 3,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text('/ ',
                       style: TextStyle(
                           color: Color(0xFFDC2626),
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold)),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900)),
                   Text(
                     'COLOUR',
                     style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.0,
-                        color: Color(0xFF0F172A)),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      fontStyle: FontStyle.italic,
+                      letterSpacing: 0.6,
+                      color: Color(0xFF0F172A),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
+              ...swatches.map((opt) {
+                final cName = opt['name']?.toString() ?? 'Standard';
+                final col = _parseColor(opt['hex']?.toString());
+                final isSel = _selectedColourName == cName;
+                final isLight = col.computeLuminance() > 0.78;
 
-              // Vertical Swatches Stack matching prototype screenshot
-              Column(
-                children: swatches.map((opt) {
-                  final isSel = _selectedColourName.toLowerCase().contains(
-                      opt['name'].toString().toLowerCase().split(' ').first);
-                  final col = opt['color'] as Color;
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 18),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: Tooltip(
+                    message: cName,
                     child: InkWell(
                       onTap: () {
                         setState(() {
-                          _selectedColourName = opt['name'] as String;
+                          _selectedColourName = cName;
                           _selectedColourValue = col;
+                          _selectedColourImageUrl =
+                              opt['colourImageUrl']?.toString();
+                          _invalidateQuoteCache();
                         });
                       },
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(32),
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
@@ -1349,34 +1409,43 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                             color: isSel
                                 ? const Color(0xFFDC2626)
                                 : Colors.transparent,
-                            width: 2.5,
+                            width: 2.2,
                           ),
                         ),
                         child: Container(
-                          width: 44,
-                          height: 44,
+                          width: 46,
+                          height: 46,
                           decoration: BoxDecoration(
-                            color: col,
                             shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              center: const Alignment(-0.35, -0.35),
+                              radius: 0.9,
+                              colors: [
+                                Color.lerp(col, Colors.white, 0.32) ?? col,
+                                col,
+                                Color.lerp(col, Colors.black, 0.25) ?? col,
+                              ],
+                            ),
                             border: Border.all(
-                              color: col == const Color(0xFFF1F5F9)
+                              color: isLight
                                   ? const Color(0xFFCBD5E1)
                                   : Colors.transparent,
                               width: 1,
                             ),
                             boxShadow: const [
                               BoxShadow(
-                                  color: Color(0x22000000),
-                                  blurRadius: 6,
-                                  offset: Offset(0, 2)),
+                                color: Color(0x24000000),
+                                blurRadius: 8,
+                                offset: Offset(0, 3),
+                              ),
                             ],
                           ),
                         ),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
+                  ),
+                );
+              }),
             ],
           ),
         ),
@@ -1384,41 +1453,30 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     );
   }
 
-  // ==========================================
-  // STEP 4: ADD ACCESSORIES
-  // ==========================================
+  // ==========================================================
+  // STEP 4: ADD ACCESSORIES (STANDARD INCLUDED + OPTIONAL GRID)
+  // ==========================================================
   Widget _buildStep4AddAccessories() {
+    final standardAccs = _standardAccessories;
+    final optionalAccs = _optionalAccessories;
+
     return Row(
       children: [
-        // Left: Vehicle Hero
         Expanded(
           flex: 5,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              RichText(
-                text: const TextSpan(
-                  style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: -0.5),
-                  children: [
-                    TextSpan(text: 'ADD '),
-                    TextSpan(
-                        text: 'ACCESSORIES',
-                        style: TextStyle(color: Color(0xFFDC2626))),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text('Personalise your ride, your way.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+              _buildHeroHeadline('ADD ', 'ACCESSORIES',
+                  subtitle: 'Personalise your ride, your way.'),
               const Spacer(),
               Center(
                 child: SizedBox(
-                  height: 310,
-                  child: _buildSafeImage(_heroBikeImage, fit: BoxFit.contain),
+                  height: 350,
+                  child: SmartMediaImage(
+                    source: _resolveShowcaseImage(),
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
               const Spacer(),
@@ -1426,417 +1484,117 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           ),
         ),
 
-        const SizedBox(width: 20),
+        const SizedBox(width: 24),
 
-        // Right Column: Standard Accessories + Optional Backend Accessories
         Expanded(
           flex: 6,
           child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Card 1: Standard Accessories (Included)
+                if (standardAccs.isNotEmpty) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        RichText(
+                          text: const TextSpan(
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A)),
+                            children: [
+                              TextSpan(text: 'Standard Accessories '),
+                              TextSpan(
+                                  text: '(Included)',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w400,
+                                      fontStyle: FontStyle.italic,
+                                      color: Color(0xFF475569))),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: standardAccs
+                              .map((acc) => _buildAccessoryTile(acc,
+                                  isStandardCard: true))
+                              .toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                ],
+
                 Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Standard Accessories (Included)',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A)),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          _buildIncludedAccessory(
-                              name: 'Engine Guard',
-                              icon: Icons.shield_outlined),
-                          const SizedBox(width: 10),
-                          _buildIncludedAccessory(
-                              name: 'Tank Pad',
-                              icon: Icons.crop_portrait_outlined),
-                          const SizedBox(width: 10),
-                          _buildIncludedAccessory(
-                              name: 'Seat Cover',
-                              icon: Icons.airline_seat_recline_normal_outlined),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Card 2: Optional Accessories from Backend
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Optional Accessories (Add to your build)',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A)),
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: _activeAccessories.map((acc) {
-                          final name = acc['name'] as String;
-                          final isSel =
-                              _selectedOptionalAccessories.contains(name);
-                          final price = ((acc['price'] ?? 500) as num).toInt();
-
-                          return InkWell(
-                            onTap: () {
-                              setState(() {
-                                if (isSel) {
-                                  _selectedOptionalAccessories.remove(name);
-                                } else {
-                                  _selectedOptionalAccessories.add(name);
-                                }
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              width: 140,
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: isSel
-                                    ? const Color(0xFFFEF2F2)
-                                    : const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                    color: isSel
-                                        ? const Color(0xFFDC2626)
-                                        : const Color(0xFFE2E8F0)),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Icon(acc['icon'] as IconData,
-                                          size: 22,
-                                          color: const Color(0xFF334155)),
-                                      Icon(
-                                        isSel
-                                            ? Icons.check_circle
-                                            : Icons.radio_button_unchecked,
-                                        size: 16,
-                                        color: isSel
-                                            ? const Color(0xFFDC2626)
-                                            : const Color(0xFF94A3B8),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    name,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF0F172A)),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '+₹$price',
-                                    style: const TextStyle(
-                                        fontSize: 10.5,
-                                        color: Color(0xFFDC2626),
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildIncludedAccessory(
-      {required String name, required IconData icon}) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Column(
-          children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: Container(
-                width: 14,
-                height: 14,
-                decoration: const BoxDecoration(
-                    color: Color(0xFFDC2626), shape: BoxShape.circle),
-                child: const Icon(Icons.check, size: 10, color: Colors.white),
-              ),
-            ),
-            Icon(icon, size: 24, color: const Color(0xFF334155)),
-            const SizedBox(height: 6),
-            Text(
-              name,
-              style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF0F172A)),
-            ),
-            const SizedBox(height: 2),
-            const Text(
-              'Included',
-              style: TextStyle(
-                  fontSize: 9.5,
-                  color: Color(0xFF16A34A),
-                  fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ==========================================
-  // STEP 5: PAYMENT OPTION (CASH OR FINANCE)
-  // ==========================================
-  Widget _buildStep5PaymentOption() {
-    return Row(
-      children: [
-        // Left: Vehicle Hero
-        Expanded(
-          flex: 5,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RichText(
-                text: const TextSpan(
-                  style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: -0.5),
-                  children: [
-                    TextSpan(text: 'CHOOSE YOUR '),
-                    TextSpan(
-                        text: 'PAYMENT OPTION',
-                        style: TextStyle(color: Color(0xFFDC2626))),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text('Pick what works best for you.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
-              const Spacer(),
-              Center(
-                child: SizedBox(
-                  height: 310,
-                  child: _buildSafeImage(_heroBikeImage, fit: BoxFit.contain),
-                ),
-              ),
-              const Spacer(),
-            ],
-          ),
-        ),
-
-        const SizedBox(width: 20),
-
-        // Right: Pay in Cash & Finance Options matching prototype
-        Expanded(
-          flex: 6,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // 1. Pay in Cash Card
-                _buildPaymentOptionCard(
-                  title: 'Pay in Cash',
-                  subtitle: 'Make a one-time payment and own your Honda.',
-                  iconWidget: const Icon(Icons.credit_card,
-                      size: 28, color: Color(0xFFDC2626)),
-                  isSelected: _paymentMode == 'Cash',
-                  onTap: () => setState(() => _paymentMode = 'Cash'),
-                ),
-                const SizedBox(height: 16),
-
-                // 2. Finance Card with detailed sub-options
-                Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: _paymentMode == 'Finance'
-                          ? const Color(0xFFDC2626)
-                          : const Color(0xFFE2E8F0),
-                      width: _paymentMode == 'Finance' ? 2 : 1,
-                    ),
-                    boxShadow: [
-                      if (_paymentMode == 'Finance')
-                        const BoxShadow(
-                            color: Color(0x15DC2626),
-                            blurRadius: 8,
-                            offset: Offset(0, 2)),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0A000000),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
                     ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      InkWell(
-                        onTap: () => setState(() => _paymentMode = 'Finance'),
-                        child: Row(
+                      RichText(
+                        text: const TextSpan(
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A)),
                           children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF2F2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.calendar_month_outlined,
-                                  size: 24, color: Color(0xFFDC2626)),
-                            ),
-                            const SizedBox(width: 14),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Finance',
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                          color: Color(0xFF0F172A))),
-                                  SizedBox(height: 3),
-                                  Text('Own your ride with easy EMI options.',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: Color(0xFF64748B))),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              width: 22,
-                              height: 22,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: _paymentMode == 'Finance'
-                                        ? const Color(0xFFDC2626)
-                                        : const Color(0xFFCBD5E1),
-                                    width: 2),
-                              ),
-                              child: _paymentMode == 'Finance'
-                                  ? Center(
-                                      child: Container(
-                                        width: 10,
-                                        height: 10,
-                                        decoration: const BoxDecoration(
-                                            color: Color(0xFFDC2626),
-                                            shape: BoxShape.circle),
-                                      ),
-                                    )
-                                  : null,
-                            ),
+                            TextSpan(text: 'Optional Accessories '),
+                            TextSpan(
+                                text: '(Add to your build)',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w400,
+                                    fontStyle: FontStyle.italic,
+                                    color: Color(0xFF475569))),
                           ],
                         ),
                       ),
-                      if (_paymentMode == 'Finance') ...[
-                        const Divider(height: 24, color: Color(0xFFE2E8F0)),
+                      const SizedBox(height: 14),
+                      if (optionalAccs.isEmpty)
                         const Text(
-                          'Choose a Finance Option',
+                          'No optional add-ons available.',
                           style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF0F172A)),
+                              fontSize: 12.5, color: Color(0xFF94A3B8)),
+                        )
+                      else
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: optionalAccs
+                              .map((acc) => _buildAccessoryTile(acc,
+                                  isStandardCard: false))
+                              .toList(),
                         ),
-                        const SizedBox(height: 10),
-
-                        // 3 Option Buttons (Bank Loan, Dealer Finance, Flexi EMI Plans)
-                        Row(
-                          children: [
-                            _buildFinanceTypeBtn(
-                                'Bank Loan', Icons.account_balance_outlined),
-                            const SizedBox(width: 8),
-                            _buildFinanceTypeBtn(
-                                'Dealer Finance', Icons.handshake_outlined),
-                            const SizedBox(width: 8),
-                            _buildFinanceTypeBtn(
-                                'Flexi EMI Plans', Icons.currency_rupee),
-                          ],
-                        ),
-
-                        if (_backendFinanciers.isNotEmpty) ...[
-                          const SizedBox(height: 14),
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedFinancierName,
-                            decoration: InputDecoration(
-                              labelText: 'Preferred Financier',
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                            ),
-                            items: _backendFinanciers
-                                .map((f) => DropdownMenuItem<String>(
-                                      value: f['name']?.toString(),
-                                      child: Text(f['name']?.toString() ?? '',
-                                          style:
-                                              const TextStyle(fontSize: 12.5)),
-                                    ))
-                                .toList(),
-                            onChanged: (val) =>
-                                setState(() => _selectedFinancierName = val),
-                          ),
-                        ],
-
-                        const SizedBox(height: 16),
-                        // 3 Value Badges
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _ValueBadge(
-                                icon: Icons.percent,
-                                text: 'Low Interest Rates'),
-                            _ValueBadge(
-                                icon: Icons.calendar_today_outlined,
-                                text: 'Flexible EMI Tenure'),
-                            _ValueBadge(
-                                icon: Icons.handshake_outlined,
-                                text: 'Hassle-Free Approval'),
-                          ],
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -1848,168 +1606,180 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     );
   }
 
-  Widget _buildPaymentOptionCard({
-    required String title,
-    required String subtitle,
-    required Widget iconWidget,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildAccessoryTile(Map<String, dynamic> acc,
+      {required bool isStandardCard}) {
+    final id = acc['id'].toString();
+    final name = acc['name']?.toString() ?? 'Accessory';
+    final price = ((acc['price'] ?? 0) as num).toDouble();
+    final imgUrl = acc['imageUrl']?.toString();
+    final isSel = isStandardCard || _selectedOptionalAccessoryIds.contains(id);
+
     return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color:
-                isSelected ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: [
-            if (isSelected)
-              const BoxShadow(
-                  color: Color(0x15DC2626),
-                  blurRadius: 8,
-                  offset: Offset(0, 2)),
-          ],
-        ),
-        child: Row(
+      onTap: isStandardCard
+          ? null
+          : () {
+              setState(() {
+                if (_selectedOptionalAccessoryIds.contains(id)) {
+                  _selectedOptionalAccessoryIds.remove(id);
+                } else {
+                  _selectedOptionalAccessoryIds.add(id);
+                }
+                _invalidateQuoteCache();
+              });
+            },
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: 118,
+        child: Column(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 118,
+              height: 102,
               decoration: BoxDecoration(
-                color: isSelected
+                color: isSel && !isStandardCard
                     ? const Color(0xFFFEF2F2)
-                    : const Color(0xFFF1F5F9),
+                    : const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSel && !isStandardCard
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFFE2E8F0),
+                  width: isSel && !isStandardCard ? 1.8 : 1.0,
+                ),
               ),
-              child: iconWidget,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
                 children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A))),
-                  const SizedBox(height: 3),
-                  Text(subtitle,
-                      style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF64748B))),
+                  Positioned.fill(
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: SmartMediaImage(
+                        source: imgUrl,
+                        fit: BoxFit.contain,
+                        fallback: Icon(
+                          _getAccessoryFallbackIcon(name),
+                          size: 34,
+                          color: const Color(0xFF475569),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: isStandardCard
+                        ? Container(
+                            width: 16,
+                            height: 16,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFDC2626),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check,
+                                size: 11, color: Colors.white),
+                          )
+                        : Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isSel
+                                  ? const Color(0xFFDC2626)
+                                  : Colors.white,
+                              border: Border.all(
+                                color: isSel
+                                    ? const Color(0xFFDC2626)
+                                    : const Color(0xFF0F172A),
+                                width: 1.3,
+                              ),
+                            ),
+                            child: isSel
+                                ? const Icon(Icons.check,
+                                    size: 11, color: Colors.white)
+                                : null,
+                          ),
+                  ),
                 ],
               ),
             ),
-            Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                    color: isSelected
-                        ? const Color(0xFFDC2626)
-                        : const Color(0xFFCBD5E1),
-                    width: 2),
+            const SizedBox(height: 6),
+            Text(
+              name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0F172A),
+                height: 1.2,
               ),
-              child: isSelected
-                  ? Center(
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                            color: Color(0xFFDC2626), shape: BoxShape.circle),
-                      ),
-                    )
-                  : null,
             ),
+            if (!isStandardCard) ...[
+              const SizedBox(height: 2),
+              Text(
+                '+${CurrencyFormatter.format(price)}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFFDC2626),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildFinanceTypeBtn(String label, IconData icon) {
-    final isSel = _selectedFinanceType == label;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () => setState(() => _selectedFinanceType = label),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-          decoration: BoxDecoration(
-            color: isSel ? const Color(0xFFFEF2F2) : Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-                color:
-                    isSel ? const Color(0xFFDC2626) : const Color(0xFFCBD5E1)),
-          ),
-          child: Column(
-            children: [
-              Icon(icon,
-                  size: 18,
-                  color: isSel
-                      ? const Color(0xFFDC2626)
-                      : const Color(0xFF475569)),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
-                  color:
-                      isSel ? const Color(0xFFDC2626) : const Color(0xFF334155),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  IconData _getAccessoryFallbackIcon(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('ceramic')) return Icons.auto_awesome_outlined;
+    if (lower.contains('seat')) {
+      return Icons.airline_seat_recline_normal_outlined;
+    }
+    if (lower.contains('warranty')) return Icons.verified_outlined;
+    if (lower.contains('mat')) return Icons.layers_outlined;
+    if (lower.contains('grip') || lower.contains('lever')) {
+      return Icons.sports_motorsports_outlined;
+    }
+    if (lower.contains('helmet')) return Icons.sports_motorsports;
+    if (lower.contains('rsa') || lower.contains('roadside')) {
+      return Icons.emergency_outlined;
+    }
+    if (lower.contains('guard') || lower.contains('crash')) {
+      return Icons.shield_outlined;
+    }
+    if (lower.contains('tank')) return Icons.crop_portrait_outlined;
+    if (lower.contains('box')) return Icons.luggage_outlined;
+    if (lower.contains('wind')) return Icons.air_outlined;
+    if (lower.contains('phone') || lower.contains('holder')) {
+      return Icons.smartphone_outlined;
+    }
+    if (lower.contains('pdi')) return Icons.fact_check_outlined;
+    return Icons.inventory_2_outlined;
   }
 
-  // ==========================================
-  // STEP 6: EXCHANGE YOUR OLD RIDE
-  // ==========================================
-  Widget _buildStep6ExchangeRide() {
+  // ==========================================================
+  // STEP 5: CHOOSE YOUR PAYMENT OPTION (DISPLAY ONLY FINANCE)
+  // ==========================================================
+  Widget _buildStep5PaymentOption() {
     return Row(
       children: [
-        // Left: Vehicle Hero
         Expanded(
           flex: 5,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              RichText(
-                text: const TextSpan(
-                  style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: -0.5),
-                  children: [
-                    TextSpan(text: 'EXCHANGE YOUR '),
-                    TextSpan(
-                        text: 'OLD RIDE',
-                        style: TextStyle(color: Color(0xFFDC2626))),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text('Trade in your current two-wheeler for a better deal.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+              _buildHeroHeadline('CHOOSE YOUR ', 'PAYMENT OPTION',
+                  subtitle: 'Pick what works best for you.'),
               const Spacer(),
               Center(
                 child: SizedBox(
-                  height: 310,
-                  child: _buildSafeImage(_heroBikeImage, fit: BoxFit.contain),
+                  height: 350,
+                  child: SmartMediaImage(
+                    source: _resolveShowcaseImage(),
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
               const Spacer(),
@@ -2017,22 +1787,364 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           ),
         ),
 
-        const SizedBox(width: 20),
+        const SizedBox(width: 24),
 
-        // Right Column: Exchange Form
+        Expanded(
+          flex: 6,
+          child: Center(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Card 1: Pay in Cash
+                  InkWell(
+                    onTap: () => setState(() {
+                      _paymentMode = 'Cash';
+                      _invalidateQuoteCache();
+                    }),
+                    borderRadius: BorderRadius.circular(18),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 22, vertical: 18),
+                      decoration: BoxDecoration(
+                        color: _paymentMode == 'Cash'
+                            ? const Color(0xFFFFFBFB)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: _paymentMode == 'Cash'
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFFE2E8F0),
+                          width: _paymentMode == 'Cash' ? 1.8 : 1.0,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0C000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 58,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF2F2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.credit_card_rounded,
+                                size: 30, color: Color(0xFFDC2626)),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Pay in Cash',
+                                  style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF0F172A)),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Make a one-time payment and own your Honda.',
+                                  style: TextStyle(
+                                      fontSize: 12, color: Color(0xFF475569)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _RadioRing(isSelected: _paymentMode == 'Cash'),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Card 2: Finance (with Bank Loan / Dealer Finance / Flexi EMI Plans)
+                  InkWell(
+                    onTap: () => setState(() {
+                      _paymentMode = 'Finance';
+                      _invalidateQuoteCache();
+                    }),
+                    borderRadius: BorderRadius.circular(18),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: _paymentMode == 'Finance'
+                            ? const Color(0xFFFFF5F5)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: _paymentMode == 'Finance'
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFFE2E8F0),
+                          width: _paymentMode == 'Finance' ? 1.8 : 1.0,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0C000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 58,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: const Color(0xFFFECACA)),
+                                ),
+                                child: const Icon(Icons.event_note_rounded,
+                                    size: 30, color: Color(0xFFDC2626)),
+                              ),
+                              const SizedBox(width: 16),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Finance',
+                                      style: TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF0F172A)),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Own your ride with easy EMI options.',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF475569)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              _RadioRing(isSelected: _paymentMode == 'Finance'),
+                            ],
+                          ),
+                          if (_paymentMode == 'Finance') ...[
+                            const SizedBox(height: 16),
+                            const Row(
+                              children: [
+                                Expanded(
+                                    child: Divider(color: Color(0xFFFECACA))),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 12),
+                                  child: Text(
+                                    'Choose a Finance Option',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                    child: Divider(color: Color(0xFFFECACA))),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                _buildFinanceOptionBtn(
+                                    'Bank Loan', Icons.account_balance_rounded),
+                                const SizedBox(width: 10),
+                                _buildFinanceOptionBtn(
+                                    'Dealer Finance', Icons.handshake_outlined),
+                                const SizedBox(width: 10),
+                                _buildFinanceOptionBtn(
+                                    'Flexi EMI Plans', Icons.currency_rupee),
+                              ],
+                            ),
+                            if (_backendFinanciers.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<String>(
+                                initialValue: _selectedFinancierId,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  labelText: 'Preferred Financier (Optional)',
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFE2E8F0)),
+                                  ),
+                                ),
+                                items: _backendFinanciers
+                                    .map((f) => DropdownMenuItem<String>(
+                                          value: f['id']?.toString(),
+                                          child: Text(
+                                            f['name']?.toString() ?? '',
+                                            style:
+                                                const TextStyle(fontSize: 12.5),
+                                          ),
+                                        ))
+                                    .toList(),
+                                onChanged: (val) {
+                                  final match = _backendFinanciers.firstWhere(
+                                      (f) => f['id'] == val,
+                                      orElse: () => {});
+                                  setState(() {
+                                    _selectedFinancierId = val;
+                                    _selectedFinancierName =
+                                        match['name']?.toString();
+                                    _invalidateQuoteCache();
+                                  });
+                                },
+                              ),
+                            ],
+                            const SizedBox(height: 16),
+                            const Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _TrustFeatureItem(
+                                    icon: Icons.percent,
+                                    label: 'Low\nInterest Rates'),
+                                _TrustFeatureItem(
+                                    icon: Icons.calendar_month_outlined,
+                                    label: 'Flexible\nEMI Tenure'),
+                                _TrustFeatureItem(
+                                    icon: Icons.handshake_outlined,
+                                    label: 'Hassle-Free\nApproval'),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFinanceOptionBtn(String label, IconData icon) {
+    final isSel = _selectedFinanceType == label;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() {
+          _selectedFinanceType = label;
+          _invalidateQuoteCache();
+        }),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color:
+                  isSel ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
+              width: isSel ? 1.8 : 1.0,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x08000000),
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: const Color(0xFFDC2626)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
+                    color: const Color(0xFF0F172A),
+                    height: 1.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==========================================================
+  // STEP 6: EXCHANGE YOUR OLD RIDE
+  // ==========================================================
+  Widget _buildStep6ExchangeRide() {
+    final years = [
+      'Select Year',
+      for (int y = 2026; y >= 2005; y--) y.toString(),
+    ];
+
+    return Row(
+      children: [
+        Expanded(
+          flex: 5,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeroHeadline('EXCHANGE YOUR ', 'OLD RIDE',
+                  subtitle:
+                      'Trade in your current two-wheeler for a better deal.'),
+              const Spacer(),
+              Center(
+                child: SizedBox(
+                  height: 350,
+                  child: SmartMediaImage(
+                    source: _resolveShowcaseImage(),
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              const Spacer(),
+            ],
+          ),
+        ),
+
+        const SizedBox(width: 24),
+
         Expanded(
           flex: 6,
           child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Prompt: Do you want to exchange?
+                // Card 1: Exchange Choice
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0A000000),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2040,119 +2152,33 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       const Text(
                         'Do you want to exchange your old vehicle?',
                         style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A)),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       Row(
                         children: [
                           Expanded(
-                            child: InkWell(
-                              onTap: () => setState(() => _wantExchange = true),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 10, horizontal: 12),
-                                decoration: BoxDecoration(
-                                  color: _wantExchange
-                                      ? const Color(0xFFFEF2F2)
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: _wantExchange
-                                        ? const Color(0xFFDC2626)
-                                        : const Color(0xFFCBD5E1),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 16,
-                                      height: 16,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                            color: _wantExchange
-                                                ? const Color(0xFFDC2626)
-                                                : const Color(0xFF94A3B8),
-                                            width: 2),
-                                      ),
-                                      child: _wantExchange
-                                          ? Center(
-                                              child: Container(
-                                                width: 8,
-                                                height: 8,
-                                                decoration: const BoxDecoration(
-                                                    color: Color(0xFFDC2626),
-                                                    shape: BoxShape.circle),
-                                              ),
-                                            )
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Text('Yes, I want to exchange',
-                                        style: TextStyle(
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.w700)),
-                                  ],
-                                ),
-                              ),
+                            child: _ExchangeChoicePill(
+                              label: 'Yes, I want to exchange',
+                              isSelected: _wantExchange,
+                              onTap: () => setState(() {
+                                _wantExchange = true;
+                                _invalidateQuoteCache();
+                              }),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: InkWell(
-                              onTap: () =>
-                                  setState(() => _wantExchange = false),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 10, horizontal: 12),
-                                decoration: BoxDecoration(
-                                  color: !_wantExchange
-                                      ? const Color(0xFFFEF2F2)
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: !_wantExchange
-                                        ? const Color(0xFFDC2626)
-                                        : const Color(0xFFCBD5E1),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 16,
-                                      height: 16,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                            color: !_wantExchange
-                                                ? const Color(0xFFDC2626)
-                                                : const Color(0xFF94A3B8),
-                                            width: 2),
-                                      ),
-                                      child: !_wantExchange
-                                          ? Center(
-                                              child: Container(
-                                                width: 8,
-                                                height: 8,
-                                                decoration: const BoxDecoration(
-                                                    color: Color(0xFFDC2626),
-                                                    shape: BoxShape.circle),
-                                              ),
-                                            )
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Text('No, Continue without exchange',
-                                        style: TextStyle(
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.w700)),
-                                  ],
-                                ),
-                              ),
+                            child: _ExchangeChoicePill(
+                              label: 'No, Continue without exchange',
+                              isSelected: !_wantExchange,
+                              onTap: () => setState(() {
+                                _wantExchange = false;
+                                _invalidateQuoteCache();
+                              }),
                             ),
                           ),
                         ],
@@ -2163,83 +2189,87 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
                 if (_wantExchange) ...[
                   const SizedBox(height: 16),
-                  // Details form
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Tell us about your current vehicle',
-                            style: TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.w800)),
+                        const Text(
+                          'Tell us about your current vehicle',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
                         const SizedBox(height: 14),
                         Row(
                           children: [
                             Expanded(
-                              child: _buildInputField(
+                              child: _ExchangeTextField(
                                 label: 'Model',
                                 hint: 'e.g. Honda Activa',
-                                icon: Icons.two_wheeler,
+                                icon: Icons.two_wheeler_outlined,
                                 controller: _exchangeModelController,
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 14),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Row(
                                     children: [
-                                      Icon(Icons.calendar_today,
+                                      Icon(Icons.calendar_month_outlined,
                                           size: 14, color: Color(0xFF64748B)),
-                                      SizedBox(width: 4),
+                                      SizedBox(width: 6),
                                       Text('Year of Purchase',
                                           style: TextStyle(
-                                              fontSize: 11.5,
+                                              fontSize: 12,
                                               fontWeight: FontWeight.w600,
                                               color: Color(0xFF334155))),
                                     ],
                                   ),
                                   const SizedBox(height: 6),
                                   Container(
-                                    height: 38,
+                                    height: 40,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFF8FAFC),
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                          color: const Color(0xFFCBD5E1)),
+                                          color: const Color(0xFFE2E8F0)),
                                     ),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10),
                                     child: DropdownButtonHideUnderline(
                                       child: DropdownButton<String>(
-                                        value: _exchangeYear,
+                                        value: years.contains(_exchangeYear)
+                                            ? _exchangeYear
+                                            : 'Select Year',
                                         isExpanded: true,
-                                        items: [
-                                          '2024',
-                                          '2023',
-                                          '2022',
-                                          '2021',
-                                          '2020',
-                                          '2019',
-                                          '2018',
-                                          '2017'
-                                        ]
+                                        style: const TextStyle(
+                                            fontSize: 12.5,
+                                            color: Color(0xFF0F172A)),
+                                        items: years
                                             .map((y) => DropdownMenuItem(
-                                                value: y,
-                                                child: Text(y,
-                                                    style: const TextStyle(
-                                                        fontSize: 12.5))))
+                                                value: y, child: Text(y)))
                                             .toList(),
-                                        onChanged: (val) {
-                                          if (val != null)
-                                            setState(() => _exchangeYear = val);
-                                        },
+                                        onChanged: (val) => setState(() =>
+                                            _exchangeYear =
+                                                val ?? 'Select Year'),
                                       ),
                                     ),
                                   ),
@@ -2248,35 +2278,37 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         Row(
                           children: [
                             Expanded(
-                              child: _buildInputField(
+                              child: _ExchangeTextField(
                                 label: 'Kms Driven',
                                 hint: 'e.g. 25,000',
-                                icon: Icons.speed,
+                                icon: Icons.speed_outlined,
                                 controller: _exchangeKmsController,
+                                keyboardType: TextInputType.number,
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 14),
                             Expanded(
-                              child: _buildInputField(
+                              child: _ExchangeTextField(
                                 label: 'Offered Price',
                                 hint: '₹ e.g. 45,000',
-                                icon: Icons.local_offer,
+                                icon: Icons.sell_outlined,
                                 controller: _exchangeOfferedPriceController,
+                                keyboardType: TextInputType.number,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        _buildInputField(
+                        const SizedBox(height: 14),
+                        _ExchangeTextField(
                           label: 'Your Expected Price',
                           hint: '₹ e.g. 50,000',
-                          icon: Icons.account_balance_wallet,
+                          icon: Icons.payments_outlined,
                           controller: _exchangeExpectedPriceController,
-                          onChanged: (_) => setState(() {}),
+                          keyboardType: TextInputType.number,
                         ),
                       ],
                     ),
@@ -2290,254 +2322,298 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     );
   }
 
-  Widget _buildInputField({
-    required String label,
-    required String hint,
-    required IconData icon,
-    required TextEditingController controller,
-    Function(String)? onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 14, color: const Color(0xFF64748B)),
-            const SizedBox(width: 4),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF334155))),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Container(
-          height: 38,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFCBD5E1)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          alignment: Alignment.centerLeft,
-          child: TextField(
-            controller: controller,
-            onChanged: onChanged,
-            style: const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle:
-                  const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-              border: InputBorder.none,
-              isDense: true,
-              contentPadding: EdgeInsets.zero,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // ==========================================================
+  // STEP 7: YOUR BUILD SUMMARY (3-COLUMN + RED ACTION PILL BAR)
+  // ==========================================================
+  Widget _buildStep7Layout() {
+    final v = _selectedVehicle;
+    final accSummaryParts = <String>[];
+    if (_standardAccessories.isNotEmpty) {
+      accSummaryParts.addAll(
+          _standardAccessories.map((a) => a['name']?.toString() ?? ''));
+    }
+    for (final a in _optionalAccessories) {
+      if (_selectedOptionalAccessoryIds.contains(a['id'].toString())) {
+        accSummaryParts.add(a['name']?.toString() ?? '');
+      }
+    }
+    final accText = accSummaryParts.isEmpty
+        ? 'No accessories added'
+        : accSummaryParts.join(', ');
 
-  // ==========================================
-  // STEP 7: BUILD SUMMARY
-  // ==========================================
-  Widget _buildStep7BuildSummary() {
-    final v = _selectedVehicle ?? _defaultCatalog.first;
-
-    return Column(
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              // Left: Vehicle Hero + Actions
-              Expanded(
-                flex: 5,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    RichText(
-                      text: const TextSpan(
-                        style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
-                            letterSpacing: -0.5),
-                        children: [
-                          TextSpan(text: 'YOUR BUILD '),
-                          TextSpan(
-                              text: 'SUMMARY',
-                              style: TextStyle(color: Color(0xFFDC2626))),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text('Here\'s your personalised Honda.',
-                        style:
-                            TextStyle(fontSize: 13, color: Color(0xFF64748B))),
-                    const Spacer(),
-                    Center(
-                      child: SizedBox(
-                        height: 280,
-                        child: _buildSafeImage(_heroBikeImage,
-                            fit: BoxFit.contain),
-                      ),
-                    ),
-                    const Spacer(),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 20),
-
-              // Right: Your Configuration Card with Edit Pencil Icons matching prototype
-              Expanded(
-                flex: 6,
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(44, 24, 40, 24),
+      child: Column(
+        children: [
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Left: Title + Clean Studio Vehicle
+                Expanded(
+                  flex: 4,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        'Your Configuration',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A)),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildConfigRow(
-                        icon: Icons.two_wheeler_outlined,
-                        label: 'Vehicle',
-                        value: v['name'] ?? 'CB300F',
-                        onEdit: () => setState(() => _currentStep = 2),
-                      ),
-                      const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                      _buildConfigRow(
-                        icon: Icons.palette_outlined,
-                        label: 'Colour',
-                        value: _selectedColourName,
-                        leadingWidget: Container(
-                          width: 12,
-                          height: 12,
-                          margin: const EdgeInsets.only(right: 6),
+                      _buildHeroHeadline('YOUR BUILD ', 'SUMMARY',
+                          subtitle: 'Here\'s your personalised Honda.'),
+                      if (_createdQuoteNumber != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                              color: _selectedColourValue,
-                              shape: BoxShape.circle),
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(20),
+                            border:
+                                Border.all(color: const Color(0xFF86EFAC)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.verified_outlined,
+                                  size: 16, color: Color(0xFF16A34A)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Quote Ready · #$_createdQuoteNumber',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF166534),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        onEdit: () => setState(() => _currentStep = 3),
+                      ],
+                      const Spacer(),
+                      Center(
+                        child: SizedBox(
+                          height: 330,
+                          child: SmartMediaImage(
+                            source: _resolveShowcaseImage(),
+                            fit: BoxFit.contain,
+                          ),
+                        ),
                       ),
-                      const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                      _buildConfigRow(
-                        icon: Icons.settings_outlined,
-                        label: 'Accessories',
-                        value: _selectedOptionalAccessories.isEmpty
-                            ? 'Engine Guard, Tank Pad, Seat Cover'
-                            : 'Standard Included + ${_selectedOptionalAccessories.join(', ')}',
-                        onEdit: () => setState(() => _currentStep = 4),
+                      const Spacer(),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 20),
+
+                // Right Column spanning Config + Quotation sidebar ABOVE + Red Action Bar BELOW
+                Expanded(
+                  flex: 7,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Center: Your Configuration White Card
+                            Expanded(
+                              flex: 6,
+                              child: Container(
+                                padding: const EdgeInsets.all(22),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                      color: const Color(0xFFF1F5F9)),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x0D000000),
+                                      blurRadius: 14,
+                                      offset: Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text(
+                                      'Your Configuration',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        fontStyle: FontStyle.italic,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    _buildSummaryConfigRow(
+                                      icon: Icons.two_wheeler_outlined,
+                                      label: 'Vehicle',
+                                      value: v?['name']?.toString() ?? 'Honda',
+                                      onEdit: () =>
+                                          setState(() => _currentStep = 2),
+                                    ),
+                                    const Divider(
+                                        height: 20, color: Color(0xFFF1F5F9)),
+                                    _buildSummaryConfigRow(
+                                      icon: Icons.palette_outlined,
+                                      label: 'Colour',
+                                      value: _selectedColourName,
+                                      leadingSwatch: _selectedColourValue,
+                                      onEdit: () =>
+                                          setState(() => _currentStep = 3),
+                                    ),
+                                    const Divider(
+                                        height: 20, color: Color(0xFFF1F5F9)),
+                                    _buildSummaryConfigRow(
+                                      icon: Icons.settings_outlined,
+                                      label: 'Accessories',
+                                      value: accText,
+                                      onEdit: () =>
+                                          setState(() => _currentStep = 4),
+                                    ),
+                                    const Divider(
+                                        height: 20, color: Color(0xFFF1F5F9)),
+                                    _buildSummaryConfigRow(
+                                      icon: Icons.monetization_on_outlined,
+                                      label: 'Finance',
+                                      value: _paymentMode == 'Cash'
+                                          ? 'Pay in Cash'
+                                          : 'Finance · $_selectedFinanceType',
+                                      onEdit: () =>
+                                          setState(() => _currentStep = 5),
+                                    ),
+                                    const Divider(
+                                        height: 20, color: Color(0xFFF1F5F9)),
+                                    _buildSummaryConfigRow(
+                                      icon: Icons.sync_alt_rounded,
+                                      label: 'Exchange',
+                                      value: _wantExchange
+                                          ? (_exchangeModelController
+                                                  .text.isNotEmpty
+                                              ? _exchangeModelController.text
+                                              : 'Exchange Old Vehicle')
+                                          : 'No Exchange',
+                                      onEdit: () =>
+                                          setState(() => _currentStep = 6),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(width: 20),
+
+                            // Right: Quotation Summary Card (no Continue btn on Step 7)
+                            SizedBox(
+                              width: 290,
+                              child: _buildQuotationSidebar(hideButton: true),
+                            ),
+                          ],
+                        ),
                       ),
-                      const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                      _buildConfigRow(
-                        icon: Icons.monetization_on_outlined,
-                        label: 'Finance',
-                        value: _paymentMode == 'Cash'
-                            ? 'Pay in Cash'
-                            : 'Finance ($_selectedFinanceType${_selectedFinancierName != null ? ' - $_selectedFinancierName' : ''})',
-                        onEdit: () => setState(() => _currentStep = 5),
-                      ),
-                      const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                      _buildConfigRow(
-                        icon: Icons.sync_alt_outlined,
-                        label: 'Exchange',
-                        value: _wantExchange
-                            ? (_exchangeModelController.text.isNotEmpty
-                                ? '${_exchangeModelController.text} ($_exchangeYear)'
-                                : 'Exchange Old Ride')
-                            : 'No Exchange',
-                        onEdit: () => setState(() => _currentStep = 6),
+
+                      const SizedBox(height: 18),
+
+                      // Bottom Red Action Bar (Email | WhatsApp | Print | Download)
+                      Container(
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDC2626),
+                          borderRadius: BorderRadius.circular(27),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x33DC2626),
+                              blurRadius: 14,
+                              offset: Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            _buildBottomActionBtn(
+                              icon: Icons.email_outlined,
+                              label: 'Email',
+                              onTap: () => _handleAction('email'),
+                            ),
+                            _verticalDivider(),
+                            _buildBottomActionBtn(
+                              icon: Icons.chat_bubble_outline_rounded,
+                              label: 'WhatsApp',
+                              onTap: () => _handleAction('whatsapp'),
+                            ),
+                            _verticalDivider(),
+                            _buildBottomActionBtn(
+                              icon: Icons.print_outlined,
+                              label: 'Print',
+                              onTap: () => _handleAction('print'),
+                            ),
+                            _verticalDivider(),
+                            _buildBottomActionBtn(
+                              icon: Icons.download_outlined,
+                              label: 'Download',
+                              onTap: () => _handleAction('download'),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Bottom Red Action Bar matching prototype: Email | WhatsApp | Print | Download
-        Container(
-          height: 52,
-          decoration: BoxDecoration(
-            color: const Color(0xFFDC2626),
-            borderRadius: BorderRadius.circular(26),
-            boxShadow: const [
-              BoxShadow(
-                  color: Color(0x33DC2626),
-                  blurRadius: 10,
-                  offset: Offset(0, 4)),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildBottomActionItem(
-                icon: Icons.email_outlined,
-                label: 'Email',
-                onTap: _showCustomerDetailsModal,
-              ),
-              Container(
-                  width: 1,
-                  height: 24,
-                  color: Colors.white.withValues(alpha: 0.4)),
-              _buildBottomActionItem(
-                icon: Icons.chat_bubble_outline_rounded,
-                label: 'WhatsApp',
-                onTap: _showCustomerDetailsModal,
-              ),
-              Container(
-                  width: 1,
-                  height: 24,
-                  color: Colors.white.withValues(alpha: 0.4)),
-              _buildBottomActionItem(
-                icon: Icons.print_outlined,
-                label: 'Print',
-                onTap: _showCustomerDetailsModal,
-              ),
-              Container(
-                  width: 1,
-                  height: 24,
-                  color: Colors.white.withValues(alpha: 0.4)),
-              _buildBottomActionItem(
-                icon: Icons.download_outlined,
-                label: 'Download',
-                onTap: _showCustomerDetailsModal,
-              ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildConfigRow({
+  Widget _verticalDivider() => Container(
+        width: 1,
+        height: 24,
+        color: Colors.white.withValues(alpha: 0.35),
+      );
+
+  Widget _buildBottomActionBtn({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: _isSubmitting ? null : onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: SizedBox(
+          height: double.infinity,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryConfigRow({
     required IconData icon,
     required String label,
     required String value,
-    Widget? leadingWidget,
+    Color? leadingSwatch,
     required VoidCallback onEdit,
   }) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: const Color(0xFF64748B)),
-        const SizedBox(width: 12),
+        Icon(icon, size: 19, color: const Color(0xFF0F172A)),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2548,15 +2624,27 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               const SizedBox(height: 2),
               Row(
                 children: [
-                  if (leadingWidget != null) leadingWidget,
+                  if (leadingSwatch != null)
+                    Container(
+                      width: 12,
+                      height: 12,
+                      margin: const EdgeInsets.only(right: 6),
+                      decoration: BoxDecoration(
+                        color: leadingSwatch,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                    ),
                   Expanded(
                     child: Text(
                       value,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A)),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
                     ),
                   ),
                 ],
@@ -2574,64 +2662,47 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     );
   }
 
-  Widget _buildBottomActionItem({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: Colors.white),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // ==========================================================
+  // RIGHT FLOATING QUOTATION SIDEBAR
+  // ==========================================================
+  Widget _buildQuotationSidebar({bool hideButton = false}) {
+    final bool canContinue;
+    if (_currentStep == 1) {
+      canContinue = _selectedCategory != null;
+    } else if (_currentStep == 2) {
+      canContinue = _selectedVehicle != null;
+    } else {
+      canContinue = true;
+    }
 
-  // ==========================================
-  // FLOATING QUOTATION CARD (RIGHT SIDEBAR)
-  // ==========================================
-  Widget _buildQuotationSummaryCard() {
-    final v = _selectedVehicle;
-    final bool canContinue = !(_currentStep == 1 && _selectedCategory == null);
+    final accCount =
+        _standardAccessories.length + _selectedOptionalAccessoryIds.length;
 
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x0A000000), blurRadius: 14, offset: Offset(0, 4)),
+            color: Color(0x0D000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           const Text(
             'Your Quotation',
             style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF0F172A),
-                letterSpacing: -0.3),
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF0F172A),
+              letterSpacing: -0.4,
+            ),
           ),
           const SizedBox(height: 4),
           const Text(
@@ -2641,406 +2712,773 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           ),
           const SizedBox(height: 24),
 
-          // 5-Point Stage Checklist matching prototype screenshots
-          _buildQuotationItem(
+          _buildSidebarCheckRow(
             icon: Icons.two_wheeler_outlined,
             label: 'Vehicle',
-            value: (_selectedCategory != null && v != null)
-                ? (v['name'] as String)
-                : '—',
-            isComplete: _selectedCategory != null,
+            isComplete: _selectedVehicle != null && _currentStep >= 3 ||
+                (_currentStep == 2 && _selectedVehicle != null),
           ),
-          const SizedBox(height: 14),
-
-          _buildQuotationItem(
+          const SizedBox(height: 16),
+          _buildSidebarCheckRow(
             icon: Icons.palette_outlined,
             label: 'Colour',
-            value: _currentStep >= 3 ? _selectedColourName : '—',
-            isComplete: _currentStep >= 3,
+            isComplete: _currentStep >= 4 ||
+                (_currentStep == 3 && _selectedColourName.isNotEmpty),
           ),
-          const SizedBox(height: 14),
-
-          _buildQuotationItem(
+          const SizedBox(height: 16),
+          _buildSidebarCheckRow(
             icon: Icons.settings_outlined,
             label: 'Accessories',
-            value: _currentStep >= 4
-                ? '${_selectedOptionalAccessories.length + 3} Items'
-                : '—',
-            isComplete: _currentStep >= 4,
+            isComplete: _currentStep >= 5 ||
+                (_currentStep == 4 && accCount > 0),
           ),
-          const SizedBox(height: 14),
-
-          _buildQuotationItem(
+          const SizedBox(height: 16),
+          _buildSidebarCheckRow(
             icon: Icons.monetization_on_outlined,
             label: 'Finance',
-            value: _currentStep >= 5
-                ? (_paymentMode == 'Cash' ? 'Cash' : 'Finance')
-                : '—',
-            isComplete: _currentStep >= 5,
+            isComplete: _currentStep >= 6 || _currentStep == 5,
           ),
-          const SizedBox(height: 14),
-
-          _buildQuotationItem(
-            icon: Icons.sync_alt_outlined,
+          const SizedBox(height: 16),
+          _buildSidebarCheckRow(
+            icon: Icons.sync_alt_rounded,
             label: 'Exchange',
-            value:
-                _currentStep >= 6 ? (_wantExchange ? 'Exchange' : 'No') : '—',
-            isComplete: _currentStep >= 6,
+            isComplete: _currentStep == 7,
           ),
 
           const Spacer(),
 
-          // Estimated Price section
-          const Text('Estimated Price',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF64748B))),
-          const SizedBox(height: 2),
+          const Text(
+            'Estimated Price',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
+          const SizedBox(height: 4),
           Text(
-            _selectedCategory == null
-                ? '₹ --,---'
-                : '${CurrencyFormatter.format(_estimatedGrandTotal)}*',
+            _selectedVehicle == null
+                ? '₹--,---'
+                : '${CurrencyFormatter.format(_estimatedTotal)}*',
             style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w900,
               color: Color(0xFFDC2626),
-              letterSpacing: -0.5,
+              letterSpacing: -0.6,
             ),
           ),
-          const SizedBox(height: 18),
 
-          // Big Red Continue / Submit Pill Button (matching Figma mockup)
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: canContinue
-                    ? const Color(0xFFDC2626)
-                    : const Color(0xFFF4A5A5),
-                foregroundColor: Colors.white,
-                elevation: canContinue ? 4 : 0,
-                shadowColor:
-                    canContinue ? const Color(0x33DC2626) : Colors.transparent,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(26)),
-              ),
-              onPressed: canContinue ? _nextStep : null,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    _currentStep == 7 ? 'Complete Enquiry' : 'Continue',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+          if (!hideButton) ...[
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: canContinue
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFFF4A5A5),
+                  disabledBackgroundColor: const Color(0xFFF4A5A5),
+                  foregroundColor: Colors.white,
+                  elevation: canContinue ? 4 : 0,
+                  shadowColor: const Color(0x33DC2626),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25)),
+                ),
+                onPressed: canContinue ? _nextStep : null,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Continue',
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    _currentStep == 7
-                        ? Icons.check_circle_outline
-                        : Icons.arrow_forward_rounded,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                ],
+                    SizedBox(width: 8),
+                    Icon(Icons.arrow_forward_rounded,
+                        size: 18, color: Colors.white),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildQuotationItem({
+  Widget _buildSidebarCheckRow({
     required IconData icon,
     required String label,
-    required String value,
     required bool isComplete,
   }) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: const Color(0xFF64748B)),
+        Icon(icon, size: 18, color: const Color(0xFF0F172A)),
         const SizedBox(width: 12),
-        Text(label,
-            style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF0F172A))),
-        const Spacer(),
-        if (isComplete && value != '—') ...[
-          Container(
-            width: 16,
-            height: 16,
-            decoration: const BoxDecoration(
-                color: Color(0xFF16A34A), shape: BoxShape.circle),
-            child: const Icon(Icons.check, size: 11, color: Colors.white),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF0F172A),
           ),
-        ] else ...[
+        ),
+        const Spacer(),
+        if (isComplete)
+          Container(
+            width: 17,
+            height: 17,
+            decoration: const BoxDecoration(
+              color: Color(0xFF16A34A),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.check, size: 11, color: Colors.white),
+          )
+        else
           const Text('—',
               style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8))),
-        ],
       ],
     );
   }
 
-  // ==========================================
-  // CUSTOMER DETAILS & BACKEND SUBMISSION MODAL
-  // ==========================================
-  void _showCustomerDetailsModal() {
-    final v = _selectedVehicle ?? _defaultCatalog.first;
+  // ==========================================================
+  // STEP 7 ACTIONS: CAPTURE CUSTOMER DETAILS -> CREATE REAL QUOTE -> DISPATCH
+  // ==========================================================
+  Future<void> _handleAction(String actionType) async {
+    if (_createdEnquiryId != null && _createdQuotationId != null) {
+      await _executeDispatchAction(actionType);
+      return;
+    }
+
+    // Prompt customer details cleanly
+    final needsEmail = actionType == 'email';
     final authState = ref.read(authStateProvider);
     final user = authState.user;
 
-    showDialog(
+    String? chosenBranchId = _selectedBranchId;
+    final activeBranch = ref.read(selectedBranchIdProvider);
+    if (activeBranch != 'all' && activeBranch.isNotEmpty) {
+      chosenBranchId = activeBranch;
+    } else if (user?.branches.isNotEmpty == true) {
+      chosenBranchId = user!.branches.first.id;
+    }
+
+    await showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          return AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                      color: const Color(0xFFDC2626),
-                      borderRadius: BorderRadius.circular(8)),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.check, color: Colors.white, size: 20),
+        builder: (context, setDlgState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDC2626),
+                  borderRadius: BorderRadius.circular(9),
                 ),
-                const SizedBox(width: 12),
-                const Text('Generate Quotation',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-              ],
-            ),
-            content: SizedBox(
-              width: 440,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Configured: ${v['name']} ($_selectedColourName)',
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A)),
-                  ),
-                  Text(
-                    'Estimated Price: ${CurrencyFormatter.format(_estimatedGrandTotal)}',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFDC2626)),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _customerNameController,
-                    decoration: InputDecoration(
-                      labelText: 'Customer Full Name *',
-                      hintText: 'Enter customer name',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      prefixIcon: const Icon(Icons.person_outline),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: _customerMobileController,
-                    keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(
-                      labelText: 'Customer Mobile Number *',
-                      hintText: '10-digit mobile number',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      prefixIcon: const Icon(Icons.phone_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.storefront_outlined,
-                            size: 18, color: Color(0xFF64748B)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Showroom: ${user?.branches.isNotEmpty == true ? user!.branches.first.name : "Phursungi"}',
-                            style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF334155)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                child: const Icon(Icons.receipt_long_rounded,
+                    color: Colors.white, size: 19),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel',
-                    style: TextStyle(color: Color(0xFF64748B))),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFDC2626),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  actionType == 'email'
+                      ? 'Email Your Quotation'
+                      : (actionType == 'whatsapp'
+                          ? 'Send Quote on WhatsApp'
+                          : 'Generate Official Quote'),
+                  style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A)),
                 ),
-                onPressed: _isSubmitting
-                    ? null
-                    : () async {
-                        final name = _customerNameController.text.trim();
-                        final mobile = _customerMobileController.text.trim();
-
-                        if (name.isEmpty || mobile.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    'Please enter Customer Name and Mobile Number')),
-                          );
-                          return;
-                        }
-
-                        setDialogState(() => _isSubmitting = true);
-                        Navigator.pop(ctx);
-                        await _submitEnquiry(name, mobile);
-                      },
-                child: _isSubmitting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text('Save & Generate Quote',
-                        style: TextStyle(fontWeight: FontWeight.w800)),
               ),
             ],
-          );
-        },
+          ),
+          content: SizedBox(
+            width: 440,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_selectedVehicle?['name'] ?? 'Honda'} · $_selectedColourName',
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A)),
+                ),
+                Text(
+                  'Estimated Price: ${CurrencyFormatter.format(_estimatedTotal)}*',
+                  style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFFDC2626)),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _customerNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Full Name *',
+                    hintText: 'Enter your name',
+                    prefixIcon: const Icon(Icons.person_outline),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _customerMobileController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: 'Mobile Number (WhatsApp) *',
+                    hintText: '10-digit mobile number',
+                    prefixIcon: const Icon(Icons.phone_outlined),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _customerEmailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: needsEmail ? 'Email Address *' : 'Email (Optional)',
+                    hintText: 'name@example.com',
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                if (_backendBranches.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _backendBranches
+                            .any((b) => b['id'] == chosenBranchId)
+                        ? chosenBranchId
+                        : _backendBranches.first['id']?.toString(),
+                    decoration: InputDecoration(
+                      labelText: 'Showroom Branch',
+                      prefixIcon: const Icon(Icons.storefront_outlined),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    items: _backendBranches
+                        .map((b) => DropdownMenuItem<String>(
+                              value: b['id']?.toString(),
+                              child: Text(
+                                '${b['name']} (${b['wing']})',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ))
+                        .toList(),
+                    onChanged: (val) =>
+                        setDlgState(() => chosenBranchId = val),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: _isSubmitting ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel',
+                  style: TextStyle(color: Color(0xFF64748B))),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: _isSubmitting
+                  ? null
+                  : () async {
+                      final name = _customerNameController.text.trim();
+                      final mobile = _customerMobileController.text.trim();
+                      final email = _customerEmailController.text.trim();
+
+                      if (name.isEmpty || mobile.length < 10) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Please enter your Name and valid 10-digit Mobile Number.')),
+                        );
+                        return;
+                      }
+                      if (needsEmail && !email.contains('@')) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Please enter a valid Email address to email your quote.')),
+                        );
+                        return;
+                      }
+
+                      setDlgState(() => _isSubmitting = true);
+                      _selectedBranchId = chosenBranchId;
+                      final ok = await _submitRealEnquiry(
+                        name: name,
+                        mobile: mobile,
+                        email: email.isEmpty ? null : email,
+                        branchId: chosenBranchId ?? '',
+                      );
+                      setDlgState(() => _isSubmitting = false);
+                      if (ok && ctx.mounted) {
+                        Navigator.pop(ctx);
+                        await _executeDispatchAction(actionType);
+                      }
+                    },
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Generate & Continue',
+                      style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Future<void> _submitEnquiry(
-      String customerName, String customerMobile) async {
+  Future<bool> _submitRealEnquiry({
+    required String name,
+    required String mobile,
+    String? email,
+    required String branchId,
+  }) async {
     setState(() => _isSubmitting = true);
-    final authState = ref.read(authStateProvider);
-    final user = authState.user;
-    final v = _selectedVehicle ?? _defaultCatalog.first;
-
     try {
       final dio = ref.read(dioProvider);
-      final branchId = ref.read(selectedBranchIdProvider);
-      final activeBranchId = (branchId != 'all' && branchId.isNotEmpty)
-          ? branchId
-          : (user?.branches.isNotEmpty == true ? user!.branches.first.id : '');
+      final authState = ref.read(authStateProvider);
+      final user = authState.user;
 
-      final storage = ref.read(secureStorageProvider);
+      final v = _selectedVehicle!;
+      final quoteAccessories = <Map<String, dynamic>>[
+        for (final acc in _standardAccessories)
+          {'accessoryId': acc['id'], 'amount': 0},
+        for (final acc in _optionalAccessories)
+          if (_selectedOptionalAccessoryIds.contains(acc['id'].toString()))
+            {'accessoryId': acc['id'], 'amount': acc['price']},
+      ];
+
+      final exchangeDesc = _wantExchange
+          ? 'Exchange: Yes (${_exchangeModelController.text.trim()} ${_exchangeYear != 'Select Year' ? _exchangeYear : ''}, Expected: ₹${_exchangeExpectedPriceController.text.trim()})'
+          : 'No';
+
+      final remarks = 'Build My Honda • $_selectedCategory • $_selectedColourName'
+          '${_paymentMode == 'Finance' ? ' • $_selectedFinanceType${_selectedFinancierName != null ? ' ($_selectedFinancierName)' : ''}' : ' • Pay in Cash'}'
+          '${_wantExchange ? ' • $exchangeDesc' : ''}';
 
       final payload = {
-        'customerName': customerName,
-        'customerMobile': customerMobile,
+        'branchId': branchId,
+        'customer': {
+          'name': name,
+          'mobile': mobile,
+          if (email != null) 'email': email,
+        },
         'enquiryType': 'Walk-in',
-        'branchId': activeBranchId,
-        'salesExecId': _selectedRepId ?? user?.id,
         'purchaseMode': _paymentMode,
-        'buyingWhen': 'Immediate',
+        if (_paymentMode == 'Finance' && _selectedFinancierId != null)
+          'financierId': _selectedFinancierId,
         'exchange': _wantExchange ? 'Yes' : 'No',
-        'vehicleId': v['id'],
-        'colourName': _selectedColourName,
-        'grandTotal': _estimatedGrandTotal,
-        'remarks':
-            'Build My Honda Configurator • $_selectedCategory • $_selectedColourName'
-                '${_selectedOptionalAccessories.isNotEmpty ? " • Accessories: ${_selectedOptionalAccessories.join(', ')}" : ""}',
+        'buyingWhen': 'Immediate',
+        'remarks': remarks,
+        if (_selectedRepId != null) 'assignedToId': _selectedRepId,
+        'quotation': {
+          'vehicleId': v['id'],
+          'colourName': _selectedColourName,
+          if (quoteAccessories.isNotEmpty) 'accessories': quoteAccessories,
+        },
       };
 
-      // 1. Submit real enquiry to backend
-      await dio.post('/enquiries', data: payload);
+      final endpoint = authState.isAuthenticated
+          ? '/enquiries'
+          : '/enquiries/public-configurator';
+      final res = await dio.post(endpoint, data: payload);
 
-      // 2. Also register live session in secureStorage so live floor dashboard picks it up immediately
-      final repId = _selectedRepId ?? user?.id ?? 'rep-active';
-      final liveSessionPayload = {
-        'salesExecId': repId,
-        'salesExecName': user?.name ?? 'Sales Representative',
-        'customerName': customerName,
-        'customerMobile': customerMobile,
-        'vehicleName': v['name'],
-        'colourName': _selectedColourName,
-        'grandTotal': _estimatedGrandTotal,
-        'branchId': activeBranchId,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-      await storage.write(
-        key: 'yash_live_session_$repId',
-        value: jsonEncode(liveSessionPayload),
-      );
+      final created = res.data as Map<String, dynamic>;
+      final quotes = (created['quotations'] as List? ?? []);
+      final firstQuote = quotes.isNotEmpty
+          ? Map<String, dynamic>.from(quotes.first as Map)
+          : null;
 
+      // Update live rep session indicator if logged in
+      final repId = _selectedRepId ?? user?.id;
+      if (repId != null) {
+        final storage = ref.read(secureStorageProvider);
+        await storage.write(
+          key: 'yash_live_session_$repId',
+          value: jsonEncode({
+            'salesExecId': repId,
+            'salesExecName': user?.name ?? 'Showroom Tablet',
+            'customerName': name,
+            'customerMobile': mobile,
+            'vehicleName': v['name'],
+            'colourName': _selectedColourName,
+            'grandTotal': firstQuote?['grandTotal'] ?? _estimatedTotal,
+            'branchId': branchId,
+            'timestamp': DateTime.now().millisecondsSinceEpoch,
+          }),
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _createdEnquiryId = created['id']?.toString();
+          _createdQuotationId = firstQuote?['id']?.toString();
+          _createdQuoteNumber = firstQuote?['quoteNumber']?.toString();
+          _isSubmitting = false;
+        });
+      }
+      return true;
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        String msg = 'Could not generate quotation: $e';
+        if (e is DioException && e.response?.data != null) {
+          msg = e.response?.data['message']?.toString() ?? msg;
+        }
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(msg)));
+      }
+      return false;
+    }
+  }
+
+  Future<void> _executeDispatchAction(String actionType) async {
+    final dio = ref.read(dioProvider);
+    final isAuthed = ref.read(authStateProvider).isAuthenticated;
+    final quoteNo = _createdQuoteNumber ?? _createdQuotationId ?? '';
+
+    if (actionType == 'print' || actionType == 'download') {
+      if (quoteNo.isEmpty) return;
+      final printUrl = '${ApiConstants.baseUrl}/quotations/$quoteNo/print';
+      final uri = Uri.parse(printUrl);
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFF16A34A),
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                      'Quotation generated successfully for $customerName! Broadcasted to live floor.'),
-                ),
-              ],
+            content: Text(
+              actionType == 'print'
+                  ? 'Opening printable quotation #$quoteNo...'
+                  : 'Quotation #$quoteNo ready to Save as PDF / Download.',
             ),
           ),
         );
-        context.go('/dashboard');
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('Submission notice: Enquiry saved locally. Error: $e')),
-        );
-        context.go('/dashboard');
+      return;
+    }
+
+    if (actionType == 'email') {
+      final email = _customerEmailController.text.trim();
+      if (!email.contains('@')) {
+        _handleAction('email');
+        return;
       }
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      try {
+        final endpoint = isAuthed
+            ? '/communications/email'
+            : '/communications/configurator-email';
+        final res = await dio.post(endpoint, data: {
+          'enquiryId': _createdEnquiryId,
+          'recipientEmail': email,
+          'subject':
+              'Your Official Honda Quotation (#$quoteNo) - Yash Honda Pune',
+          'quotationId': _createdQuotationId,
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF16A34A),
+              content: Text(res.data?['message']?.toString() ??
+                  'Quotation emailed successfully!'),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Email send error: $e')));
+        }
+      }
+      return;
+    }
+
+    if (actionType == 'whatsapp') {
+      try {
+        final endpoint = isAuthed
+            ? '/communications/whatsapp'
+            : '/communications/configurator-whatsapp';
+        final res = await dio.post(endpoint, data: {
+          'enquiryId': _createdEnquiryId,
+          'templateName': 'quotation_send',
+          'quotationId': _createdQuotationId,
+        });
+        final mode = res.data?['mode']?.toString();
+        if (mode != 'live_meta') {
+          final custName = _customerNameController.text.trim();
+          final mobile = _customerMobileController.text
+              .trim()
+              .replaceAll(RegExp(r'[^0-9]'), '');
+          final vName = _selectedVehicle?['name']?.toString() ?? 'Honda';
+          final totalStr = CurrencyFormatter.format(_estimatedTotal);
+          final text = Uri.encodeComponent(
+            'Namaste $custName, thank you for configuring your $vName ($_selectedColourName) at Yash Honda!\n\n'
+            '• Quote No: $quoteNo\n'
+            '• Estimated Total: $totalStr*\n'
+            '• Print / View Quote: ${ApiConstants.baseUrl}/quotations/$quoteNo/print\n\n'
+            'Yash Honda Authorised Dealership, Pune.',
+          );
+          await launchUrl(Uri.parse('https://wa.me/91$mobile?text=$text'),
+              mode: LaunchMode.externalApplication);
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFF16A34A),
+              content: Text('Official quotation sent via WhatsApp!'),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('WhatsApp error: $e')));
+        }
+      }
     }
   }
 }
 
-class _ValueBadge extends StatelessWidget {
+// ==========================================================
+// VECTOR HONDA WING LOGO + REUSABLE ATOMIC WIDGETS
+// ==========================================================
+class _HondaWingPainter extends CustomPainter {
+  final Color color;
+  _HondaWingPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final w = size.width;
+    final h = size.height;
+
+    // Stylized sculpted Honda Wing silhouette
+    final outer = Path()
+      ..moveTo(w * 0.06, h * 0.92)
+      ..lineTo(w * 0.96, h * 0.92)
+      ..lineTo(w * 0.78, h * 0.78)
+      ..lineTo(w * 0.14, h * 0.78)
+      ..close();
+    canvas.drawPath(outer, paint);
+
+    // 4 swept feathers rising right
+    for (int i = 0; i < 4; i++) {
+      final yTop = h * (0.10 + i * 0.17);
+      final yBot = h * (0.21 + i * 0.17);
+      final xStart = w * (0.14 + i * 0.04);
+      final xEnd = w * (0.98 - i * 0.06);
+      final feather = Path()
+        ..moveTo(xStart, h * 0.74)
+        ..quadraticBezierTo(xStart + w * 0.18, yTop + h * 0.04, xEnd, yTop)
+        ..lineTo(xEnd - w * 0.05, yBot)
+        ..quadraticBezierTo(xStart + w * 0.22, yBot + h * 0.05, xStart + w * 0.10, h * 0.74)
+        ..close();
+      canvas.drawPath(feather, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HondaWingPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+class _RadioRing extends StatelessWidget {
+  final bool isSelected;
+  const _RadioRing({required this.isSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isSelected
+              ? const Color(0xFFDC2626)
+              : const Color(0xFF0F172A),
+          width: 1.8,
+        ),
+      ),
+      child: isSelected
+          ? Center(
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFDC2626),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            )
+          : null,
+    );
+  }
+}
+
+class _TrustFeatureItem extends StatelessWidget {
   final IconData icon;
-  final String text;
-  const _ValueBadge({required this.icon, required this.text});
+  final String label;
+  const _TrustFeatureItem({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: const Color(0xFFDC2626)),
-        const SizedBox(width: 4),
-        Text(text,
-            style: const TextStyle(
-                fontSize: 10.5,
+        Icon(icon, size: 17, color: const Color(0xFFDC2626)),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF334155),
+            height: 1.2,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ExchangeChoicePill extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ExchangeChoicePill({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFEF2F2) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFFDC2626)
+                : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            _RadioRing(isSelected: isSelected),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: isSelected
+                      ? const Color(0xFF991B1B)
+                      : const Color(0xFF0F172A),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExchangeTextField extends StatelessWidget {
+  final String label;
+  final String hint;
+  final IconData icon;
+  final TextEditingController controller;
+  final TextInputType? keyboardType;
+
+  const _ExchangeTextField({
+    required this.label,
+    required this.hint,
+    required this.icon,
+    required this.controller,
+    this.keyboardType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 14, color: const Color(0xFF64748B)),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF475569))),
+                color: Color(0xFF334155),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          alignment: Alignment.centerLeft,
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            style: const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle:
+                  const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ),
       ],
     );
   }

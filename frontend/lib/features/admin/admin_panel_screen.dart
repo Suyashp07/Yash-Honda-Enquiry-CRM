@@ -10,6 +10,7 @@ import '../../core/constants/api_constants.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../auth/auth_notifier.dart';
+import 'widgets/configurator_media_dialogs.dart';
 
 class AdminPanelScreen extends ConsumerStatefulWidget {
   final String section;
@@ -863,8 +864,13 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     final priceCtrl = TextEditingController(
       text: editingItem?['defaultPrice']?.toString() ?? '',
     );
-    bool isDefault = editingItem?['isDefault'] == true ||
-        editingItem?['isPriceEditable'] == true;
+    bool isPriceEditable = editingItem?['isPriceEditable'] == true;
+    bool isStandard = editingItem?['isStandard'] == true;
+    String? currentImageUrl = editingItem?['imageUrl']?.toString();
+    LocalImageInspectResult? pendingImage;
+    String? imageFeedback;
+    bool imageIsError = false;
+    bool isSaving = false;
 
     showDialog(
       context: context,
@@ -884,120 +890,356 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 color: Color(0xFF0F172A)),
           ),
           content: SizedBox(
-            width: 420,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Code
-                const Text('Code',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: Color(0xFF1E293B))),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: codeCtrl,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. CERAMIC, EW32, HELMET',
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626))),
-                  ),
-                  style:
-                      const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
-                ),
-                const SizedBox(height: 16),
-
-                // Name
-                const Text('Name',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: Color(0xFF1E293B))),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. Ceramic Coating',
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626))),
-                  ),
-                  style:
-                      const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
-                ),
-                const SizedBox(height: 16),
-
-                // Base price (₹)
-                const Text('Base price (₹)',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: Color(0xFF1E293B))),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: priceCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. 1000',
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626))),
-                  ),
-                  style:
-                      const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
-                ),
-                const SizedBox(height: 16),
-
-                // Default switch / checkbox
-                Row(
-                  children: [
-                    Transform.scale(
-                      scale: 0.85,
-                      child: Switch(
-                        value: isDefault,
-                        activeColor: Colors.white,
-                        activeTrackColor: const Color(0xFF16A34A),
-                        onChanged: (val) => setDlgState(() => isDefault = val),
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Code & Name row
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Code',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: Color(0xFF1E293B))),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: codeCtrl,
+                              decoration: InputDecoration(
+                                hintText: 'CERAMIC',
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFE2E8F0))),
+                              ),
+                              style: const TextStyle(
+                                  fontSize: 13.5, color: Color(0xFF0F172A)),
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Base price (₹)',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: Color(0xFF1E293B))),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: priceCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                hintText: 'e.g. 1250',
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFE2E8F0))),
+                              ),
+                              style: const TextStyle(
+                                  fontSize: 13.5, color: Color(0xFF0F172A)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Name
+                  const Text('Name',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: Color(0xFF1E293B))),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Engine Guard, Tank Pad, Ceramic Coating',
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFDC2626))),
                     ),
-                    const SizedBox(width: 8),
-                    const Text('Include by default on new quotations',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF1E293B),
-                            fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ],
+                    style:
+                        const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Configurator Inclusion Type (Standard Included vs Optional)
+                  const Text('Build My Honda Classification',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: Color(0xFF1E293B))),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setDlgState(() => isStandard = false),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 10, horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: !isStandard
+                                  ? const Color(0xFFFEF2F2)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: !isStandard
+                                    ? const Color(0xFFDC2626)
+                                    : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Optional Add-on',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: !isStandard
+                                        ? const Color(0xFFDC2626)
+                                        : const Color(0xFF334155),
+                                  ),
+                                ),
+                                const Text(
+                                  'Customer ticks & adds price',
+                                  style: TextStyle(
+                                      fontSize: 10.5, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setDlgState(() => isStandard = true),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 10, horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: isStandard
+                                  ? const Color(0xFFF0FDF4)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isStandard
+                                    ? const Color(0xFF16A34A)
+                                    : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Standard (Included)',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: isStandard
+                                        ? const Color(0xFF16A34A)
+                                        : const Color(0xFF334155),
+                                  ),
+                                ),
+                                const Text(
+                                  'Pre-checked & included free',
+                                  style: TextStyle(
+                                      fontSize: 10.5, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Editable price at POS toggle
+                  Row(
+                    children: [
+                      Transform.scale(
+                        scale: 0.85,
+                        child: Switch(
+                          value: isPriceEditable,
+                          activeColor: Colors.white,
+                          activeTrackColor: const Color(0xFFDC2626),
+                          onChanged: (val) =>
+                              setDlgState(() => isPriceEditable = val),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Text('Sales rep can override amount at POS',
+                          style: TextStyle(
+                              fontSize: 12.5,
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Product Image Upload + Live Preview Box
+                  const Text('Product Thumbnail (400×400 px, min 200×200 px)',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: Color(0xFF1E293B))),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 82,
+                          height: 82,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: pendingImage != null &&
+                                  pendingImage!.bytes.isNotEmpty
+                              ? Image.memory(pendingImage!.bytes,
+                                  fit: BoxFit.contain)
+                              : SmartMediaImage(
+                                  source: currentImageUrl,
+                                  fit: BoxFit.contain,
+                                  fallback: const Icon(
+                                      Icons.inventory_2_outlined,
+                                      size: 28,
+                                      color: Color(0xFF94A3B8)),
+                                ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF0F172A),
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 8),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                    ),
+                                    onPressed: () async {
+                                      final inspect = await pickAndInspectImage(
+                                          isAccessory: true);
+                                      if (inspect == null) return;
+                                      setDlgState(() {
+                                        if (inspect.qualityStatus ==
+                                            'rejected') {
+                                          pendingImage = null;
+                                          imageFeedback = inspect.message;
+                                          imageIsError = true;
+                                        } else {
+                                          pendingImage = inspect;
+                                          imageFeedback = inspect.message;
+                                          imageIsError = false;
+                                        }
+                                      });
+                                    },
+                                    icon: const Icon(
+                                        Icons.upload_file_outlined,
+                                        size: 15),
+                                    label: Text(
+                                      (pendingImage != null ||
+                                              (currentImageUrl != null &&
+                                                  currentImageUrl!.isNotEmpty))
+                                          ? 'Replace Photo'
+                                          : 'Upload Photo',
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  if (pendingImage != null ||
+                                      (currentImageUrl != null &&
+                                          currentImageUrl!.isNotEmpty)) ...[
+                                    const SizedBox(width: 8),
+                                    TextButton(
+                                      onPressed: () {
+                                        setDlgState(() {
+                                          pendingImage = null;
+                                          currentImageUrl = null;
+                                          imageFeedback = 'Photo will be cleared on Save.';
+                                          imageIsError = false;
+                                        });
+                                      },
+                                      child: const Text('Clear',
+                                          style: TextStyle(
+                                              fontSize: 11.5,
+                                              color: Color(0xFFDC2626))),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                imageFeedback ??
+                                    'Clean product photo on light background. Sharp validates & optimizes on save.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: imageIsError
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFF64748B),
+                                  fontWeight: imageIsError
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
@@ -1010,7 +1252,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: isSaving ? null : () => Navigator.pop(ctx),
               child: const Text('Cancel',
                   style: TextStyle(
                       color: Color(0xFF1E293B),
@@ -1027,42 +1269,74 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: () async {
-                final dio = ref.read(dioProvider);
-                final p = num.tryParse(priceCtrl.text) ?? 500;
-                try {
-                  if (editingItem != null) {
-                    await dio.put('/accessories/${editingItem['id']}', data: {
-                      'name': nameCtrl.text.trim(),
-                      'defaultPrice': p,
-                      'isPriceEditable': isDefault,
-                    });
-                  } else {
-                    await dio.post('/accessories', data: {
-                      'name': nameCtrl.text.trim(),
-                      'defaultPrice': p,
-                      'isPriceEditable': isDefault,
-                    });
-                  }
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  _loadSectionData();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              'Add-on ${editingItem != null ? "updated" : "added"} successfully')),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to save add-on: $e')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Save',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      setDlgState(() => isSaving = true);
+                      final dio = ref.read(dioProvider);
+                      final p = num.tryParse(priceCtrl.text) ?? 500;
+                      try {
+                        String savedId;
+                        if (editingItem != null) {
+                          savedId = editingItem['id'].toString();
+                          await dio.put('/accessories/$savedId', data: {
+                            'name': nameCtrl.text.trim(),
+                            'defaultPrice': p,
+                            'isPriceEditable': isPriceEditable,
+                            'isStandard': isStandard,
+                            if (currentImageUrl == null && pendingImage == null)
+                              'imageUrl': null,
+                          });
+                        } else {
+                          final res = await dio.post('/accessories', data: {
+                            'name': nameCtrl.text.trim(),
+                            'defaultPrice': p,
+                            'isPriceEditable': isPriceEditable,
+                            'isStandard': isStandard,
+                          });
+                          savedId = res.data['id'].toString();
+                        }
+
+                        if (pendingImage != null &&
+                            pendingImage!.bytes.isNotEmpty) {
+                          final formData = FormData.fromMap({
+                            'file': MultipartFile.fromBytes(
+                              pendingImage!.bytes,
+                              filename: pendingImage!.filename,
+                            ),
+                          });
+                          await dio.post('/accessories/$savedId/image',
+                              data: formData);
+                        }
+
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        _loadSectionData();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Add-on ${editingItem != null ? "updated" : "added"} successfully')),
+                          );
+                        }
+                      } catch (e) {
+                        setDlgState(() => isSaving = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Failed to save add-on: $e')),
+                          );
+                        }
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Text('Save',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
             ),
           ],
         ),
@@ -1363,6 +1637,12 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           editingItem?['defaultPrice']?.toString() ??
           '',
     );
+    final exShowroomCtrl = TextEditingController(
+      text: editingItem?['exShowroomPrice']?.toString() ?? '',
+    );
+    final ccCtrl = TextEditingController(
+      text: editingItem?['ccDisplacement']?.toString() ?? '',
+    );
     final hexCtrl =
         TextEditingController(text: editingItem?['hex'] ?? '#CC0000');
     final letterheadCtrl = TextEditingController(
@@ -1371,14 +1651,42 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         TextEditingController(text: editingItem?['brochureUrl'] ?? '');
     final addressCtrl =
         TextEditingController(text: editingItem?['address'] ?? '');
-    String vehicleType = editingItem?['category'] ?? 'Motorcycle';
+    final rawCat = (editingItem?['category'] ?? 'MC').toString();
+    String vehicleType = rawCat.toLowerCase().contains('scooter')
+        ? 'Scooter'
+        : (rawCat.toLowerCase().contains('big') ||
+                rawCat.toLowerCase().contains('wing')
+            ? 'BigBike'
+            : 'MC');
     String branchWing = editingItem?['wing'] ?? 'RedWing';
     bool isPriceEditable = editingItem?['isPriceEditable'] ?? false;
+
+    final Set<String> selectedColourIds = {
+      for (final vc in (editingItem?['colours'] as List? ?? []))
+        if (vc['colour']?['id'] != null || vc['colourId'] != null)
+          (vc['colour']?['id'] ?? vc['colourId']).toString(),
+    };
+    List<Map<String, dynamic>> allColours = [];
+    bool coloursLoaded = false;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlgState) => AlertDialog(
+        builder: (context, setDlgState) {
+          if (_currentSection == 'vehicles' && !coloursLoaded) {
+            coloursLoaded = true;
+            ref.read(dioProvider).get('/vehicles/colours').then((res) {
+              if (res.data is List && context.mounted) {
+                setDlgState(() {
+                  allColours = (res.data as List)
+                      .map((e) => Map<String, dynamic>.from(e as Map))
+                      .where((c) => (c['status'] ?? 'Active') == 'Active')
+                      .toList();
+                });
+              }
+            }).catchError((_) {});
+          }
+          return AlertDialog(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           shape:
@@ -1437,49 +1745,177 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                   ),
                   const SizedBox(height: 12),
                   if (_currentSection == 'vehicles') ...[
-                    const Text('Vehicle Type / Category',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    DropdownButtonFormField<String>(
-                      value: ['MC', 'Scooter', 'BigBike'].contains(vehicleType)
-                          ? vehicleType
-                          : 'Scooter',
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'Scooter', child: Text('Scooter')),
-                        DropdownMenuItem(
-                            value: 'MC', child: Text('Motorcycle (MC)')),
-                        DropdownMenuItem(
-                            value: 'BigBike',
-                            child: Text('Big Wing (BigBike)')),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Vehicle Category / Division',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12)),
+                              const SizedBox(height: 4),
+                              DropdownButtonFormField<String>(
+                                value: ['MC', 'Scooter', 'BigBike']
+                                        .contains(vehicleType)
+                                    ? vehicleType
+                                    : 'MC',
+                                items: const [
+                                  DropdownMenuItem(
+                                      value: 'MC',
+                                      child: Text('Motorcycles (MC)')),
+                                  DropdownMenuItem(
+                                      value: 'Scooter', child: Text('Scooter')),
+                                  DropdownMenuItem(
+                                      value: 'BigBike',
+                                      child: Text('Big Bike (BigWing)')),
+                                ],
+                                onChanged: (val) =>
+                                    setDlgState(() => vehicleType = val ?? 'MC'),
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Engine CC',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12)),
+                              const SizedBox(height: 4),
+                              TextField(
+                                controller: ccCtrl,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  hintText: 'e.g. 125',
+                                  suffixText: 'CC',
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
-                      onChanged: (val) =>
-                          setDlgState(() => vehicleType = val ?? 'Scooter'),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(),
-                      ),
                     ),
                     const SizedBox(height: 12),
-                    const Text('On-road Price (₹ Pune)',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: priceCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        hintText: 'e.g. 97200',
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Ex-Showroom (₹)',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12)),
+                              const SizedBox(height: 4),
+                              TextField(
+                                controller: exShowroomCtrl,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  hintText: 'e.g. 82450',
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('On-road Price (₹ Pune)',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12)),
+                              const SizedBox(height: 4),
+                              TextField(
+                                controller: priceCtrl,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  hintText: 'e.g. 100380',
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
+                    if (allColours.isNotEmpty) ...[
+                      const Text('Available Factory Colours',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 12)),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: allColours.map((col) {
+                          final cid = col['id'].toString();
+                          final isChecked = selectedColourIds.contains(cid);
+                          final hexStr = col['hex']?.toString() ?? '#111827';
+                          return FilterChip(
+                            selected: isChecked,
+                            onSelected: (sel) {
+                              setDlgState(() {
+                                if (sel) {
+                                  selectedColourIds.add(cid);
+                                } else {
+                                  selectedColourIds.remove(cid);
+                                }
+                              });
+                            },
+                            avatar: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: _parseColor(hexStr),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: const Color(0xFFCBD5E1), width: 0.8),
+                              ),
+                            ),
+                            label: Text(
+                              col['name']?.toString() ?? '',
+                              style: const TextStyle(fontSize: 11.5),
+                            ),
+                            selectedColor: const Color(0xFFFEF2F2),
+                            checkmarkColor: const Color(0xFFDC2626),
+                            side: BorderSide(
+                              color: isChecked
+                                  ? const Color(0xFFDC2626)
+                                  : const Color(0xFFE2E8F0),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 0),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     const Text('Brochure PDF URL / Link (Optional)',
                         style: TextStyle(
                             fontWeight: FontWeight.w600, fontSize: 12)),
@@ -1494,6 +1930,37 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                         border: OutlineInputBorder(),
                       ),
                     ),
+                    if (editingItem != null) ...[
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFFDC2626)),
+                            foregroundColor: const Color(0xFFDC2626),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            showVehicleMediaManagerDialog(
+                              context: context,
+                              dio: ref.read(dioProvider),
+                              vehicle: editingItem,
+                              onUpdated: _loadSectionData,
+                            );
+                          },
+                          icon: const Icon(Icons.photo_library_outlined,
+                              size: 16),
+                          label: const Text(
+                            'Manage Listing, Studio & Colour Photos →',
+                            style: TextStyle(
+                                fontSize: 12.5, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                   if (_currentSection == 'model-groups') ...[
                     const Text('Quotation Letterhead',
@@ -1679,7 +2146,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 final dio = ref.read(dioProvider);
                 try {
                   if (_currentSection == 'vehicles') {
-                    final p = num.tryParse(priceCtrl.text) ?? 85000;
+                    final onRoad = num.tryParse(priceCtrl.text) ?? 85000;
+                    final exShowroom = num.tryParse(exShowroomCtrl.text) ??
+                        (onRoad * 0.85).round();
+                    final ccVal = int.tryParse(ccCtrl.text.trim());
                     final bUrl = brochureUrlCtrl.text.trim().isNotEmpty
                         ? brochureUrlCtrl.text.trim()
                         : null;
@@ -1687,23 +2157,40 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       await dio.put('/vehicles/${editingItem['id']}', data: {
                         'name': nameCtrl.text.trim(),
                         'category': vehicleType,
-                        'onRoadPrice': p,
+                        'exShowroomPrice': exShowroom,
+                        'onRoadPrice': onRoad,
+                        if (ccVal != null) 'ccDisplacement': ccVal,
                         'brochureUrl': bUrl,
+                        'colourIds': selectedColourIds.toList(),
                       });
                     } else {
-                      // Get a model group id
                       final mgRes = await dio.get('/vehicles/model-groups');
-                      final mgId = (mgRes.data as List).first['id'];
+                      final mgs = (mgRes.data as List);
+                      final targetMg = vehicleType == 'BigBike'
+                          ? mgs.firstWhere(
+                              (m) => m['name']
+                                  .toString()
+                                  .toLowerCase()
+                                  .contains('big'),
+                              orElse: () => mgs.first)
+                          : mgs.firstWhere(
+                              (m) => !m['name']
+                                  .toString()
+                                  .toLowerCase()
+                                  .contains('big'),
+                              orElse: () => mgs.first);
                       await dio.post('/vehicles', data: {
                         'code': codeCtrl.text.trim().isEmpty
                             ? 'MOD-${DateTime.now().millisecondsSinceEpoch}'
                             : codeCtrl.text.trim(),
                         'name': nameCtrl.text.trim(),
                         'category': vehicleType,
-                        'modelGroupId': mgId,
-                        'exShowroomPrice': p * 0.85,
-                        'onRoadPrice': p,
+                        'modelGroupId': targetMg['id'],
+                        'exShowroomPrice': exShowroom,
+                        'onRoadPrice': onRoad,
+                        if (ccVal != null) 'ccDisplacement': ccVal,
                         'brochureUrl': bUrl,
+                        'colourIds': selectedColourIds.toList(),
                       });
                     }
                   } else if (_currentSection == 'model-groups') {
@@ -1819,7 +2306,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
               child: const Text('Save'),
             ),
           ],
-        ),
+        );
+        },
       ),
     );
   }
@@ -2797,9 +3285,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       case 'vehicles':
         return [
           Expanded(flex: 2, child: Text('Code', style: headerStyle)),
-          Expanded(flex: 3, child: Text('Name', style: headerStyle)),
-          Expanded(flex: 2, child: Text('Group', style: headerStyle)),
-          Expanded(flex: 2, child: Text('On-road price', style: headerStyle)),
+          Expanded(flex: 3, child: Text('Model & CC', style: headerStyle)),
+          Expanded(flex: 2, child: Text('Group / Div', style: headerStyle)),
+          Expanded(flex: 2, child: Text('Price (Ex / OR)', style: headerStyle)),
+          Expanded(flex: 2, child: Text('Showroom Media', style: headerStyle)),
           Expanded(flex: 2, child: Text('Brochure', style: headerStyle)),
           SizedBox(width: 80, child: Text('Active', style: headerStyle)),
           const SizedBox(
@@ -2830,9 +3319,9 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       case 'accessories':
         return [
           Expanded(flex: 2, child: Text('Code', style: headerStyle)),
-          Expanded(flex: 4, child: Text('Name', style: headerStyle)),
+          Expanded(flex: 4, child: Text('Add-on', style: headerStyle)),
           Expanded(flex: 2, child: Text('Base price', style: headerStyle)),
-          Expanded(flex: 2, child: Text('Default', style: headerStyle)),
+          Expanded(flex: 2, child: Text('Configurator Type', style: headerStyle)),
           SizedBox(width: 80, child: Text('Active', style: headerStyle)),
           const SizedBox(
               width: 100, child: Text('', textAlign: TextAlign.right)),
@@ -2945,10 +3434,69 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       case 'vehicles':
         final code = item['code'] ?? 'Activa';
         final name = item['name'] ?? '';
+        final cat = item['category'] ?? 'MC';
+        final cc = item['ccDisplacement'];
         final group = item['modelGroup']?['name'] ??
-            (item['category'] == 'Scooter' ? 'RW Scooter' : 'Red Wing');
+            (cat == 'Scooter' ? 'RW Scooter' : 'Red Wing');
+        final exPrice = CurrencyFormatter.format(item['exShowroomPrice'] ?? 0);
         final price = CurrencyFormatter.format(item['onRoadPrice'] ?? 97200);
         final brochureUrl = item['brochureUrl'] as String?;
+        final thumbUrl = item['listingImageUrl']?.toString() ??
+            item['detailImageUrl']?.toString();
+        final colourList = (item['colours'] as List? ?? []);
+        final colourImgsUploaded = colourList
+            .where((c) =>
+                c['colourImageUrl'] != null &&
+                c['colourImageUrl'].toString().isNotEmpty)
+            .length;
+        final baseCount = (item['listingImageUrl'] != null ? 1 : 0) +
+            (item['detailImageUrl'] != null ? 1 : 0) +
+            colourImgsUploaded;
+
+        Widget mediaWidget = OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            backgroundColor: baseCount > 0
+                ? const Color(0xFFF0FDF4)
+                : const Color(0xFFFAFAFA),
+            side: BorderSide(
+              color: baseCount > 0
+                  ? const Color(0xFF86EFAC)
+                  : const Color(0xFFCBD5E1),
+            ),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          ),
+          onPressed: () {
+            if (isSuperAdmin) {
+              showVehicleMediaManagerDialog(
+                context: context,
+                dio: ref.read(dioProvider),
+                vehicle: item,
+                onUpdated: _loadSectionData,
+              );
+            }
+          },
+          icon: Icon(
+            Icons.photo_library_outlined,
+            size: 13,
+            color: baseCount > 0
+                ? const Color(0xFF16A34A)
+                : const Color(0xFF64748B),
+          ),
+          label: Text(
+            baseCount > 0 ? 'Photos ($baseCount)' : 'Add Photos',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: baseCount > 0
+                  ? const Color(0xFF166534)
+                  : const Color(0xFF475569),
+            ),
+          ),
+        );
 
         Widget brochureWidget;
         if (brochureUrl != null && brochureUrl.isNotEmpty) {
@@ -3012,14 +3560,71 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         return [
           Expanded(flex: 2, child: Text(code, style: textStyle)),
           Expanded(
-              flex: 3,
-              child: Text(name,
-                  style: textStyle.copyWith(fontWeight: FontWeight.w500))),
-          Expanded(flex: 2, child: Text(group, style: textStyle)),
+            flex: 3,
+            child: Row(
+              children: [
+                if (thumbUrl != null && thumbUrl.isNotEmpty) ...[
+                  Container(
+                    width: 38,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: SmartMediaImage(source: thumbUrl, fit: BoxFit.cover),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              textStyle.copyWith(fontWeight: FontWeight.w600)),
+                      if (cc != null)
+                        Text('$cc CC',
+                            style: const TextStyle(
+                                fontSize: 11, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(group, style: textStyle),
+                Text(cat,
+                    style: const TextStyle(
+                        fontSize: 11, color: Color(0xFF64748B))),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(price,
+                    style: textStyle.copyWith(fontWeight: FontWeight.w700)),
+                Text('Ex: $exPrice',
+                    style: const TextStyle(
+                        fontSize: 10.5, color: Color(0xFF64748B))),
+              ],
+            ),
+          ),
           Expanded(
               flex: 2,
-              child: Text(price,
-                  style: textStyle.copyWith(fontWeight: FontWeight.w600))),
+              child: Align(
+                  alignment: Alignment.centerLeft, child: mediaWidget)),
           Expanded(
               flex: 2,
               child: Align(
@@ -3094,18 +3699,84 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         final code = _getAccessoryCode(item);
         final name = item['name'] ?? '';
         final price = CurrencyFormatter.format(item['defaultPrice'] ?? 0);
-        final isDefault =
-            item['isDefault'] == true || item['isPriceEditable'] == true;
-        final defaultStr = isDefault ? 'Yes' : '-';
+        final isStandard = item['isStandard'] == true;
+        final imgUrl = item['imageUrl']?.toString();
 
         return [
           Expanded(flex: 2, child: Text(code, style: textStyle)),
           Expanded(
-              flex: 4,
-              child: Text(name,
-                  style: textStyle.copyWith(fontWeight: FontWeight.w500))),
+            flex: 4,
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: SmartMediaImage(
+                    source: imgUrl,
+                    fit: BoxFit.contain,
+                    fallback: const Icon(Icons.inventory_2_outlined,
+                        size: 16, color: Color(0xFF94A3B8)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textStyle.copyWith(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          ),
           Expanded(flex: 2, child: Text(price, style: textStyle)),
-          Expanded(flex: 2, child: Text(defaultStr, style: textStyle)),
+          Expanded(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: InkWell(
+                onTap: isSuperAdmin
+                    ? () async {
+                        final dio = ref.read(dioProvider);
+                        await dio.put('/accessories/${item['id']}',
+                            data: {'isStandard': !isStandard});
+                        _loadSectionData();
+                      }
+                    : null,
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isStandard
+                        ? const Color(0xFFF0FDF4)
+                        : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isStandard
+                          ? const Color(0xFF86EFAC)
+                          : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Text(
+                    isStandard ? 'Standard (Included)' : 'Optional',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isStandard
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFF475569),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
           activeSwitch,
           actions,
         ];

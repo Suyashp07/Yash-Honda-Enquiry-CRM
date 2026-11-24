@@ -15,6 +15,21 @@ export class CreateAccessoryDto {
   @IsBoolean()
   @IsOptional()
   isPriceEditable?: boolean;
+
+  @ApiProperty({ example: false, description: 'true = included as standard in Build My Honda, false = optional' })
+  @IsBoolean()
+  @IsOptional()
+  isStandard?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  imageUrl?: string | null;
+
+  @ApiProperty({ example: 0, required: false })
+  @IsNumber()
+  @IsOptional()
+  sortOrder?: number;
 }
 
 export class UpdateAccessoryDto {
@@ -34,8 +49,22 @@ export class UpdateAccessoryDto {
   isPriceEditable?: boolean;
 
   @ApiProperty({ required: false })
+  @IsBoolean()
+  @IsOptional()
+  isStandard?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  imageUrl?: string | null;
+
+  @ApiProperty({ required: false })
+  @IsNumber()
+  @IsOptional()
+  sortOrder?: number;
+
+  @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
   status?: string;
 }
-
