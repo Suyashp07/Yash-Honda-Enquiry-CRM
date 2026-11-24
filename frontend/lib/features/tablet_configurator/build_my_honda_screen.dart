@@ -258,8 +258,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   (exShow * 1.18);
 
           final normCat = bv['normalizedCategory']?.toString() ??
-              _normalizeCategory(
-                  bv['category']?.toString(), bv['modelGroup']?['name']?.toString());
+              _normalizeCategory(bv['category']?.toString(),
+                  bv['modelGroup']?['name']?.toString());
 
           final parsedColours = <Map<String, dynamic>>[];
           if (bv['colours'] is List) {
@@ -303,7 +303,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                 'id': acc['id']?.toString() ?? '',
                 'name': acc['name']?.toString() ?? '',
                 'price':
-                    double.tryParse(acc['defaultPrice']?.toString() ?? '0') ?? 0,
+                    double.tryParse(acc['defaultPrice']?.toString() ?? '0') ??
+                        0,
                 'isStandard': acc['isStandard'] == true,
                 'imageUrl': acc['imageUrl']?.toString(),
                 'isPriceEditable': acc['isPriceEditable'] == true,
@@ -317,8 +318,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             .toList();
         if (_backendFinanciers.isNotEmpty) {
           _selectedFinancierId = _backendFinanciers.first['id']?.toString();
-          _selectedFinancierName =
-              _backendFinanciers.first['name']?.toString();
+          _selectedFinancierName = _backendFinanciers.first['name']?.toString();
         }
 
         _backendBranches = rawBranches
@@ -332,9 +332,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               : _backendBranches.first['id']?.toString();
         }
 
-        _backendColours = rawColours
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList();
+        _backendColours =
+            rawColours.map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
         _isLoadingCatalog = false;
       });
@@ -409,15 +408,47 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   }
 
   List<Map<String, dynamic>> get _effectiveAccessories =>
-      _backendAccessories.isNotEmpty ? _backendAccessories : _fallbackAccessories;
+      _backendAccessories.isNotEmpty
+          ? _backendAccessories
+          : _fallbackAccessories;
 
   static const List<Map<String, dynamic>> _fallbackAccessories = [
-    {'id': 'acc-ceramic', 'name': 'Ceramic Coating (2-Year)', 'price': 3500, 'isStandard': false},
-    {'id': 'acc-warranty', 'name': 'Extended Warranty (3+3 Yrs)', 'price': 2200, 'isStandard': false},
-    {'id': 'acc-helmet', 'name': 'Helmet (Studds/Honda ISI)', 'price': 1250, 'isStandard': false},
-    {'id': 'acc-seat', 'name': 'Designer Seat Cover', 'price': 650, 'isStandard': false},
-    {'id': 'acc-mat', 'name': 'Floor Mat Premium', 'price': 450, 'isStandard': false},
-    {'id': 'acc-rsa', 'name': 'RSA (Roadside Assistance - 1 Yr)', 'price': 1499, 'isStandard': false},
+    {
+      'id': 'acc-ceramic',
+      'name': 'Ceramic Coating (2-Year)',
+      'price': 3500,
+      'isStandard': false
+    },
+    {
+      'id': 'acc-warranty',
+      'name': 'Extended Warranty (3+3 Yrs)',
+      'price': 2200,
+      'isStandard': false
+    },
+    {
+      'id': 'acc-helmet',
+      'name': 'Helmet (Studds/Honda ISI)',
+      'price': 1250,
+      'isStandard': false
+    },
+    {
+      'id': 'acc-seat',
+      'name': 'Designer Seat Cover',
+      'price': 650,
+      'isStandard': false
+    },
+    {
+      'id': 'acc-mat',
+      'name': 'Floor Mat Premium',
+      'price': 450,
+      'isStandard': false
+    },
+    {
+      'id': 'acc-rsa',
+      'name': 'RSA (Roadside Assistance - 1 Yr)',
+      'price': 1499,
+      'isStandard': false
+    },
   ];
 
   List<Map<String, dynamic>> get _standardAccessories =>
@@ -493,7 +524,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     if (_vehicleFallbackImages.containsKey(code)) {
       return _vehicleFallbackImages[code]!;
     }
-    if (v['category'] == 'Scooter') return 'assets/configurator/v_activa110.jpg';
+    if (v['category'] == 'Scooter')
+      return 'assets/configurator/v_activa110.jpg';
     if (v['category'] == 'BigBike') {
       return 'assets/configurator/hero_cb300f_full.webp';
     }
@@ -501,7 +533,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   }
 
   String _resolveShowcaseImage() {
-    if (_selectedColourImageUrl != null && _selectedColourImageUrl!.isNotEmpty) {
+    if (_selectedColourImageUrl != null &&
+        _selectedColourImageUrl!.isNotEmpty) {
       return _selectedColourImageUrl!;
     }
     final detail = _selectedVehicle?['detailImageUrl']?.toString();
@@ -566,7 +599,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                     opacity: 0.06,
                     child: CustomPaint(
                       size: const Size(340, 170),
-                      painter: _HondaWingPainter(color: const Color(0xFF0F172A)),
+                      painter:
+                          _HondaWingPainter(color: const Color(0xFF0F172A)),
                     ),
                   ),
                 ),
@@ -653,7 +687,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   children: [
                     CustomPaint(
                       size: const Size(44, 26),
-                      painter: _HondaWingPainter(color: const Color(0xFFDC2626)),
+                      painter:
+                          _HondaWingPainter(color: const Color(0xFFDC2626)),
                     ),
                     const SizedBox(height: 1),
                     const Text(
@@ -856,8 +891,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     }
   }
 
-  Widget _buildHeroHeadline(String first, String redPart,
-      {String? subtitle}) {
+  Widget _buildHeroHeadline(String first, String redPart, {String? subtitle}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -1159,9 +1193,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                   // Top Card Image
                                   Expanded(
                                     child: ClipRRect(
-                                      borderRadius:
-                                          const BorderRadius.vertical(
-                                              top: Radius.circular(20)),
+                                      borderRadius: const BorderRadius.vertical(
+                                          top: Radius.circular(20)),
                                       child: Stack(
                                         fit: StackFit.expand,
                                         children: [
@@ -1288,8 +1321,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 14, vertical: 9),
                                           ),
-                                          onPressed: () => _selectVehicle(v,
-                                              advance: true),
+                                          onPressed: () =>
+                                              _selectVehicle(v, advance: true),
                                           child: const Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
@@ -1322,7 +1355,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(vehicles.length.clamp(1, 6), (i) {
-              final active = i == _carouselDotIndex.clamp(0, vehicles.length - 1);
+              final active =
+                  i == _carouselDotIndex.clamp(0, vehicles.length - 1);
               return Container(
                 width: active ? 8 : 6,
                 height: active ? 8 : 6,
@@ -1543,9 +1577,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             ],
           ),
         ),
-
         const SizedBox(width: 24),
-
         Expanded(
           flex: 6,
           child: SingleChildScrollView(
@@ -1603,7 +1635,6 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   ),
                   const SizedBox(height: 18),
                 ],
-
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
@@ -1846,9 +1877,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             ],
           ),
         ),
-
         const SizedBox(width: 24),
-
         Expanded(
           flex: 6,
           child: Center(
@@ -2114,8 +2143,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color:
-                  isSel ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
+              color: isSel ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
               width: isSel ? 1.8 : 1.0,
             ),
             boxShadow: const [
@@ -2181,9 +2209,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             ],
           ),
         ),
-
         const SizedBox(width: 24),
-
         Expanded(
           flex: 6,
           child: SingleChildScrollView(
@@ -2389,8 +2415,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     final v = _selectedVehicle;
     final accSummaryParts = <String>[];
     if (_standardAccessories.isNotEmpty) {
-      accSummaryParts.addAll(
-          _standardAccessories.map((a) => a['name']?.toString() ?? ''));
+      accSummaryParts
+          .addAll(_standardAccessories.map((a) => a['name']?.toString() ?? ''));
     }
     for (final a in _optionalAccessories) {
       if (_selectedOptionalAccessoryIds.contains(a['id'].toString())) {
@@ -2402,226 +2428,258 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         : accSummaryParts.join(', ');
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(44, 24, 40, 24),
-      child: Column(
-        children: [
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Left: Title + Clean Studio Vehicle
-                Expanded(
-                  flex: 4,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeroHeadline('YOUR BUILD ', 'SUMMARY',
-                          subtitle: 'Here\'s your personalised Honda.'),
-                      if (_createdQuoteNumber != null) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0FDF4),
-                            borderRadius: BorderRadius.circular(20),
-                            border:
-                                Border.all(color: const Color(0xFF86EFAC)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.verified_outlined,
-                                  size: 16, color: Color(0xFF16A34A)),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Quote Ready · #$_createdQuoteNumber',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF166534),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      const Spacer(),
-                      Center(
-                        child: SizedBox(
-                          height: 330,
-                          child: SmartMediaImage(
-                            source: _resolveShowcaseImage(),
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(width: 20),
-
-                // Right Column spanning Config + Quotation sidebar ABOVE + Red Action Bar BELOW
-                Expanded(
-                  flex: 7,
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Center: Your Configuration White Card
-                            Expanded(
-                              flex: 6,
-                              child: Container(
-                                padding: const EdgeInsets.all(22),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                      color: const Color(0xFFF1F5F9)),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x0D000000),
-                                      blurRadius: 14,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Text(
-                                      'Your Configuration',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                        fontStyle: FontStyle.italic,
-                                        color: Color(0xFF0F172A),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    _buildSummaryConfigRow(
-                                      icon: Icons.two_wheeler_outlined,
-                                      label: 'Vehicle',
-                                      value: v?['name']?.toString() ?? 'Honda',
-                                      onEdit: () =>
-                                          setState(() => _currentStep = 2),
-                                    ),
-                                    const Divider(
-                                        height: 20, color: Color(0xFFF1F5F9)),
-                                    _buildSummaryConfigRow(
-                                      icon: Icons.palette_outlined,
-                                      label: 'Colour',
-                                      value: _selectedColourName,
-                                      leadingSwatch: _selectedColourValue,
-                                      onEdit: () =>
-                                          setState(() => _currentStep = 3),
-                                    ),
-                                    const Divider(
-                                        height: 20, color: Color(0xFFF1F5F9)),
-                                    _buildSummaryConfigRow(
-                                      icon: Icons.settings_outlined,
-                                      label: 'Accessories',
-                                      value: accText,
-                                      onEdit: () =>
-                                          setState(() => _currentStep = 4),
-                                    ),
-                                    const Divider(
-                                        height: 20, color: Color(0xFFF1F5F9)),
-                                    _buildSummaryConfigRow(
-                                      icon: Icons.monetization_on_outlined,
-                                      label: 'Finance',
-                                      value: _paymentMode == 'Cash'
-                                          ? 'Pay in Cash'
-                                          : 'Finance · $_selectedFinanceType',
-                                      onEdit: () =>
-                                          setState(() => _currentStep = 5),
-                                    ),
-                                    const Divider(
-                                        height: 20, color: Color(0xFFF1F5F9)),
-                                    _buildSummaryConfigRow(
-                                      icon: Icons.sync_alt_rounded,
-                                      label: 'Exchange',
-                                      value: _wantExchange
-                                          ? (_exchangeModelController
-                                                  .text.isNotEmpty
-                                              ? _exchangeModelController.text
-                                              : 'Exchange Old Vehicle')
-                                          : 'No Exchange',
-                                      onEdit: () =>
-                                          setState(() => _currentStep = 6),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(width: 20),
-
-                            // Right: Quotation Summary Card (no Continue btn on Step 7)
-                            SizedBox(
-                              width: 290,
-                              child: _buildQuotationSidebar(hideButton: true),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 18),
-
-                      // Bottom Red Action Bar (Email | WhatsApp | Print | Download)
+      padding: const EdgeInsets.fromLTRB(44, 24, 40, 28),
+      child: LayoutBuilder(
+        builder: (context, outerConstraints) {
+          final cardHeight =
+              (outerConstraints.maxHeight - 84).clamp(380.0, 468.0);
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left: Title + Clean Studio Vehicle
+              Expanded(
+                flex: 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeroHeadline('YOUR BUILD ', 'SUMMARY',
+                        subtitle: 'Here\'s your personalised Honda.'),
+                    if (_createdQuoteNumber != null) ...[
+                      const SizedBox(height: 12),
                       Container(
-                        height: 54,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDC2626),
-                          borderRadius: BorderRadius.circular(27),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x33DC2626),
-                              blurRadius: 14,
-                              offset: Offset(0, 5),
-                            ),
-                          ],
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFF86EFAC)),
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            _buildBottomActionBtn(
-                              icon: Icons.email_outlined,
-                              label: 'Email',
-                              onTap: () => _handleAction('email'),
-                            ),
-                            _verticalDivider(),
-                            _buildBottomActionBtn(
-                              icon: Icons.chat_bubble_outline_rounded,
-                              label: 'WhatsApp',
-                              onTap: () => _handleAction('whatsapp'),
-                            ),
-                            _verticalDivider(),
-                            _buildBottomActionBtn(
-                              icon: Icons.print_outlined,
-                              label: 'Print',
-                              onTap: () => _handleAction('print'),
-                            ),
-                            _verticalDivider(),
-                            _buildBottomActionBtn(
-                              icon: Icons.download_outlined,
-                              label: 'Download',
-                              onTap: () => _handleAction('download'),
+                            const Icon(Icons.verified_outlined,
+                                size: 16, color: Color(0xFF16A34A)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Quote Ready · #$_createdQuoteNumber',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF166534),
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ],
-                  ),
+                    const Spacer(),
+                    Center(
+                      child: SizedBox(
+                        height: 330,
+                        child: SmartMediaImage(
+                          source: _resolveShowcaseImage(),
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+
+              const SizedBox(width: 20),
+
+              // Right Column spanning Config + Quotation sidebar ABOVE + Red Action Bar BELOW
+              Expanded(
+                flex: 7,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      height: cardHeight,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Center: Your Configuration White Card
+                          Expanded(
+                            flex: 6,
+                            child: Container(
+                              padding:
+                                  const EdgeInsets.fromLTRB(24, 22, 20, 22),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(22),
+                                border:
+                                    Border.all(color: const Color(0xFFF1F5F9)),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x0D000000),
+                                    blurRadius: 16,
+                                    offset: Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Your Configuration',
+                                    style: TextStyle(
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w900,
+                                      fontStyle: FontStyle.italic,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Expanded(
+                                    child: LayoutBuilder(
+                                      builder: (_, innerConstraints) {
+                                        return SingleChildScrollView(
+                                          child: ConstrainedBox(
+                                            constraints: BoxConstraints(
+                                              minHeight:
+                                                  innerConstraints.maxHeight,
+                                            ),
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                _buildSummaryConfigRow(
+                                                  icon: Icons
+                                                      .two_wheeler_outlined,
+                                                  label: 'Vehicle',
+                                                  value:
+                                                      v?['name']?.toString() ??
+                                                          'Honda',
+                                                  onEdit: () => setState(
+                                                      () => _currentStep = 2),
+                                                ),
+                                                const Divider(
+                                                    height: 1,
+                                                    color: Color(0xFFF1F5F9)),
+                                                _buildSummaryConfigRow(
+                                                  icon: Icons.palette_outlined,
+                                                  label: 'Colour',
+                                                  value: _selectedColourName,
+                                                  leadingSwatch:
+                                                      _selectedColourValue,
+                                                  onEdit: () => setState(
+                                                      () => _currentStep = 3),
+                                                ),
+                                                const Divider(
+                                                    height: 1,
+                                                    color: Color(0xFFF1F5F9)),
+                                                _buildSummaryConfigRow(
+                                                  icon: Icons.settings_outlined,
+                                                  label: 'Accessories',
+                                                  value: accText,
+                                                  onEdit: () => setState(
+                                                      () => _currentStep = 4),
+                                                ),
+                                                const Divider(
+                                                    height: 1,
+                                                    color: Color(0xFFF1F5F9)),
+                                                _buildSummaryConfigRow(
+                                                  icon: Icons
+                                                      .monetization_on_outlined,
+                                                  label: 'Finance',
+                                                  value: _paymentMode == 'Cash'
+                                                      ? 'Pay in Cash'
+                                                      : 'Finance · $_selectedFinanceType',
+                                                  onEdit: () => setState(
+                                                      () => _currentStep = 5),
+                                                ),
+                                                const Divider(
+                                                    height: 1,
+                                                    color: Color(0xFFF1F5F9)),
+                                                _buildSummaryConfigRow(
+                                                  icon: Icons.sync_alt_rounded,
+                                                  label: 'Exchange',
+                                                  value: _wantExchange
+                                                      ? (_exchangeModelController
+                                                              .text.isNotEmpty
+                                                          ? _exchangeModelController
+                                                              .text
+                                                          : 'Exchange Old Vehicle')
+                                                      : 'No Exchange',
+                                                  onEdit: () => setState(
+                                                      () => _currentStep = 6),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(width: 20),
+
+                          // Right: Quotation Summary Card (no Continue btn on Step 7)
+                          SizedBox(
+                            width: 290,
+                            child: _buildQuotationSidebar(hideButton: true),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Bottom Red Action Bar (Email | WhatsApp | Print | Download)
+                    Container(
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDC2626),
+                        borderRadius: BorderRadius.circular(27),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x33DC2626),
+                            blurRadius: 14,
+                            offset: Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          _buildBottomActionBtn(
+                            icon: Icons.email_outlined,
+                            label: 'Email',
+                            onTap: () => _handleAction('email'),
+                          ),
+                          _verticalDivider(),
+                          _buildBottomActionBtn(
+                            icon: Icons.chat_bubble_outline_rounded,
+                            label: 'WhatsApp',
+                            onTap: () => _handleAction('whatsapp'),
+                          ),
+                          _verticalDivider(),
+                          _buildBottomActionBtn(
+                            icon: Icons.print_outlined,
+                            label: 'Print',
+                            onTap: () => _handleAction('print'),
+                          ),
+                          _verticalDivider(),
+                          _buildBottomActionBtn(
+                            icon: Icons.download_outlined,
+                            label: 'Download',
+                            onTap: () => _handleAction('download'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -2771,7 +2829,6 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                 fontSize: 11.5, color: Color(0xFF64748B), height: 1.3),
           ),
           const SizedBox(height: 24),
-
           _buildSidebarCheckRow(
             icon: Icons.two_wheeler_outlined,
             label: 'Vehicle',
@@ -2789,8 +2846,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           _buildSidebarCheckRow(
             icon: Icons.settings_outlined,
             label: 'Accessories',
-            isComplete: _currentStep >= 5 ||
-                (_currentStep == 4 && accCount > 0),
+            isComplete:
+                _currentStep >= 5 || (_currentStep == 4 && accCount > 0),
           ),
           const SizedBox(height: 16),
           _buildSidebarCheckRow(
@@ -2804,9 +2861,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             label: 'Exchange',
             isComplete: _currentStep == 7,
           ),
-
           const Spacer(),
-
           const Text(
             'Estimated Price',
             style: TextStyle(
@@ -2827,7 +2882,6 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               letterSpacing: -0.6,
             ),
           ),
-
           if (!hideButton) ...[
             const SizedBox(height: 18),
             SizedBox(
@@ -3037,7 +3091,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   controller: _customerEmailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: needsEmail ? 'Email Address *' : 'Email (Optional)',
+                    labelText:
+                        needsEmail ? 'Email Address *' : 'Email (Optional)',
                     hintText: 'name@example.com',
                     prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(
@@ -3047,10 +3102,10 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                 if (_backendBranches.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: _backendBranches
-                            .any((b) => b['id'] == chosenBranchId)
-                        ? chosenBranchId
-                        : _backendBranches.first['id']?.toString(),
+                    initialValue:
+                        _backendBranches.any((b) => b['id'] == chosenBranchId)
+                            ? chosenBranchId
+                            : _backendBranches.first['id']?.toString(),
                     decoration: InputDecoration(
                       labelText: 'Showroom Branch',
                       prefixIcon: const Icon(Icons.storefront_outlined),
@@ -3066,8 +3121,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                               ),
                             ))
                         .toList(),
-                    onChanged: (val) =>
-                        setDlgState(() => chosenBranchId = val),
+                    onChanged: (val) => setDlgState(() => chosenBranchId = val),
                   ),
                 ],
               ],
@@ -3167,7 +3221,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           ? 'Exchange: Yes (${_exchangeModelController.text.trim()} ${_exchangeYear != 'Select Year' ? _exchangeYear : ''}, Expected: ₹${_exchangeExpectedPriceController.text.trim()})'
           : 'No';
 
-      final remarks = 'Build My Honda • $_selectedCategory • $_selectedColourName'
+      final remarks =
+          'Build My Honda • $_selectedCategory • $_selectedColourName'
           '${_paymentMode == 'Finance' ? ' • $_selectedFinanceType${_selectedFinancierName != null ? ' ($_selectedFinancierName)' : ''}' : ' • Pay in Cash'}'
           '${_wantExchange ? ' • $exchangeDesc' : ''}';
 
@@ -3377,7 +3432,8 @@ class _HondaWingPainter extends CustomPainter {
         ..moveTo(xStart, h * 0.74)
         ..quadraticBezierTo(xStart + w * 0.18, yTop + h * 0.04, xEnd, yTop)
         ..lineTo(xEnd - w * 0.05, yBot)
-        ..quadraticBezierTo(xStart + w * 0.22, yBot + h * 0.05, xStart + w * 0.10, h * 0.74)
+        ..quadraticBezierTo(
+            xStart + w * 0.22, yBot + h * 0.05, xStart + w * 0.10, h * 0.74)
         ..close();
       canvas.drawPath(feather, paint);
     }
@@ -3400,9 +3456,7 @@ class _RadioRing extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: isSelected
-              ? const Color(0xFFDC2626)
-              : const Color(0xFF0F172A),
+          color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF0F172A),
           width: 1.8,
         ),
       ),
@@ -3470,9 +3524,8 @@ class _ExchangeChoicePill extends StatelessWidget {
           color: isSelected ? const Color(0xFFFEF2F2) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFFDC2626)
-                : const Color(0xFFE2E8F0),
+            color:
+                isSelected ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
