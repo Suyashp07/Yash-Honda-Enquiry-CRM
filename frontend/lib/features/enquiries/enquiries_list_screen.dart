@@ -163,7 +163,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       final dio = ref.read(dioProvider);
       await dio.patch('/enquiries/$enquiryId/status', data: {
         'status': backendStatus,
-        'reason': 'Status updated from leads table to $newDisplayStatus',
+        'remarks': 'Status updated from leads table to $newDisplayStatus',
       });
       setState(() {
         final idx = _enquiries.indexWhere((e) => e['id'] == enquiryId);

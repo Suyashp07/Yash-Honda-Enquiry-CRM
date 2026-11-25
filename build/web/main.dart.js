@@ -122492,7 +122492,7 @@ q=3
 n=o.gbn().b0(0,$.cv(),t.u)
 l=t.N
 s=6
-return A.v(n.aaw("/enquiries/"+a+"/status",A.C(["status",j,"reason","Status updated from leads table to "+b],l,l),t.z),$async$F4)
+return A.v(n.aaw("/enquiries/"+a+"/status",A.C(["status",j,"remarks","Status updated from leads table to "+b],l,l),t.z),$async$F4)
 case 6:o.G(new A.aOr(o,a,j))
 l=o.c
 if(l!=null)l.N(t.q).f.b6(A.cB(null,null,null,null,null,B.O,null,A.p("Status updated to "+b,null,null,null,null,null,null,null,null),null,B.am,null,null,null,null,null,null,null,null,null,null))
