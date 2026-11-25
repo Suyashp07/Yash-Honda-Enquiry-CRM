@@ -1,12 +1,17 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/file_download.dart';
 import '../../core/utils/mask_util.dart';
 import '../../core/providers/branch_provider.dart';
 import '../auth/auth_notifier.dart';
@@ -27,6 +32,9 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
   final Set<String> _revealedMobiles = {};
   final Set<String> _revealedEmails = {};
   bool _filterFollowUpsDue = false;
+  String _filterType = 'All';
+  String _filterPurchaseMode = 'All';
+  String _filterBranchName = 'All';
 
   final TextEditingController _searchCtrl = TextEditingController();
 
@@ -44,7 +52,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     super.dispose();
   }
 
-  Future<void> _loadEnquiries() async {
+  Future<void> _loadEnquiries({bool showFeedback = false}) async {
     setState(() => _isLoading = true);
     try {
       final dio = ref.read(dioProvider);
@@ -56,16 +64,29 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       final res = await dio.get('/enquiries', queryParameters: query);
 
       if (!mounted) return;
+      final list = (res.data as List?) ?? [];
       setState(() {
-        _enquiries = (res.data as List?) ?? [];
+        _enquiries = list;
         _isLoading = false;
       });
+      if (showFeedback) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF16A34A),
+            content: Text('Loaded ${list.length} enquiries.'),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
       if (e is DioException && e.response?.statusCode == 401) {
         ref.read(authStateProvider.notifier).logout();
         context.go('/login');
+      } else if (showFeedback) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not reload enquiries: $e')),
+        );
       }
     }
   }
@@ -124,8 +145,251 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         if (followUps.isEmpty) return false;
       }
 
+      if (_filterType != 'All') {
+        final t = (e['enquiryType'] ?? '').toString();
+        if (t != _filterType) return false;
+      }
+
+      if (_filterPurchaseMode != 'All') {
+        final pm = (e['purchaseMode'] ?? '').toString();
+        if (pm != _filterPurchaseMode) return false;
+      }
+
+      if (_filterBranchName != 'All') {
+        final bn = (e['branch']?['name'] ?? '').toString();
+        if (bn != _filterBranchName) return false;
+      }
+
       return true;
     }).toList();
+  }
+
+  String _csvEsc(dynamic val) {
+    final s = (val ?? '').toString().replaceAll('"', '""');
+    return '"$s"';
+  }
+
+  void _exportCsv() {
+    final rows = _selectedIds.isNotEmpty
+        ? _filteredEnquiries
+            .where((e) => _selectedIds.contains(e['id'].toString()))
+            .toList()
+        : _filteredEnquiries;
+    if (rows.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No enquiries to export.')),
+      );
+      return;
+    }
+
+    final buf = StringBuffer();
+    buf.writeln(
+        'Name,Mobile,Email,Type,Source,Branch,Area,Model,Colour,Payment Mode,Exchange,Buying,Date,Status,Remarks');
+    for (final e in rows) {
+      final customer = e['customer'] ?? {};
+      final quote = (e['quotations'] as List?)?.firstOrNull ?? {};
+      final vehicle = quote['vehicle'] ?? {};
+      buf.writeln([
+        _csvEsc(customer['name']),
+        _csvEsc(customer['mobile']),
+        _csvEsc(customer['email']),
+        _csvEsc(e['enquiryType']),
+        _csvEsc(e['leadSource']?['name']),
+        _csvEsc(e['branch']?['name']),
+        _csvEsc(customer['area']?['name']),
+        _csvEsc(vehicle['name']),
+        _csvEsc(quote['colourName']),
+        _csvEsc(e['purchaseMode']),
+        _csvEsc(e['exchange']),
+        _csvEsc(e['buyingWhen']),
+        _csvEsc(DateFormatter.formatDate(e['createdAt'])),
+        _csvEsc(_mapStatusToDisplay((e['status'] ?? 'ACTIVE').toString())),
+        _csvEsc(e['remarks']),
+      ].join(','));
+    }
+
+    final bytes = Uint8List.fromList(utf8.encode(buf.toString()));
+    downloadFileBytes(bytes, 'yash_honda_enquiries.csv', 'text/csv;charset=utf-8');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF16A34A),
+        content: Text('Exported ${rows.length} enquiries to yash_honda_enquiries.csv'),
+      ),
+    );
+  }
+
+  Future<void> _printDirectory() async {
+    final rows = _filteredEnquiries;
+    if (rows.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No enquiries to print.')),
+      );
+      return;
+    }
+
+    try {
+      final doc = pw.Document();
+      final previewRows = rows.take(40).toList();
+      doc.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4.landscape,
+          margin: const pw.EdgeInsets.all(24),
+          build: (ctx) => [
+            pw.Text(
+              'Yash Honda — Enquiries Directory Report',
+              style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'Total Enquiries: ${rows.length} (Tab: $_activeTab)',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
+            pw.SizedBox(height: 12),
+            pw.TableHelper.fromTextArray(
+              headerStyle:
+                  pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+              cellStyle: const pw.TextStyle(fontSize: 8.5),
+              headers: [
+                'Name',
+                'Mobile',
+                'Type',
+                'Branch',
+                'Model',
+                'Payment',
+                'Date',
+                'Status',
+              ],
+              data: previewRows.map((e) {
+                final c = e['customer'] ?? {};
+                final q = (e['quotations'] as List?)?.firstOrNull ?? {};
+                final v = q['vehicle'] ?? {};
+                return [
+                  (c['name'] ?? '-').toString(),
+                  (c['mobile'] ?? '-').toString(),
+                  (e['enquiryType'] ?? '-').toString(),
+                  (e['branch']?['name'] ?? '-').toString(),
+                  (v['name'] ?? '-').toString(),
+                  (e['purchaseMode'] ?? '-').toString(),
+                  DateFormatter.formatDate(e['createdAt']),
+                  _mapStatusToDisplay((e['status'] ?? 'ACTIVE').toString()),
+                ];
+              }).toList(),
+            ),
+          ],
+        ),
+      );
+      final bytes = await doc.save();
+      downloadFileBytes(
+          bytes, 'yash_honda_enquiries_report.pdf', 'application/pdf');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF16A34A),
+            content: Text(
+                'Generated PDF report (${previewRows.length} rows) — yash_honda_enquiries_report.pdf'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not generate report: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showFilterDialog() async {
+    final branches = <String>{'All'};
+    final types = <String>{'All'};
+    final modes = <String>{'All'};
+    for (final e in _enquiries) {
+      final b = (e['branch']?['name'] ?? '').toString();
+      if (b.isNotEmpty) branches.add(b);
+      final t = (e['enquiryType'] ?? '').toString();
+      if (t.isNotEmpty) types.add(t);
+      final m = (e['purchaseMode'] ?? '').toString();
+      if (m.isNotEmpty) modes.add(m);
+    }
+
+    String tmpType = types.contains(_filterType) ? _filterType : 'All';
+    String tmpMode = modes.contains(_filterPurchaseMode) ? _filterPurchaseMode : 'All';
+    String tmpBranch = branches.contains(_filterBranchName) ? _filterBranchName : 'All';
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDlgState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: const Text('Filter Enquiries',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          content: SizedBox(
+            width: 340,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: tmpBranch,
+                  decoration: const InputDecoration(labelText: 'Branch'),
+                  items: branches
+                      .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                      .toList(),
+                  onChanged: (v) => setDlgState(() => tmpBranch = v ?? 'All'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: tmpType,
+                  decoration: const InputDecoration(labelText: 'Enquiry Type'),
+                  items: types
+                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                      .toList(),
+                  onChanged: (v) => setDlgState(() => tmpType = v ?? 'All'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: tmpMode,
+                  decoration: const InputDecoration(labelText: 'Purchase Mode'),
+                  items: modes
+                      .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                      .toList(),
+                  onChanged: (v) => setDlgState(() => tmpMode = v ?? 'All'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _filterBranchName = 'All';
+                  _filterType = 'All';
+                  _filterPurchaseMode = 'All';
+                });
+                Navigator.pop(ctx);
+              },
+              child: const Text('Reset'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                setState(() {
+                  _filterBranchName = tmpBranch;
+                  _filterType = tmpType;
+                  _filterPurchaseMode = tmpMode;
+                });
+                Navigator.pop(ctx);
+              },
+              child: const Text('Apply'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   String _mapStatusToDisplay(String status) {
@@ -1162,19 +1426,19 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                 const SizedBox(width: 8),
 
                 // Filter icon button
-                _buildSquareIconButton(Icons.tune, () {}, tooltip: 'Filter enquiries by date range, vehicle model, or branch'),
+                _buildSquareIconButton(Icons.tune, _showFilterDialog, tooltip: 'Filter enquiries by branch, type, or purchase mode'),
                 const SizedBox(width: 6),
 
                 // Export icon button
-                _buildSquareIconButton(Icons.file_download_outlined, _loadEnquiries, tooltip: 'Export filtered customer enquiries to CSV / Excel spreadsheet'),
+                _buildSquareIconButton(Icons.file_download_outlined, _exportCsv, tooltip: 'Export filtered customer enquiries to CSV / Excel spreadsheet'),
                 const SizedBox(width: 6),
 
                 // Print icon button
-                _buildSquareIconButton(Icons.print_outlined, () {}, tooltip: 'Print enquiry directory summary report'),
+                _buildSquareIconButton(Icons.print_outlined, _printDirectory, tooltip: 'Download printable PDF directory summary report'),
                 const SizedBox(width: 6),
 
                 // Refresh / View icon button
-                _buildSquareIconButton(Icons.refresh, _loadEnquiries, tooltip: 'Reload latest enquiries from database'),
+                _buildSquareIconButton(Icons.refresh, () => _loadEnquiries(showFeedback: true), tooltip: 'Reload latest enquiries from database'),
               ],
             ),
             const SizedBox(height: 16),
