@@ -263,7 +263,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 keyboardType: TextInputType.phone,
                                 style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
                                 decoration: const InputDecoration(
+                                  filled: false,
                                   border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
                                   hintText: '10-digit mobile number',
                                   hintStyle: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
                                   isDense: true,
@@ -333,7 +336,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           keyboardType: TextInputType.number,
                           style: const TextStyle(fontSize: 13, letterSpacing: 2, fontWeight: FontWeight.w700),
                           decoration: const InputDecoration(
+                            filled: false,
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                             hintText: '123456',
                             isDense: true,
                             contentPadding: EdgeInsets.symmetric(vertical: 12),
@@ -357,7 +363,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           obscureText: obscureNew,
                           style: const TextStyle(fontSize: 13),
                           decoration: InputDecoration(
+                            filled: false,
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                             hintText: 'At least 6 characters',
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -386,7 +395,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           obscureText: obscureNew,
                           style: const TextStyle(fontSize: 13),
                           decoration: const InputDecoration(
+                            filled: false,
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                             hintText: 'Re-enter password',
                             isDense: true,
                             contentPadding: EdgeInsets.symmetric(vertical: 12),
@@ -528,7 +540,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 16),
                 ],
 
-                // Mobile number field
+                // Mobile number field (standard single-layer Material input)
                 const Text(
                   'Mobile number',
                   style: TextStyle(
@@ -538,51 +550,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                TextField(
+                  controller: _mobileController,
+                  keyboardType: TextInputType.phone,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF0F172A),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.phone_outlined, size: 17, color: Color(0xFF94A3B8)),
-                      const SizedBox(width: 8),
-                      const Text(
-                        '+91',
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: _mobileController,
-                          keyboardType: TextInputType.phone,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF0F172A),
-                          ),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: '98765 43210',
-                            hintStyle: TextStyle(
-                              fontSize: 13.5,
-                              color: Color(0xFF94A3B8),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    hintText: '98765 43210',
+                    hintStyle: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF94A3B8),
+                    ),
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.only(left: 14, right: 10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.phone_outlined,
+                              size: 18, color: Color(0xFF64748B)),
+                          SizedBox(width: 8),
+                          Text(
+                            '+91',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF475569),
                             ),
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
                           ),
-                          onSubmitted: (_) => _submit(),
-                        ),
+                          SizedBox(width: 10),
+                          SizedBox(
+                            height: 20,
+                            width: 1,
+                            child: ColoredBox(color: Color(0xFFE2E8F0)),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                    prefixIconConstraints:
+                        const BoxConstraints(minWidth: 0, minHeight: 0),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 15),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                          color: Color(0xFFDC2626), width: 1.5),
+                    ),
                   ),
+                  onSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: 18),
 
@@ -602,7 +625,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onTap: _showForgotPasswordDialog,
                       borderRadius: BorderRadius.circular(4),
                       child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                         child: Text(
                           'Forgot password?',
                           style: TextStyle(
@@ -616,52 +640,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                TextField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF0F172A),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.lock_outline, size: 17, color: Color(0xFF94A3B8)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF0F172A),
-                          ),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Enter password',
-                            hintStyle: TextStyle(
-                              fontSize: 13.5,
-                              color: Color(0xFF94A3B8),
-                            ),
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          onSubmitted: (_) => _submit(),
-                        ),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    hintText: 'Enter password',
+                    hintStyle: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF94A3B8),
+                    ),
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.only(left: 14, right: 10),
+                      child: Icon(Icons.lock_outline,
+                          size: 18, color: Color(0xFF64748B)),
+                    ),
+                    prefixIconConstraints:
+                        const BoxConstraints(minWidth: 0, minHeight: 0),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        size: 18,
+                        color: const Color(0xFF64748B),
                       ),
-                      IconButton(
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                          size: 18,
-                          color: const Color(0xFF94A3B8),
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      ),
-                    ],
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 15),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                          color: Color(0xFFDC2626), width: 1.5),
+                    ),
                   ),
+                  onSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: 22),
 
