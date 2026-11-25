@@ -656,7 +656,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             if (_currentStep <= 6)
               Positioned(
                 top: 60,
-                right: 300, // sits behind the left content stage, not over sidebar
+                right:
+                    300, // sits behind the left content stage, not over sidebar
                 child: IgnorePointer(
                   child: Opacity(
                     opacity: 0.055,
@@ -1268,34 +1269,45 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                               fit: BoxFit.cover,
                                               fallback: Center(
                                                 child: Padding(
-                                                  padding: const EdgeInsets.all(16),
+                                                  padding:
+                                                      const EdgeInsets.all(16),
                                                   child: Column(
-                                                    mainAxisSize: MainAxisSize.min,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
                                                     children: [
                                                       const Icon(
-                                                        Icons.two_wheeler_outlined,
+                                                        Icons
+                                                            .two_wheeler_outlined,
                                                         size: 42,
-                                                        color: Color(0xFF94A3B8),
+                                                        color:
+                                                            Color(0xFF94A3B8),
                                                       ),
                                                       const SizedBox(height: 8),
                                                       Text(
-                                                        v['name']?.toString() ?? '',
-                                                        textAlign: TextAlign.center,
+                                                        v['name']?.toString() ??
+                                                            '',
+                                                        textAlign:
+                                                            TextAlign.center,
                                                         maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
                                                         style: const TextStyle(
                                                           fontSize: 12,
-                                                          fontWeight: FontWeight.w700,
-                                                          color: Color(0xFF475569),
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color:
+                                                              Color(0xFF475569),
                                                         ),
                                                       ),
                                                       const SizedBox(height: 2),
                                                       const Text(
                                                         'Upload image in Admin Panel',
-                                                        textAlign: TextAlign.center,
+                                                        textAlign:
+                                                            TextAlign.center,
                                                         style: TextStyle(
                                                           fontSize: 10.5,
-                                                          color: Color(0xFF94A3B8),
+                                                          color:
+                                                              Color(0xFF94A3B8),
                                                         ),
                                                       ),
                                                     ],
@@ -2615,7 +2627,9 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
                     const SizedBox(height: 18),
 
-                    // Bottom Red Action Bar (Email | WhatsApp | Print | Download)
+                    // Bottom Red Action Bar:
+                    // Before customer details -> "Fill Customer Details & Generate Quote"
+                    // After enquiry & quote created -> (Email | WhatsApp | Print | Download)
                     Container(
                       height: 54,
                       decoration: BoxDecoration(
@@ -2629,33 +2643,45 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                           ),
                         ],
                       ),
-                      child: Row(
-                        children: [
-                          _buildBottomActionBtn(
-                            icon: Icons.email_outlined,
-                            label: 'Email',
-                            onTap: () => _handleAction('email'),
-                          ),
-                          _verticalDivider(),
-                          _buildBottomActionBtn(
-                            icon: Icons.chat_bubble_outline_rounded,
-                            label: 'WhatsApp',
-                            onTap: () => _handleAction('whatsapp'),
-                          ),
-                          _verticalDivider(),
-                          _buildBottomActionBtn(
-                            icon: Icons.print_outlined,
-                            label: 'Print',
-                            onTap: () => _handleAction('print'),
-                          ),
-                          _verticalDivider(),
-                          _buildBottomActionBtn(
-                            icon: Icons.download_outlined,
-                            label: 'Download',
-                            onTap: () => _handleAction('download'),
-                          ),
-                        ],
-                      ),
+                      child: (_createdEnquiryId == null ||
+                              _createdQuotationId == null)
+                          ? Row(
+                              children: [
+                                _buildBottomActionBtn(
+                                  icon: Icons.person_add_alt_1_outlined,
+                                  label:
+                                      'Fill Customer Details & Generate Quote',
+                                  onTap: () => _handleAction('register'),
+                                ),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                _buildBottomActionBtn(
+                                  icon: Icons.email_outlined,
+                                  label: 'Email',
+                                  onTap: () => _handleAction('email'),
+                                ),
+                                _verticalDivider(),
+                                _buildBottomActionBtn(
+                                  icon: Icons.chat_bubble_outline_rounded,
+                                  label: 'WhatsApp',
+                                  onTap: () => _handleAction('whatsapp'),
+                                ),
+                                _verticalDivider(),
+                                _buildBottomActionBtn(
+                                  icon: Icons.print_outlined,
+                                  label: 'Print',
+                                  onTap: () => _handleAction('print'),
+                                ),
+                                _verticalDivider(),
+                                _buildBottomActionBtn(
+                                  icon: Icons.download_outlined,
+                                  label: 'Download',
+                                  onTap: () => _handleAction('download'),
+                                ),
+                              ],
+                            ),
                     ),
                   ],
                 ),
@@ -3013,11 +3039,13 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  actionType == 'email'
-                      ? 'Email Your Quotation'
-                      : (actionType == 'whatsapp'
-                          ? 'Send Quote on WhatsApp'
-                          : 'Generate Official Quote'),
+                  actionType == 'register'
+                      ? 'Customer Details & Quote'
+                      : actionType == 'email'
+                          ? 'Email Your Quotation'
+                          : (actionType == 'whatsapp'
+                              ? 'Send Quote on WhatsApp'
+                              : 'Generate Official Quote'),
                   style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
@@ -3158,7 +3186,11 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       setDlgState(() => _isSubmitting = false);
                       if (ok && ctx.mounted) {
                         Navigator.pop(ctx);
-                        await _executeDispatchAction(actionType);
+                        if (actionType == 'register') {
+                          await _autoDispatchOnRegister();
+                        } else {
+                          await _executeDispatchAction(actionType);
+                        }
                       }
                     },
               child: _isSubmitting
@@ -3279,6 +3311,50 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             .showSnackBar(SnackBar(content: Text(msg)));
       }
       return false;
+    }
+  }
+
+  Future<void> _autoDispatchOnRegister() async {
+    final dio = ref.read(dioProvider);
+    final quoteNo = _createdQuoteNumber ?? _createdQuotationId ?? '';
+    final email = _customerEmailController.text.trim();
+    final parts = <String>['Enquiry & Quote #$quoteNo saved'];
+
+    if (email.contains('@')) {
+      try {
+        final emailRes = await dio.post('/communications/email', data: {
+          'enquiryId': _createdEnquiryId,
+          'recipientEmail': email,
+          'subject':
+              'Your Official Honda Quotation (#$quoteNo) - Yash Honda Pune',
+          'quotationId': _createdQuotationId,
+        });
+        final emailOk =
+            emailRes.data is Map && emailRes.data['success'] == true;
+        parts.add(emailOk ? 'Email sent' : 'Email failed');
+      } catch (_) {
+        parts.add('Email pending');
+      }
+    }
+
+    try {
+      await dio.post('/communications/whatsapp', data: {
+        'enquiryId': _createdEnquiryId,
+        'templateName': 'quotation_send',
+        'quotationId': _createdQuotationId,
+      });
+      parts.add('WhatsApp logged');
+    } catch (_) {
+      // Formal WhatsApp Business API queued for next version
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF16A34A),
+          content: Text('${parts.join(' • ')}.'),
+        ),
+      );
     }
   }
 
@@ -3404,8 +3480,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           : 'Yash Honda Pune';
 
       final selectedOptional = _optionalAccessories
-          .where((a) =>
-              _selectedOptionalAccessoryIds.contains(a['id'].toString()))
+          .where(
+              (a) => _selectedOptionalAccessoryIds.contains(a['id'].toString()))
           .toList();
       final now = DateTime.now();
       final dateStr =
@@ -3501,7 +3577,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 fontWeight: pw.FontWeight.bold,
                                 color: PdfColor.fromHex('#64748B'))),
                         pw.SizedBox(height: 4),
-                        pw.Text(custName.isNotEmpty ? custName : 'Valued Customer',
+                        pw.Text(
+                            custName.isNotEmpty ? custName : 'Valued Customer',
                             style: pw.TextStyle(
                                 fontSize: 13, fontWeight: pw.FontWeight.bold)),
                         if (custMobile.isNotEmpty)
@@ -3602,7 +3679,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                         child: pw.Text(_pdfRs(_vehicleBasePrice),
                             textAlign: pw.TextAlign.right,
                             style: pw.TextStyle(
-                                fontSize: 10.5, fontWeight: pw.FontWeight.bold)),
+                                fontSize: 10.5,
+                                fontWeight: pw.FontWeight.bold)),
                       ),
                     ],
                   ),
