@@ -125267,93 +125267,95 @@ case 6:case 1:return A.M(q,r)
 case 2:return A.L(o.at(-1),r)}})
 return A.N($async$yU,r)},
 nu(a){return this.aoi(a)},
-aoi(a8){var s=0,r=A.O(t.H),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7
-var $async$nu=A.P(function(a9,b0){if(a9===1){o.push(b0)
-s=p}for(;;)switch(s){case 0:a2=n.gbn().b2(0,$.cx(),t.u)
-a3=n.p4
-a4=a3==null?n.p3:a3
-a5=a4==null?"":a4
-s=a8==="print"?3:4
+aoi(b0){var s=0,r=A.O(t.H),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9
+var $async$nu=A.P(function(b1,b2){if(b1===1){o.push(b2)
+s=p}for(;;)switch(s){case 0:a4=n.gbn().b2(0,$.cx(),t.u)
+a5=n.p4
+a6=a5==null?n.p3:a5
+a7=a6==null?"":a6
+s=b0==="print"?3:4
 break
-case 3:if(J.bv(a5)===0){s=1
+case 3:if(J.bv(a7)===0){s=1
 break}s=5
-return A.v(A.oa(A.dl(A.hw()+"/quotations/"+A.h(a5)+"/print",0,null),B.hf),$async$nu)
-case 5:a3=n.c
-if(a3!=null)a3.O(t.q).f.b7(A.cD(null,null,null,B.b_,null,B.O,null,A.p("Opening printable quotation #"+A.h(a5)+"...",null,null,null,null,null,null,null,null),null,B.am,null,null,null,null,null,null,null,null,null,null))
+return A.v(A.oa(A.dl(A.hw()+"/quotations/"+A.h(a7)+"/print",0,null),B.hf),$async$nu)
+case 5:a5=n.c
+if(a5!=null)a5.O(t.q).f.b7(A.cD(null,null,null,B.b_,null,B.O,null,A.p("Opening printable quotation #"+A.h(a7)+"...",null,null,null,null,null,null,null,null),null,B.am,null,null,null,null,null,null,null,null,null,null))
 s=1
 break
-case 4:s=a8==="download"?6:7
+case 4:s=b0==="download"?6:7
 break
-case 6:if(J.bv(a5)===0){s=1
+case 6:if(J.bv(a7)===0){s=1
 break}s=8
-return A.v(n.Dj(a5),$async$nu)
+return A.v(n.Dj(a7),$async$nu)
 case 8:s=1
 break
-case 7:s=a8==="email"?9:10
+case 7:s=b0==="email"?9:10
 break
 case 9:m=B.m.ak(n.k3.a.a)
 if(!J.yh(m,"@")){n.nw("email")
 s=1
 break}p=12
 s=15
-return A.v(a2.du("/communications/email",A.E(["enquiryId",n.p2,"recipientEmail",m,"subject","Your Official Honda Quotation (#"+A.h(a5)+") - Yash Honda Pune","quotationId",n.p3],t.N,t.l),t.z),$async$nu)
-case 15:l=b0
-a3=n.c
-if(a3!=null){a3=a3.O(t.q).f
-b=l.a
-if(b==null)b=null
-else{b=J.j(b,"message")
-b=b==null?null:J.H(b)}a3.b7(A.cD(null,null,null,B.b_,null,B.O,null,A.p(b==null?"Quotation emailed successfully!":b,null,null,null,null,null,null,null,null),null,B.am,null,null,null,null,null,null,null,null,null,null))}p=2
+return A.v(a4.du("/communications/email",A.E(["enquiryId",n.p2,"recipientEmail",m,"subject","Your Official Honda Quotation (#"+A.h(a7)+") - Yash Honda Pune","quotationId",n.p3],t.N,t.l),t.z),$async$nu)
+case 15:l=b2
+if(n.c!=null){k=t.f.b(l.a)&&J.c(J.j(l.a,"success"),!0)
+a5=n.c.O(t.q).f
+a=k?B.b_:B.P
+a0=l.a
+if(a0==null)a0=null
+else{a0=J.j(a0,"message")
+a0=a0==null?null:J.H(a0)}if(a0==null)a0=k?"Quotation emailed successfully!":"Failed to send email."
+a5.b7(A.cD(null,null,null,a,null,B.O,null,A.p(a0,null,null,null,null,null,null,null,null),null,B.am,null,null,null,null,null,null,null,null,null,null))}p=2
 s=14
 break
 case 12:p=11
-a6=o.pop()
-k=A.ae(a6)
-a3=n.c
-if(a3!=null)a3.O(t.q).f.b7(A.cD(null,null,null,null,null,B.O,null,A.p("Email send error: "+A.h(k),null,null,null,null,null,null,null,null),null,B.am,null,null,null,null,null,null,null,null,null,null))
+a8=o.pop()
+j=A.ae(a8)
+a5=n.c
+if(a5!=null)a5.O(t.q).f.b7(A.cD(null,null,null,null,null,B.O,null,A.p("Email send error: "+A.h(j),null,null,null,null,null,null,null,null),null,B.am,null,null,null,null,null,null,null,null,null,null))
 s=14
 break
 case 11:s=2
 break
 case 14:s=1
 break
-case 10:s=a8==="whatsapp"?16:17
+case 10:s=b0==="whatsapp"?16:17
 break
 case 16:p=19
 s=22
-return A.v(a2.du("/communications/whatsapp",A.E(["enquiryId",n.p2,"templateName","quotation_send","quotationId",n.p3],t.N,t.l),t.z),$async$nu)
-case 22:j=b0
-a3=j.a
-if(a3==null)a0=null
-else{a3=J.j(a3,"mode")
-a0=a3==null?null:J.H(a3)}i=a0
-s=!J.c(i,"live_meta")?23:25
+return A.v(a4.du("/communications/whatsapp",A.E(["enquiryId",n.p2,"templateName","quotation_send","quotationId",n.p3],t.N,t.l),t.z),$async$nu)
+case 22:i=b2
+a5=i.a
+if(a5==null)a2=null
+else{a5=J.j(a5,"mode")
+a2=a5==null?null:J.H(a5)}h=a2
+s=!J.c(h,"live_meta")?23:25
 break
-case 23:h=B.m.ak(n.k1.a.a)
-a3=B.m.ak(n.k2.a.a)
-b=A.bd("[^0-9]",!0,!1,!1)
-g=A.c0(a3,b,"")
-a3=n.Q
-if(a3==null)a1=null
-else{a3=J.j(a3,"name")
-a3=a3==null?null:J.H(a3)
-a1=a3}f=a1==null?"Honda":a1
-e=A.dE(n.gxU())
-d=A.mP(2,"Namaste "+A.h(h)+", thank you for configuring your "+A.h(f)+" ("+n.ax+") at Yash Honda!\n\n\u2022 Quote No: "+A.h(a5)+"\n\u2022 Estimated Total: "+A.h(e)+"*\n\u2022 Print / View Quote: "+A.hw()+"/quotations/"+A.h(a5)+"/print\n\nYash Honda Authorised Dealership, Pune.",B.bj,!1)
+case 23:g=B.m.ak(n.k1.a.a)
+a5=B.m.ak(n.k2.a.a)
+a=A.bd("[^0-9]",!0,!1,!1)
+f=A.c0(a5,a,"")
+a5=n.Q
+if(a5==null)a3=null
+else{a5=J.j(a5,"name")
+a5=a5==null?null:J.H(a5)
+a3=a5}e=a3==null?"Honda":a3
+d=A.dE(n.gxU())
+c=A.mP(2,"Namaste "+A.h(g)+", thank you for configuring your "+A.h(e)+" ("+n.ax+") at Yash Honda!\n\n\u2022 Quote No: "+A.h(a7)+"\n\u2022 Estimated Total: "+A.h(d)+"*\n\u2022 Print / View Quote: "+A.hw()+"/quotations/"+A.h(a7)+"/print\n\nYash Honda Authorised Dealership, Pune.",B.bj,!1)
 s=26
-return A.v(A.oa(A.dl("https://wa.me/91"+A.h(g)+"?text="+A.h(d),0,null),B.hf),$async$nu)
+return A.v(A.oa(A.dl("https://wa.me/91"+A.h(f)+"?text="+A.h(c),0,null),B.hf),$async$nu)
 case 26:s=24
 break
-case 25:a3=n.c
-if(a3!=null)a3.O(t.q).f.b7(B.aZV)
+case 25:a5=n.c
+if(a5!=null)a5.O(t.q).f.b7(B.aZV)
 case 24:p=2
 s=21
 break
 case 19:p=18
-a7=o.pop()
-c=A.ae(a7)
-a3=n.c
-if(a3!=null)a3.O(t.q).f.b7(A.cD(null,null,null,null,null,B.O,null,A.p("WhatsApp error: "+A.h(c),null,null,null,null,null,null,null,null),null,B.am,null,null,null,null,null,null,null,null,null,null))
+a9=o.pop()
+b=A.ae(a9)
+a5=n.c
+if(a5!=null)a5.O(t.q).f.b7(A.cD(null,null,null,null,null,B.O,null,A.p("WhatsApp error: "+A.h(b),null,null,null,null,null,null,null,null),null,B.am,null,null,null,null,null,null,null,null,null,null))
 s=21
 break
 case 18:s=2

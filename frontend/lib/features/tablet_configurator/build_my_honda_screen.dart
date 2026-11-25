@@ -3323,11 +3323,15 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           'quotationId': _createdQuotationId,
         });
         if (mounted) {
+          final ok = res.data is Map && res.data['success'] == true;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              backgroundColor: const Color(0xFF16A34A),
+              backgroundColor:
+                  ok ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
               content: Text(res.data?['message']?.toString() ??
-                  'Quotation emailed successfully!'),
+                  (ok
+                      ? 'Quotation emailed successfully!'
+                      : 'Failed to send email.')),
             ),
           );
         }

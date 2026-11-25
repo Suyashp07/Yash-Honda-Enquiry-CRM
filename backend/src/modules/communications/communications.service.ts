@@ -313,8 +313,14 @@ export class CommunicationsService {
       `Official Yash Honda Quotation - ${quotation.vehicle?.name || 'Honda'} (${quotation.quoteNumber})`;
     const htmlContent = this.generateQuotationHtml(quotation, enquiry, settings);
 
-    const brevoApiKey = process.env.BREVO_API_KEY?.trim();
-    const senderEmail = process.env.BREVO_SENDER_EMAIL?.trim() || 'quotes@yashhonda.com';
+    const brevoApiKey = process.env.BREVO_API_KEY?.trim().replace(/^["']|["']$/g, '');
+    const rawSender = process.env.BREVO_SENDER_EMAIL?.trim().replace(/^["']|["']$/g, '');
+    const senderEmail =
+      rawSender && rawSender.includes('@')
+        ? rawSender
+        : settings?.email && String(settings.email).includes('@')
+        ? String(settings.email).trim()
+        : 'quotes@yashhonda.com';
     const senderName = settings.companyName || 'Yash Honda Pune';
 
     let deliveryStatus = 'sent';
