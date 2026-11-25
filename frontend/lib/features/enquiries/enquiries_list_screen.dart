@@ -1216,6 +1216,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                               child: SingleChildScrollView(
                                 scrollDirection: Axis.horizontal,
                                 child: DataTable(
+                                  showCheckboxColumn: false,
                                   columnSpacing: 18,
                                   headingRowHeight: 40,
                                   dataRowMinHeight: 44,
