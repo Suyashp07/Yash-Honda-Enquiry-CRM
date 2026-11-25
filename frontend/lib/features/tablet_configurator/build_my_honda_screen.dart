@@ -1326,113 +1326,52 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                                 ),
                                               ),
                                             ),
-                                          Positioned(
-                                            bottom: 12,
-                                            right: 12,
-                                            child: InkWell(
-                                              onTap: () => _selectVehicle(v,
-                                                  advance: true),
-                                              child: Container(
-                                                width: 34,
-                                                height: 34,
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.white,
-                                                  shape: BoxShape.circle,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Color(0x26000000),
-                                                      blurRadius: 8,
-                                                      offset: Offset(0, 2),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: const Icon(
-                                                    Icons.chevron_right_rounded,
-                                                    color: Color(0xFFDC2626),
-                                                    size: 22),
-                                              ),
-                                            ),
-                                          ),
                                         ],
                                       ),
                                     ),
                                   ),
 
-                                  // Bottom Price + Customise CTA Bar (Mockup 2)
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        16, 12, 14, 14),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                v['name']?.toString() ?? '',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: Color(0xFF334155),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                '${CurrencyFormatter.format(displayPrice)}*',
-                                                style: const TextStyle(
-                                                  fontSize: 19,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: Color(0xFF0F172A),
-                                                  letterSpacing: -0.4,
-                                                ),
-                                              ),
-                                              Text(
-                                                _showOnRoadPrice
-                                                    ? 'On-Road Price (Pune)'
-                                                    : 'Ex-Showroom Price',
-                                                style: const TextStyle(
-                                                  fontSize: 10.5,
-                                                  color: Color(0xFF94A3B8),
-                                                ),
-                                              ),
-                                            ],
+                                  // Bottom Vehicle Name & Price Bar
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          16, 12, 16, 14),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            v['name']?.toString() ?? '',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF334155),
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                const Color(0xFFDC2626),
-                                            foregroundColor: Colors.white,
-                                            elevation: 0,
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(20)),
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 14, vertical: 9),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${CurrencyFormatter.format(displayPrice)}*',
+                                            style: const TextStyle(
+                                              fontSize: 19,
+                                              fontWeight: FontWeight.w900,
+                                              color: Color(0xFF0F172A),
+                                              letterSpacing: -0.4,
+                                            ),
                                           ),
-                                          onPressed: () =>
-                                              _selectVehicle(v, advance: true),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text('Customise',
-                                                  style: TextStyle(
-                                                      fontSize: 12,
-                                                      fontWeight:
-                                                          FontWeight.w700)),
-                                              SizedBox(width: 4),
-                                              Icon(Icons.arrow_forward_rounded,
-                                                  size: 14),
-                                            ],
+                                          Text(
+                                            _showOnRoadPrice
+                                                ? 'On-Road Price (Pune)'
+                                                : 'Ex-Showroom Price',
+                                            style: const TextStyle(
+                                              fontSize: 10.5,
+                                              color: Color(0xFF94A3B8),
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],
