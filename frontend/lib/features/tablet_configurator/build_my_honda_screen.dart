@@ -73,20 +73,6 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   List<Map<String, dynamic>> _backendBranches = [];
   List<Map<String, dynamic>> _backendColours = [];
 
-  // Fallback Local Asset Paths (used ONLY when admin hasn't uploaded vehicle/colour photos yet)
-  static const Map<String, String> _vehicleFallbackImages = {
-    'SHN100': 'assets/configurator/v_shine100.jpg',
-    'SP125': 'assets/configurator/v_sp125.jpg',
-    'SHN125': 'assets/configurator/v_shine125.jpg',
-    'CB300F': 'assets/configurator/v_cb300f.jpg',
-    'CB350H': 'assets/configurator/hero_bigbike.png',
-    'CB350RS': 'assets/configurator/hero_cb300f_full.webp',
-    'CB300R': 'assets/configurator/hero_bike_black.png',
-    'ACT110DLX': 'assets/configurator/v_activa110.jpg',
-    'ACT6G': 'assets/configurator/v_activa110.jpg',
-    'DIO125': 'assets/configurator/hero_scooter.png',
-  };
-
   final List<Map<String, dynamic>> _fallbackCatalog = [
     {
       'id': 'v-shine125',
@@ -515,24 +501,19 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     ];
   }
 
-  String _resolveListingImage(Map<String, dynamic> v) {
+  /// Returns the listing image URL for a vehicle card in Step 2.
+  /// Priority: backend listingImageUrl → detailImageUrl → null (show placeholder).
+  String? _resolveListingImage(Map<String, dynamic> v) {
     final uploaded = v['listingImageUrl']?.toString();
     if (uploaded != null && uploaded.isNotEmpty) return uploaded;
     final detail = v['detailImageUrl']?.toString();
     if (detail != null && detail.isNotEmpty) return detail;
-    final code = v['code']?.toString() ?? '';
-    if (_vehicleFallbackImages.containsKey(code)) {
-      return _vehicleFallbackImages[code]!;
-    }
-    if (v['category'] == 'Scooter')
-      return 'assets/configurator/v_activa110.jpg';
-    if (v['category'] == 'BigBike') {
-      return 'assets/configurator/hero_cb300f_full.webp';
-    }
-    return 'assets/configurator/v_sp125.jpg';
+    return null; // No image uploaded → show placeholder
   }
 
-  String _resolveShowcaseImage() {
+  /// Returns the showcase image URL for Steps 3-7 large panel.
+  /// Priority: per-colour backend image → vehicle detail → vehicle listing → null.
+  String? _resolveShowcaseImage() {
     if (_selectedColourImageUrl != null &&
         _selectedColourImageUrl!.isNotEmpty) {
       return _selectedColourImageUrl!;
@@ -541,25 +522,104 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     if (detail != null && detail.isNotEmpty) return detail;
     final listing = _selectedVehicle?['listingImageUrl']?.toString();
     if (listing != null && listing.isNotEmpty) return listing;
+    return null; // No image → show placeholder
+  }
 
-    // Curated high-res fallback by category & selected colour
-    if (_selectedCategory == 'Scooter') {
-      return 'assets/configurator/hero_scooter.png';
-    }
-    if (_selectedCategory == 'BigBike') {
-      return 'assets/configurator/hero_bigbike.png';
-    }
-    final cLow = _selectedColourName.toLowerCase();
-    if (cLow.contains('black') || cLow.contains('grey')) {
-      return 'assets/configurator/hero_bike_black.png';
-    }
-    if (cLow.contains('white')) {
-      return 'assets/configurator/hero_bike_white.png';
-    }
-    if (cLow.contains('blue')) {
-      return 'assets/configurator/hero_bike_blue.png';
-    }
-    return 'assets/configurator/hero_cb300f_full.webp';
+  /// Full-size, responsive showcase stage for Steps 3–7.
+  /// Displays the backend per-colour / detail / listing image at maximum stage size,
+  /// or a clean studio placeholder when no image has been uploaded in Admin Panel yet.
+  Widget _buildShowcaseImageBox({bool animate = false}) {
+    final imgUrl = _resolveShowcaseImage();
+    final vName = _selectedVehicle?['name']?.toString() ?? 'Selected Vehicle';
+    final placeholder = Container(
+      width: double.infinity,
+      height: double.infinity,
+      constraints: const BoxConstraints(maxWidth: 480, maxHeight: 340),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(Icons.two_wheeler_outlined,
+                    size: 34, color: Color(0xFF94A3B8)),
+                Positioned(
+                  right: 10,
+                  bottom: 10,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: _selectedColourValue,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            '$vName · $_selectedColourName',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'No image uploaded for this colour yet.\nUpload in Admin Panel → Vehicle Masters → Media.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF64748B),
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final media = SmartMediaImage(
+      key: ValueKey(
+          '${_selectedVehicle?['id']}-$_selectedColourName-${imgUrl ?? 'none'}'),
+      source: imgUrl,
+      width: double.infinity,
+      height: double.infinity,
+      fit: BoxFit.contain,
+      fallback: Center(child: placeholder),
+    );
+
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        child: Center(
+          child: animate
+              ? AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 240),
+                  child: media,
+                )
+              : media,
+        ),
+      ),
+    );
   }
 
   void _nextStep() {
@@ -1203,6 +1263,42 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                             child: SmartMediaImage(
                                               source: _resolveListingImage(v),
                                               fit: BoxFit.cover,
+                                              fallback: Center(
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(16),
+                                                  child: Column(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.two_wheeler_outlined,
+                                                        size: 42,
+                                                        color: Color(0xFF94A3B8),
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        v['name']?.toString() ?? '',
+                                                        textAlign: TextAlign.center,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w700,
+                                                          color: Color(0xFF475569),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 2),
+                                                      const Text(
+                                                        'Upload image in Admin Panel',
+                                                        textAlign: TextAlign.center,
+                                                        style: TextStyle(
+                                                          fontSize: 10.5,
+                                                          color: Color(0xFF94A3B8),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
                                           if (cc != null)
@@ -1389,21 +1485,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             children: [
               _buildHeroHeadline('CHOOSE YOUR ', 'COLOUR',
                   subtitle: 'Make it truly yours.'),
-              const Spacer(),
-              Center(
-                child: SizedBox(
-                  height: 360,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 240),
-                    child: SmartMediaImage(
-                      key: ValueKey(
-                          '${_selectedVehicle?['id']}-$_selectedColourName'),
-                      source: _resolveShowcaseImage(),
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-              ),
+              _buildShowcaseImageBox(animate: true),
               const SizedBox(height: 8),
               Center(
                 child: Container(
@@ -1438,7 +1520,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -1562,17 +1644,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             children: [
               _buildHeroHeadline('ADD ', 'ACCESSORIES',
                   subtitle: 'Personalise your ride, your way.'),
-              const Spacer(),
-              Center(
-                child: SizedBox(
-                  height: 350,
-                  child: SmartMediaImage(
-                    source: _resolveShowcaseImage(),
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-              const Spacer(),
+              _buildShowcaseImageBox(),
             ],
           ),
         ),
@@ -1862,17 +1934,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             children: [
               _buildHeroHeadline('CHOOSE YOUR ', 'PAYMENT OPTION',
                   subtitle: 'Pick what works best for you.'),
-              const Spacer(),
-              Center(
-                child: SizedBox(
-                  height: 350,
-                  child: SmartMediaImage(
-                    source: _resolveShowcaseImage(),
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-              const Spacer(),
+              _buildShowcaseImageBox(),
             ],
           ),
         ),
@@ -2194,17 +2256,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               _buildHeroHeadline('EXCHANGE YOUR ', 'OLD RIDE',
                   subtitle:
                       'Trade in your current two-wheeler for a better deal.'),
-              const Spacer(),
-              Center(
-                child: SizedBox(
-                  height: 350,
-                  child: SmartMediaImage(
-                    source: _resolveShowcaseImage(),
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-              const Spacer(),
+              _buildShowcaseImageBox(),
             ],
           ),
         ),
@@ -2471,17 +2523,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                         ),
                       ),
                     ],
-                    const Spacer(),
-                    Center(
-                      child: SizedBox(
-                        height: 330,
-                        child: SmartMediaImage(
-                          source: _resolveShowcaseImage(),
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
+                    _buildShowcaseImageBox(),
                   ],
                 ),
               ),
