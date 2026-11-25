@@ -3,12 +3,15 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/api_constants.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/providers/branch_provider.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/file_download.dart';
 import '../admin/widgets/configurator_media_dialogs.dart';
 import '../auth/auth_notifier.dart';
 
@@ -3283,7 +3286,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     final dio = ref.read(dioProvider);
     final quoteNo = _createdQuoteNumber ?? _createdQuotationId ?? '';
 
-    if (actionType == 'print' || actionType == 'download') {
+    if (actionType == 'print') {
       if (quoteNo.isEmpty) return;
       final printUrl = '${ApiConstants.baseUrl}/quotations/$quoteNo/print';
       final uri = Uri.parse(printUrl);
@@ -3292,14 +3295,16 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFF16A34A),
-            content: Text(
-              actionType == 'print'
-                  ? 'Opening printable quotation #$quoteNo...'
-                  : 'Quotation #$quoteNo ready to Save as PDF / Download.',
-            ),
+            content: Text('Opening printable quotation #$quoteNo...'),
           ),
         );
       }
+      return;
+    }
+
+    if (actionType == 'download') {
+      if (quoteNo.isEmpty) return;
+      await _downloadQuotationPdf(quoteNo);
       return;
     }
 
@@ -3372,6 +3377,333 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text('WhatsApp error: $e')));
         }
+      }
+    }
+  }
+
+  String _pdfRs(num amount) =>
+      CurrencyFormatter.format(amount).replaceAll('₹', 'Rs. ');
+
+  Future<void> _downloadQuotationPdf(String quoteNo) async {
+    try {
+      final doc = pw.Document();
+      final custName = _customerNameController.text.trim();
+      final custMobile = _customerMobileController.text.trim();
+      final custEmail = _customerEmailController.text.trim();
+      final vName = _selectedVehicle?['name']?.toString() ?? 'Honda Vehicle';
+      final branchObj = _backendBranches.firstWhere(
+        (b) => b['id']?.toString() == _selectedBranchId,
+        orElse: () => <String, dynamic>{},
+      );
+      final branchLabel = branchObj.isNotEmpty
+          ? '${branchObj['name']} (${branchObj['wing'] ?? ''})'
+          : 'Yash Honda Pune';
+
+      final selectedOptional = _optionalAccessories
+          .where((a) =>
+              _selectedOptionalAccessoryIds.contains(a['id'].toString()))
+          .toList();
+      final now = DateTime.now();
+      final dateStr =
+          '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+
+      doc.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (ctx) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Brand Header
+              pw.Container(
+                padding: const pw.EdgeInsets.all(16),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#DC2626'),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'YASH HONDA',
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 20,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Text(
+                          'Authorised Honda Two-Wheeler Dealership · $branchLabel',
+                          style: const pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text(
+                          'QUOTATION',
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 13,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.Text(
+                          '#$quoteNo',
+                          style: const pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 11,
+                          ),
+                        ),
+                        pw.Text(
+                          'Date: $dateStr',
+                          style: const pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 9.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 18),
+
+              // Customer Details
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#F8FAFC'),
+                  border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0')),
+                  borderRadius: pw.BorderRadius.circular(6),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('PREPARED FOR',
+                            style: pw.TextStyle(
+                                fontSize: 9,
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColor.fromHex('#64748B'))),
+                        pw.SizedBox(height: 4),
+                        pw.Text(custName.isNotEmpty ? custName : 'Valued Customer',
+                            style: pw.TextStyle(
+                                fontSize: 13, fontWeight: pw.FontWeight.bold)),
+                        if (custMobile.isNotEmpty)
+                          pw.Text('Mobile: +91 $custMobile',
+                              style: const pw.TextStyle(fontSize: 10.5)),
+                        if (custEmail.isNotEmpty)
+                          pw.Text('Email: $custEmail',
+                              style: const pw.TextStyle(fontSize: 10.5)),
+                      ],
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text('PAYMENT MODE',
+                            style: pw.TextStyle(
+                                fontSize: 9,
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColor.fromHex('#64748B'))),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          _paymentMode == 'Finance'
+                              ? 'Finance (${_selectedFinancierName ?? _selectedFinanceType})'
+                              : 'Pay in Cash',
+                          style: pw.TextStyle(
+                              fontSize: 11, fontWeight: pw.FontWeight.bold),
+                        ),
+                        pw.Text(
+                          _wantExchange
+                              ? 'Exchange: ${_exchangeModelController.text.trim()}'
+                              : 'Exchange: No',
+                          style: const pw.TextStyle(fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 18),
+
+              // Vehicle & Accessories Breakdown Table
+              pw.Text(
+                'VEHICLE & CONFIGURATION BREAKDOWN',
+                style: pw.TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColor.fromHex('#0F172A'),
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColor.fromHex('#E2E8F0')),
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(3),
+                  1: const pw.FlexColumnWidth(1.5),
+                  2: const pw.FlexColumnWidth(1.5),
+                },
+                children: [
+                  pw.TableRow(
+                    decoration:
+                        pw.BoxDecoration(color: PdfColor.fromHex('#F1F5F9')),
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('Item / Description',
+                            style: pw.TextStyle(
+                                fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('Type',
+                            style: pw.TextStyle(
+                                fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('Amount',
+                            textAlign: pw.TextAlign.right,
+                            style: pw.TextStyle(
+                                fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                  pw.TableRow(
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text('$vName\nColour: $_selectedColourName',
+                            style: const pw.TextStyle(fontSize: 10.5)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text(
+                            _showOnRoadPrice ? 'On-Road' : 'Ex-Showroom',
+                            style: const pw.TextStyle(fontSize: 10)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text(_pdfRs(_vehicleBasePrice),
+                            textAlign: pw.TextAlign.right,
+                            style: pw.TextStyle(
+                                fontSize: 10.5, fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                  for (final acc in _standardAccessories)
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(acc['name']?.toString() ?? '',
+                              style: const pw.TextStyle(fontSize: 10)),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Standard',
+                              style: const pw.TextStyle(fontSize: 10)),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Included',
+                              textAlign: pw.TextAlign.right,
+                              style: const pw.TextStyle(fontSize: 10)),
+                        ),
+                      ],
+                    ),
+                  for (final acc in selectedOptional)
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(acc['name']?.toString() ?? '',
+                              style: const pw.TextStyle(fontSize: 10)),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text('Optional Add-on',
+                              style: const pw.TextStyle(fontSize: 10)),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Text(
+                              _pdfRs(((acc['price'] ?? 0) as num).toDouble()),
+                              textAlign: pw.TextAlign.right,
+                              style: const pw.TextStyle(fontSize: 10)),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              pw.SizedBox(height: 16),
+
+              // Estimated Grand Total Box
+              pw.Container(
+                padding: const pw.EdgeInsets.all(14),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#FEF2F2'),
+                  border: pw.Border.all(color: PdfColor.fromHex('#FECACA')),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'Estimated Total (${_showOnRoadPrice ? 'On-Road' : 'Ex-Showroom'} + Add-ons)',
+                      style: pw.TextStyle(
+                          fontSize: 11.5, fontWeight: pw.FontWeight.bold),
+                    ),
+                    pw.Text(
+                      '${_pdfRs(_estimatedTotal)}*',
+                      style: pw.TextStyle(
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColor.fromHex('#DC2626'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              pw.Spacer(),
+              pw.Divider(color: PdfColor.fromHex('#E2E8F0')),
+              pw.Text(
+                '* Prices are indicative and subject to RTO/insurance charges and final dealership confirmation at delivery.',
+                style: pw.TextStyle(
+                    fontSize: 8.5, color: PdfColor.fromHex('#64748B')),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final bytes = await doc.save();
+      downloadFileBytes(bytes, 'Quotation-$quoteNo.pdf', 'application/pdf');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF16A34A),
+            content: Text('Downloaded Quotation-$quoteNo.pdf'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not download PDF: $e')),
+        );
       }
     }
   }
