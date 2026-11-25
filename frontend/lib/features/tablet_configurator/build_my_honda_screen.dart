@@ -589,16 +589,16 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Subtle light-grey Honda Wing watermark matching designer mockups
+            // Honda Wing watermark matching designer mockups
             if (_currentStep <= 6)
               Positioned(
-                top: 86,
-                left: MediaQuery.of(context).size.width * 0.38,
+                top: 60,
+                right: 300, // sits behind the left content stage, not over sidebar
                 child: IgnorePointer(
                   child: Opacity(
-                    opacity: 0.06,
+                    opacity: 0.055,
                     child: CustomPaint(
-                      size: const Size(340, 170),
+                      size: const Size(560, 280),
                       painter:
                           _HondaWingPainter(color: const Color(0xFF0F172A)),
                     ),
@@ -1308,13 +1308,12 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        OutlinedButton(
-                                          style: OutlinedButton.styleFrom(
-                                            side: const BorderSide(
-                                                color: Color(0xFFDC2626),
-                                                width: 1.3),
-                                            foregroundColor:
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
                                                 const Color(0xFFDC2626),
+                                            foregroundColor: Colors.white,
+                                            elevation: 0,
                                             shape: RoundedRectangleBorder(
                                                 borderRadius:
                                                     BorderRadius.circular(20)),
