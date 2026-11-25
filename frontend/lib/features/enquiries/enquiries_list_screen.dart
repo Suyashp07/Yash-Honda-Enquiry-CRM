@@ -1114,47 +1114,48 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                 ),
                 const SizedBox(width: 12),
 
-                // Search box
+                // Search box (clean single-layer Material input)
                 Tooltip(
                   message: 'Quick search enquiries by customer name, 10-digit mobile, or quotation number',
-                  child: Container(
-                    width: 210,
+                  child: SizedBox(
+                    width: 250,
                     height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.search, size: 16, color: Color(0xFF94A3B8)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchCtrl,
-                            style: const TextStyle(fontSize: 12),
-                            decoration: const InputDecoration(
-                              hintText: 'Name, mobile or quote n',
-                              hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            onChanged: (val) {
-                              setState(() => _searchQuery = val);
-                            },
-                          ),
+                    child: TextField(
+                      controller: _searchCtrl,
+                      style: const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white,
+                        hintText: 'Search name, mobile or quote...',
+                        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.only(left: 10, right: 6),
+                          child: Icon(Icons.search, size: 16, color: Color(0xFF64748B)),
                         ),
-                        if (_searchQuery.isNotEmpty)
-                          GestureDetector(
-                            onTap: () {
-                              _searchCtrl.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                            child: const Icon(Icons.close, size: 14, color: Color(0xFF94A3B8)),
-                          ),
-                      ],
+                        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close, size: 15, color: Color(0xFF94A3B8)),
+                                padding: EdgeInsets.zero,
+                                onPressed: () {
+                                  _searchCtrl.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.4),
+                        ),
+                      ),
+                      onChanged: (val) {
+                        setState(() => _searchQuery = val);
+                      },
                     ),
                   ),
                 ),
