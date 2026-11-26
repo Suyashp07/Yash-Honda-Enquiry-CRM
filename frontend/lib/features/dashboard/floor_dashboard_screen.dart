@@ -878,52 +878,50 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   Widget _buildSearchAndControlsBar() {
     return Row(
       children: [
-        // Search box matching prototype: Search rep or customer
-        Container(
+        // Search box: single-layer aligned 36px control matching toolbar height
+        SizedBox(
           width: 300,
-          height: 34,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.search, size: 16, color: Color(0xFF94A3B8)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (val) =>
-                      setState(() => _searchQuery = val.trim().toLowerCase()),
-                  style:
-                      const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                    hintText: 'Search rep or customer',
-                    hintStyle: const TextStyle(
-                        fontSize: 12.5, color: Color(0xFF94A3B8)),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 14),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                                minWidth: 20, minHeight: 20),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                  ),
-                ),
+          height: 36,
+          child: TextField(
+            controller: _searchController,
+            onChanged: (val) =>
+                setState(() => _searchQuery = val.trim().toLowerCase()),
+            textAlignVertical: TextAlignVertical.center,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              isDense: true,
+              constraints: const BoxConstraints(maxHeight: 36),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              hintText: 'Search rep or customer',
+              hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
+              prefixIcon: const Icon(Icons.search, size: 17, color: Color(0xFF64748B)),
+              prefixIconConstraints: const BoxConstraints(minWidth: 34, minHeight: 36),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
               ),
-            ],
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppColors.brand, width: 1.2),
+              ),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 15, color: Color(0xFF64748B)),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 36),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
+            ),
           ),
         ),
 
