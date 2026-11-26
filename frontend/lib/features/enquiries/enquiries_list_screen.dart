@@ -45,6 +45,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
   String _filterBranchName = 'All';
 
   final TextEditingController _searchCtrl = TextEditingController();
+  final ScrollController _verticalScrollCtrl = ScrollController();
+  final ScrollController _horizontalScrollCtrl = ScrollController();
 
   final List<String> _tabs = [
     'All',
@@ -63,6 +65,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _verticalScrollCtrl.dispose();
+    _horizontalScrollCtrl.dispose();
     super.dispose();
   }
 
@@ -1699,11 +1703,29 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.vertical,
+                            child: Scrollbar(
+                              controller: _verticalScrollCtrl,
+                              thumbVisibility: true,
+                              trackVisibility: true,
+                              interactive: true,
+                              thickness: 9,
+                              radius: const Radius.circular(6),
                               child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: DataTable(
+                                controller: _verticalScrollCtrl,
+                                scrollDirection: Axis.vertical,
+                                padding: const EdgeInsets.only(right: 12),
+                                child: Scrollbar(
+                                  controller: _horizontalScrollCtrl,
+                                  thumbVisibility: true,
+                                  interactive: true,
+                                  thickness: 7,
+                                  radius: const Radius.circular(6),
+                                  notificationPredicate: (n) => n.depth == 0,
+                                  child: SingleChildScrollView(
+                                    controller: _horizontalScrollCtrl,
+                                    scrollDirection: Axis.horizontal,
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: DataTable(
                                   showCheckboxColumn: false,
                                   columnSpacing: 18,
                                   headingRowHeight: 40,
@@ -2515,6 +2537,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                       ],
                                     );
                                   }).toList(),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
