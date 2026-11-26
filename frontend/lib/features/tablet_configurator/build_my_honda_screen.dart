@@ -3154,7 +3154,18 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
       chosenBranchId = activeBranch;
     } else if (user?.branches.isNotEmpty == true) {
       chosenBranchId = user!.branches.first.id;
+    } else if (_backendBranches.isNotEmpty) {
+      chosenBranchId = _backendBranches.first['id']?.toString();
     }
+
+    String chosenBuyingWhen = 'Immediate';
+    DateTime? customBuyDate;
+    const buyingOptions = <Map<String, String>>[
+      {'label': 'Immediately', 'value': 'Immediate'},
+      {'label': '3 Days', 'value': 'Within 3 Days'},
+      {'label': 'This Week', 'value': 'This Week'},
+      {'label': 'This Month', 'value': 'This Month'},
+    ];
 
     await showDialog(
       context: context,
@@ -3250,31 +3261,101 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                         borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
-                if (_backendBranches.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue:
-                        _backendBranches.any((b) => b['id'] == chosenBranchId)
-                            ? chosenBranchId
-                            : _backendBranches.first['id']?.toString(),
-                    decoration: InputDecoration(
-                      labelText: 'Showroom Branch',
-                      prefixIcon: const Icon(Icons.storefront_outlined),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    items: _backendBranches
-                        .map((b) => DropdownMenuItem<String>(
-                              value: b['id']?.toString(),
-                              child: Text(
-                                '${b['name']} (${b['wing']})',
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                            ))
-                        .toList(),
-                    onChanged: (val) => setDlgState(() => chosenBranchId = val),
+                const SizedBox(height: 14),
+                const Text(
+                  'When are you planning to buy?',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF334155),
                   ),
-                ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ...buyingOptions.map((opt) {
+                      final val = opt['value']!;
+                      final isSel =
+                          customBuyDate == null && chosenBuyingWhen == val;
+                      return ChoiceChip(
+                        label: Text(opt['label']!),
+                        selected: isSel,
+                        onSelected: (_) => setDlgState(() {
+                          customBuyDate = null;
+                          chosenBuyingWhen = val;
+                        }),
+                        selectedColor: const Color(0xFFDC2626),
+                        backgroundColor: const Color(0xFFF8FAFC),
+                        side: BorderSide(
+                          color: isSel
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFFE2E8F0),
+                        ),
+                        labelStyle: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isSel
+                              ? Colors.white
+                              : const Color(0xFF0F172A),
+                        ),
+                        showCheckmark: false,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                      );
+                    }),
+                    ChoiceChip(
+                      avatar: Icon(
+                        Icons.calendar_today_outlined,
+                        size: 14,
+                        color: customBuyDate != null
+                            ? Colors.white
+                            : const Color(0xFF475569),
+                      ),
+                      label: Text(
+                        customBuyDate != null
+                            ? '${customBuyDate!.day.toString().padLeft(2, '0')}/${customBuyDate!.month.toString().padLeft(2, '0')}/${customBuyDate!.year}'
+                            : 'Custom Date',
+                      ),
+                      selected: customBuyDate != null,
+                      onSelected: (_) async {
+                        final now = DateTime.now();
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate:
+                              customBuyDate ?? now.add(const Duration(days: 7)),
+                          firstDate: now,
+                          lastDate: now.add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setDlgState(() {
+                            customBuyDate = picked;
+                            chosenBuyingWhen =
+                                '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                          });
+                        }
+                      },
+                      selectedColor: const Color(0xFFDC2626),
+                      backgroundColor: const Color(0xFFF8FAFC),
+                      side: BorderSide(
+                        color: customBuyDate != null
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFFE2E8F0),
+                      ),
+                      labelStyle: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: customBuyDate != null
+                            ? Colors.white
+                            : const Color(0xFF0F172A),
+                      ),
+                      showCheckmark: false,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -3322,6 +3403,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                         mobile: mobile,
                         email: email.isEmpty ? null : email,
                         branchId: chosenBranchId ?? '',
+                        buyingWhen: chosenBuyingWhen,
                       );
                       setDlgState(() => _isSubmitting = false);
                       if (ok && ctx.mounted) {
@@ -3354,6 +3436,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     required String mobile,
     String? email,
     required String branchId,
+    String buyingWhen = 'Immediate',
   }) async {
     setState(() => _isSubmitting = true);
     try {
@@ -3393,7 +3476,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         if (_paymentMode == 'Finance' && _selectedFinancierId != null)
           'financierId': _selectedFinancierId,
         'exchange': _wantExchange ? 'Yes' : 'No',
-        'buyingWhen': 'Immediate',
+        'buyingWhen': buyingWhen,
         'remarks': remarks,
         if (_selectedRepId != null) 'assignedToId': _selectedRepId,
         'quotation': {
