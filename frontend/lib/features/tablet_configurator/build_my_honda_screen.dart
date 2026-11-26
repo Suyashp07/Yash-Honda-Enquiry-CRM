@@ -1793,38 +1793,48 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                 _invalidateQuoteCache();
               });
             },
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: SizedBox(
-        width: 118,
+        width: 162,
         child: Column(
           children: [
-            Container(
-              width: 118,
-              height: 102,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              width: 162,
+              height: 136,
               decoration: BoxDecoration(
                 color: isSel && !isStandardCard
                     ? const Color(0xFFFEF2F2)
                     : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isSel && !isStandardCard
                       ? const Color(0xFFDC2626)
                       : const Color(0xFFE2E8F0),
-                  width: isSel && !isStandardCard ? 1.8 : 1.0,
+                  width: isSel && !isStandardCard ? 2.0 : 1.0,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isSel && !isStandardCard
+                        ? const Color(0x22DC2626)
+                        : const Color(0x0C0F172A),
+                    blurRadius: isSel && !isStandardCard ? 14 : 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Stack(
                 children: [
                   Positioned.fill(
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(11),
+                      borderRadius: BorderRadius.circular(14.5),
                       child: SmartMediaImage(
                         source: imgUrl,
                         fit: BoxFit.cover,
                         fallback: Center(
                           child: Icon(
                             _getAccessoryFallbackIcon(name),
-                            size: 34,
+                            size: 40,
                             color: const Color(0xFF475569),
                           ),
                         ),
@@ -1832,22 +1842,22 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                     ),
                   ),
                   Positioned(
-                    top: 6,
-                    right: 6,
+                    top: 8,
+                    right: 8,
                     child: isStandardCard
                         ? Container(
-                            width: 16,
-                            height: 16,
+                            width: 20,
+                            height: 20,
                             decoration: const BoxDecoration(
                               color: Color(0xFFDC2626),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.check,
-                                size: 11, color: Colors.white),
+                                size: 13, color: Colors.white),
                           )
                         : Container(
-                            width: 16,
-                            height: 16,
+                            width: 20,
+                            height: 20,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: isSel
@@ -1857,37 +1867,43 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 color: isSel
                                     ? const Color(0xFFDC2626)
                                     : const Color(0xFF0F172A),
-                                width: 1.3,
+                                width: 1.4,
                               ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x18000000),
+                                  blurRadius: 4,
+                                ),
+                              ],
                             ),
                             child: isSel
                                 ? const Icon(Icons.check,
-                                    size: 11, color: Colors.white)
+                                    size: 13, color: Colors.white)
                                 : null,
                           ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
                 color: Color(0xFF0F172A),
-                height: 1.2,
+                height: 1.25,
               ),
             ),
             if (!isStandardCard) ...[
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(
                 '+${CurrencyFormatter.format(price)}',
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFFDC2626),
                 ),
