@@ -435,30 +435,11 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Tooltip(
-                message: 'Print summary view',
-                child: InkWell(
-                  onTap: _handlePrint,
-                  borderRadius: BorderRadius.circular(6),
-                  child: Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.print_outlined, size: 16, color: Color(0xFF475569)),
-                        SizedBox(width: 6),
-                        Text('Print', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-                      ],
-                    ),
-                  ),
-                ),
+              IconButton(
+                icon: const Icon(Icons.print_outlined, size: 20, color: Color(0xFF64748B)),
+                tooltip: 'Print / Export summary',
+                onPressed: _handlePrint,
               ),
-              const SizedBox(width: 6),
               IconButton(
                 icon: const Icon(Icons.refresh, size: 20, color: Color(0xFF64748B)),
                 tooltip: 'Reload latest dealership metrics from database',
