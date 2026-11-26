@@ -3058,39 +3058,87 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             style: TextStyle(
                 fontSize: 11.5, color: Color(0xFF64748B), height: 1.3),
           ),
-          const SizedBox(height: 24),
-          _buildSidebarCheckRow(
+          const SizedBox(height: 20),
+          _buildSidebarPriceRow(
             icon: Icons.two_wheeler_outlined,
             label: 'Vehicle',
-            isComplete: _selectedVehicle != null && _currentStep >= 3 ||
-                (_currentStep == 2 && _selectedVehicle != null),
+            subtitle: _selectedVehicle?['name']?.toString(),
+            valueText: _selectedVehicle == null
+                ? '—'
+                : CurrencyFormatter.format(_vehicleBasePrice),
+            valueColor: _selectedVehicle != null
+                ? const Color(0xFF0F172A)
+                : const Color(0xFF94A3B8),
           ),
-          const SizedBox(height: 16),
-          _buildSidebarCheckRow(
+          const SizedBox(height: 14),
+          _buildSidebarPriceRow(
             icon: Icons.palette_outlined,
             label: 'Colour',
-            isComplete: _currentStep >= 4 ||
-                (_currentStep == 3 && _selectedColourName.isNotEmpty),
+            subtitle: _selectedVehicle != null && _selectedColourName.isNotEmpty
+                ? _selectedColourName
+                : null,
+            colorDot: _selectedVehicle != null ? _selectedColourValue : null,
+            valueText: _selectedVehicle == null ? '—' : 'Included',
+            valueColor: _selectedVehicle != null
+                ? const Color(0xFF16A34A)
+                : const Color(0xFF94A3B8),
           ),
-          const SizedBox(height: 16),
-          _buildSidebarCheckRow(
+          const SizedBox(height: 14),
+          _buildSidebarPriceRow(
             icon: Icons.settings_outlined,
             label: 'Accessories',
-            isComplete:
-                _currentStep >= 5 || (_currentStep == 4 && accCount > 0),
+            subtitle: accCount > 0 ? '$accCount selected' : null,
+            valueText: _selectedVehicle == null
+                ? '—'
+                : (_selectedOptionalAccessoriesTotal > 0
+                    ? '+${CurrencyFormatter.format(_selectedOptionalAccessoriesTotal)}'
+                    : (_currentStep >= 4 ? '₹0' : '—')),
+            valueColor: _selectedOptionalAccessoriesTotal > 0
+                ? const Color(0xFFDC2626)
+                : (_currentStep >= 4 && _selectedVehicle != null
+                    ? const Color(0xFF475569)
+                    : const Color(0xFF94A3B8)),
           ),
-          const SizedBox(height: 16),
-          _buildSidebarCheckRow(
+          const SizedBox(height: 14),
+          _buildSidebarPriceRow(
             icon: Icons.monetization_on_outlined,
             label: 'Finance',
-            isComplete: _currentStep >= 6 || _currentStep == 5,
+            subtitle: _currentStep >= 5 || _paymentMode == 'Finance'
+                ? (_paymentMode == 'Finance'
+                    ? (_selectedFinancierName ?? _selectedFinanceType)
+                    : 'Pay in Cash')
+                : null,
+            valueText: _currentStep >= 5 || _paymentMode == 'Finance'
+                ? (_paymentMode == 'Finance' ? 'Finance' : 'Cash')
+                : '—',
+            valueColor: _currentStep >= 5 || _paymentMode == 'Finance'
+                ? const Color(0xFF0F172A)
+                : const Color(0xFF94A3B8),
           ),
-          const SizedBox(height: 16),
-          _buildSidebarCheckRow(
-            icon: Icons.sync_alt_rounded,
-            label: 'Exchange',
-            isComplete: _currentStep == 7,
-          ),
+          const SizedBox(height: 14),
+          Builder(builder: (context) {
+            final exVal = double.tryParse(
+                    _exchangeExpectedPriceController.text.trim()) ??
+                0;
+            return _buildSidebarPriceRow(
+              icon: Icons.sync_alt_rounded,
+              label: 'Exchange',
+              subtitle: _wantExchange &&
+                      _exchangeModelController.text.trim().isNotEmpty
+                  ? _exchangeModelController.text.trim()
+                  : null,
+              valueText: _wantExchange
+                  ? (exVal > 0
+                      ? '-${CurrencyFormatter.format(exVal)}'
+                      : 'Yes')
+                  : (_currentStep >= 6 ? 'No' : '—'),
+              valueColor: _wantExchange
+                  ? const Color(0xFF16A34A)
+                  : (_currentStep >= 6
+                      ? const Color(0xFF475569)
+                      : const Color(0xFF94A3B8)),
+            );
+          }),
           const Spacer(),
           const Text(
             'Estimated Price',
@@ -3154,37 +3202,79 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     );
   }
 
-  Widget _buildSidebarCheckRow({
+  Widget _buildSidebarPriceRow({
     required IconData icon,
     required String label,
-    required bool isComplete,
+    String? subtitle,
+    Color? colorDot,
+    required String valueText,
+    required Color valueColor,
   }) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: const Color(0xFF0F172A)),
-        const SizedBox(width: 12),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF0F172A),
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: Icon(icon, size: 17, color: const Color(0xFF0F172A)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              if (subtitle != null && subtitle.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    if (colorDot != null) ...[
+                      Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.only(right: 5),
+                        decoration: BoxDecoration(
+                          color: colorDot,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0x33000000),
+                            width: 0.6,
+                          ),
+                        ),
+                      ),
+                    ],
+                    Expanded(
+                      child: Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
           ),
         ),
-        const Spacer(),
-        if (isComplete)
-          Container(
-            width: 17,
-            height: 17,
-            decoration: const BoxDecoration(
-              color: Color(0xFF16A34A),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.check, size: 11, color: Colors.white),
-          )
-        else
-          const Text('—',
-              style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8))),
+        const SizedBox(width: 8),
+        Text(
+          valueText,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+            color: valueColor,
+          ),
+        ),
       ],
     );
   }
