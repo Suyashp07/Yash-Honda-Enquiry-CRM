@@ -21,6 +21,7 @@ if [ -d "frontend" ]; then
 fi
 
 echo "Resolving dependencies..."
+touch .env
 flutter pub get
 
 echo "Building Flutter Web application..."
