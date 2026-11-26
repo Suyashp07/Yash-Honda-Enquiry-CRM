@@ -1976,27 +1976,27 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                           Tooltip(
                                             message:
                                                 'Lead #${filtered.length - idx} • Quotation Revision $revCount',
-                                            child: Text(
-                                                '${filtered.length - idx}/$revCount',
-                                                style: const TextStyle(
-                                                    fontSize: 12,
-                                                    color: Color(0xFF94A3B8))),
-                                          ),
-                                        ),
-
-                                        // Name
-                                        DataCell(
-                                          InkWell(
-                                            onTap: () => _showEnquiryDetails(e),
-                                            child: Text(
-                                              customer['name'] ?? '-',
-                                              style: const TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Color(0xFF0F172A)),
+                                              child: Text(
+                                                  '${filtered.length - idx}/$revCount',
+                                                  style: const TextStyle(
+                                                      fontSize: 13.5,
+                                                      color: Color(0xFF94A3B8))),
                                             ),
                                           ),
-                                        ),
+
+                                          // Name
+                                          DataCell(
+                                            InkWell(
+                                              onTap: () => _showEnquiryDetails(e),
+                                              child: Text(
+                                                customer['name'] ?? '-',
+                                                style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Color(0xFF0F172A)),
+                                              ),
+                                            ),
+                                          ),
 
                                         // Mobile (Masked by default • Click to reveal)
                                         DataCell(
@@ -2051,7 +2051,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                                         Text(
                                                           displayMobile,
                                                           style: TextStyle(
-                                                            fontSize: 12,
+                                                            fontSize: 14,
                                                             fontWeight:
                                                                 isRevealed
                                                                     ? FontWeight
@@ -2152,7 +2152,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                                                   TextOverflow
                                                                       .ellipsis,
                                                               style: TextStyle(
-                                                                fontSize: 11,
+                                                                fontSize: 13,
                                                                 fontWeight: isRevealed
                                                                     ? FontWeight
                                                                         .w600
@@ -2205,7 +2205,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                             child: Text(
                                                 e['enquiryType'] ?? 'Walkin',
                                                 style: const TextStyle(
-                                                    fontSize: 12,
+                                                    fontSize: 14,
                                                     color: Color(0xFF1E293B))),
                                           ),
                                         ),
@@ -2220,7 +2220,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                                     e['enquiryType'] ??
                                                     'Walk-in',
                                                 style: const TextStyle(
-                                                    fontSize: 12,
+                                                    fontSize: 14,
                                                     color: Color(0xFF1E293B))),
                                           ),
                                         ),
@@ -2229,7 +2229,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                         DataCell(
                                           Container(
                                             padding: const EdgeInsets.symmetric(
-                                                horizontal: 8, vertical: 3),
+                                                horizontal: 7, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: const Color(0xFFEFF6FF),
                                               borderRadius:
@@ -2242,7 +2242,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                               e['branch']?['name'] ??
                                                   'Showroom',
                                               style: const TextStyle(
-                                                  fontSize: 11,
+                                                  fontSize: 12.5,
                                                   fontWeight: FontWeight.w600,
                                                   color: Color(0xFF1D4ED8)),
                                             ),
@@ -2258,7 +2258,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                                 customer['area']?['name'] ??
                                                     'Hadapsar',
                                                 style: const TextStyle(
-                                                    fontSize: 12,
+                                                    fontSize: 14,
                                                     color: Color(0xFF1E293B))),
                                           ),
                                         ),
@@ -2268,7 +2268,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                           Text(
                                             vehicle['name'] ?? 'Activa 110 Dlx',
                                             style: const TextStyle(
-                                                fontSize: 12,
+                                                fontSize: 14,
                                                 fontWeight: FontWeight.w500,
                                                 color: Color(0xFF0F172A)),
                                           ),
@@ -2282,7 +2282,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                             child: Text(
                                                 e['purchaseMode'] ?? 'Cash',
                                                 style: const TextStyle(
-                                                    fontSize: 12,
+                                                    fontSize: 14,
                                                     color: Color(0xFF1E293B))),
                                           ),
                                         ),
@@ -2295,7 +2295,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                             child: Text(
                                                 e['financier']?['name'] ?? '-',
                                                 style: const TextStyle(
-                                                    fontSize: 12,
+                                                    fontSize: 14,
                                                     color: Color(0xFF475569))),
                                           ),
                                         ),
@@ -2305,7 +2305,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                           Text(
                                             isExchange ? 'Yes' : '-',
                                             style: TextStyle(
-                                              fontSize: 12,
+                                              fontSize: 14,
                                               fontWeight: isExchange
                                                   ? FontWeight.w700
                                                   : FontWeight.normal,
@@ -2322,34 +2322,34 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                                 ? (e['oldVehicle'] ?? 'Activa')
                                                 : '-',
                                             style: const TextStyle(
-                                                fontSize: 12,
+                                                fontSize: 14,
                                                 color: Color(0xFF475569)))),
 
                                         // Kms
                                         DataCell(Text(
                                             isExchange ? '25000' : '-',
                                             style: const TextStyle(
-                                                fontSize: 12,
+                                                fontSize: 14,
                                                 color: Color(0xFF475569)))),
 
                                         // Owner
                                         DataCell(Text(
                                             isExchange ? '1st Owner' : '-',
                                             style: const TextStyle(
-                                                fontSize: 12,
+                                                fontSize: 14,
                                                 color: Color(0xFF475569)))),
 
                                         // Exch value
                                         DataCell(Text(
                                             isExchange ? '25000.00' : '-',
                                             style: const TextStyle(
-                                                fontSize: 12,
+                                                fontSize: 14,
                                                 color: Color(0xFF475569)))),
 
                                         // Consent (red Yes)
                                         const DataCell(Text('Yes',
                                             style: TextStyle(
-                                                fontSize: 12,
+                                                fontSize: 14,
                                                 fontWeight: FontWeight.w700,
                                                 color: Color(0xFFDC2626)))),
 
@@ -2362,7 +2362,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                                   e['createdBy']?['name'] ??
                                                   'Big Wing Sales Exec',
                                               style: const TextStyle(
-                                                  fontSize: 12,
+                                                  fontSize: 14,
                                                   color: Color(0xFF1E293B)),
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -2373,7 +2373,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                         DataCell(Text(
                                             e['buyingWhen'] ?? 'This week',
                                             style: const TextStyle(
-                                                fontSize: 12,
+                                                fontSize: 14,
                                                 color: Color(0xFF1E293B)))),
 
                                         // Enq. Date
@@ -2381,7 +2381,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                             DateFormatter.formatDate(
                                                 e['createdAt']),
                                             style: const TextStyle(
-                                                fontSize: 12,
+                                                fontSize: 14,
                                                 color: Color(0xFF475569)))),
 
                                         // Status dropdown
@@ -2394,7 +2394,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                             child: Text(
                                               e['remarks'] ?? '-',
                                               style: const TextStyle(
-                                                  fontSize: 11,
+                                                  fontSize: 13,
                                                   color: Color(0xFF64748B)),
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -2553,7 +2553,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
 }
 
 const TextStyle _headerStyle = TextStyle(
-  fontSize: 12,
+  fontSize: 13.5,
   fontWeight: FontWeight.w700,
   color: Color(0xFF64748B),
 );
