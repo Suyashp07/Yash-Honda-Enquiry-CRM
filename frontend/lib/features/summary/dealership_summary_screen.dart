@@ -480,40 +480,16 @@ class _DealershipSummaryScreenState
             ),
           ),
 
-          // Date Stepper: Jump Today | < | Date | >
+          // Date Stepper: < | Date | >
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Tooltip(
-                message: 'Reset filter to today\'s date',
-                child: InkWell(
-                  onTap: () {
-                    setState(() => _selectedDate = DateTime.now());
-                    _loadSummary();
-                  },
-                  borderRadius: BorderRadius.circular(6),
-                  child: Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text('Jump Today',
-                        style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFEA580C))),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Tooltip(
                 message: 'View previous period analytics',
                 child: IconButton(
                   icon: const Icon(Icons.chevron_left, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 36),
                   onPressed: () => _stepDate(-1),
                 ),
               ),
@@ -566,6 +542,8 @@ class _DealershipSummaryScreenState
                 message: 'View next period analytics',
                 child: IconButton(
                   icon: const Icon(Icons.chevron_right, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 36),
                   onPressed: () => _stepDate(1),
                 ),
               ),
