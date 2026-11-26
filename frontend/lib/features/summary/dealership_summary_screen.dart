@@ -468,7 +468,7 @@ class _DealershipSummaryScreenState
                       child: Text(
                         item['label']!,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w700,
                           color: isSel ? Colors.white : const Color(0xFF475569),
                         ),
@@ -503,7 +503,7 @@ class _DealershipSummaryScreenState
                     alignment: Alignment.center,
                     child: const Text('Jump Today',
                         style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFFEA580C))),
                   ),
@@ -718,7 +718,7 @@ class _DealershipSummaryScreenState
                     child: const Text(
                       'METRIC / BREAKDOWN',
                       style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF334155),
                           letterSpacing: 0.5),
@@ -738,13 +738,13 @@ class _DealershipSummaryScreenState
                         children: [
                           Text('LOCATION $index',
                               style: const TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12.5,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF0F172A))),
                           Text(b['name'] ?? '',
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                  fontSize: 10, color: Color(0xFF64748B))),
+                                  fontSize: 12, color: Color(0xFF64748B))),
                         ],
                       ),
                     );
@@ -763,12 +763,12 @@ class _DealershipSummaryScreenState
                       children: [
                         Text('CONSOLIDATED',
                             style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12.5,
                                 fontWeight: FontWeight.w900,
                                 color: Color(0xFFB45309))),
                         Text('All Dealerships',
                             style: TextStyle(
-                                fontSize: 10, color: Color(0xFF92400E))),
+                                fontSize: 12, color: Color(0xFF92400E))),
                       ],
                     ),
                   ),
@@ -1070,7 +1070,7 @@ class _DealershipSummaryScreenState
                 children: [
                   const Text('FILTER METRICS: ',
                       style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF64748B),
                           letterSpacing: 0.5)),
@@ -1099,7 +1099,7 @@ class _DealershipSummaryScreenState
                           child: Text(
                             tab['label'] as String,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12.5,
                               fontWeight: isSelected
                                   ? FontWeight.w700
                                   : FontWeight.w500,
@@ -1144,12 +1144,12 @@ class _DealershipSummaryScreenState
                           children: [
                             Text('LOCATION',
                                 style: TextStyle(
-                                    fontSize: 11.5,
+                                    fontSize: 12.5,
                                     fontWeight: FontWeight.w900,
                                     color: Color(0xFF1E293B))),
                             Text('Showroom Branch',
                                 style: TextStyle(
-                                    fontSize: 10, color: Color(0xFF64748B))),
+                                    fontSize: 12, color: Color(0xFF64748B))),
                           ],
                         ),
                       ),
@@ -1168,7 +1168,7 @@ class _DealershipSummaryScreenState
                               Text(
                                 (col['sectionTitle'] ?? '').toString(),
                                 style: const TextStyle(
-                                    fontSize: 9,
+                                    fontSize: 12.5,
                                     fontWeight: FontWeight.w700,
                                     color: Color(0xFF64748B),
                                     letterSpacing: 0.3),
@@ -1179,7 +1179,7 @@ class _DealershipSummaryScreenState
                               Text(
                                 (col['label'] ?? '').toString(),
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12.5,
                                   fontWeight: FontWeight.w800,
                                   color: col['color'] as Color? ??
                                       const Color(0xFF0F172A),
@@ -1250,7 +1250,7 @@ class _DealershipSummaryScreenState
                                   child: Text(
                                     bCode,
                                     style: const TextStyle(
-                                        fontSize: 9.5,
+                                        fontSize: 12.5,
                                         fontWeight: FontWeight.w700,
                                         color: Color(0xFF64748B)),
                                   ),
@@ -1325,7 +1325,7 @@ class _DealershipSummaryScreenState
       child: Text(
         title,
         style: const TextStyle(
-            fontSize: 11,
+            fontSize: 12.5,
             fontWeight: FontWeight.w800,
             color: Color(0xFF1E293B),
             letterSpacing: 0.5),
@@ -1357,7 +1357,7 @@ class _DealershipSummaryScreenState
               label,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12.5,
                 fontWeight: isBold ? FontWeight.w800 : FontWeight.w500,
                 color: const Color(0xFF334155),
               ),
@@ -1430,7 +1430,7 @@ class _DealershipSummaryScreenState
     }
 
     return Text(val,
-        style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)));
+        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)));
   }
 
   Widget _buildBadge(String text, Color bg, Color fg) {
@@ -1443,7 +1443,7 @@ class _DealershipSummaryScreenState
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 9.5,
+          fontSize: 12.5,
           fontWeight: FontWeight.w700,
           color: fg,
         ),
@@ -1512,7 +1512,7 @@ class _DealershipSummaryScreenState
                       const Text(
                         'Click any location card below to drill down, or click here for all locations',
                         style:
-                            TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                            TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
                       ),
                     ],
                   ),
@@ -1600,12 +1600,12 @@ class _DealershipSummaryScreenState
                               children: [
                                 Text('LOCATION ${i + 1}',
                                     style: const TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w800,
                                         color: Color(0xFF64748B))),
                                 Text(conv,
                                     style: const TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w900,
                                         color: Color(0xFFDC2626))),
                               ],
@@ -1695,12 +1695,12 @@ class _DealershipSummaryScreenState
                               children: [
                                 Text('LOC $index · ${b['name']}',
                                     style: const TextStyle(
-                                        fontSize: 11,
+                                        fontSize: 12.5,
                                         fontWeight: FontWeight.w700,
                                         color: Color(0xFF1E293B))),
                                 Text('${l}L / ${bk}BK ($c)',
                                     style: const TextStyle(
-                                        fontSize: 10.5,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w800,
                                         color: Color(0xFFDC2626))),
                               ],
@@ -1772,7 +1772,7 @@ class _DealershipSummaryScreenState
                                 color: Color(0xFF0F172A))),
                         Text('All Locations',
                             style: TextStyle(
-                                fontSize: 11, color: Color(0xFF64748B))),
+                                fontSize: 12.5, color: Color(0xFF64748B))),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -1783,12 +1783,12 @@ class _DealershipSummaryScreenState
                       children: [
                         const Text('Enquiry Sources',
                             style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12.5,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF475569))),
                         Text('$leadsAll total leads',
                             style: const TextStyle(
-                                fontSize: 10, color: Color(0xFF64748B))),
+                                fontSize: 12, color: Color(0xFF64748B))),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -1825,12 +1825,12 @@ class _DealershipSummaryScreenState
                       children: [
                         const Text('Payment Modes',
                             style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12.5,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF475569))),
                         Text('$leadsAll total leads',
                             style: const TextStyle(
-                                fontSize: 10, color: Color(0xFF64748B))),
+                                fontSize: 12, color: Color(0xFF64748B))),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -1932,7 +1932,7 @@ class _DealershipSummaryScreenState
                                 color: Color(0xFF0F172A))),
                         Text('TODAY & MTD',
                             style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF94A3B8))),
                       ],
@@ -1956,7 +1956,7 @@ class _DealershipSummaryScreenState
                                 padding: EdgeInsets.only(bottom: 8),
                                 child: Text('MODEL',
                                     style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w800,
                                         color: Color(0xFF64748B)))),
                             Padding(
@@ -1964,7 +1964,7 @@ class _DealershipSummaryScreenState
                                 child: Center(
                                     child: Text('TODAY LEADS',
                                         style: TextStyle(
-                                            fontSize: 10,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.w800,
                                             color: Color(0xFF64748B))))),
                             Padding(
@@ -1972,7 +1972,7 @@ class _DealershipSummaryScreenState
                                 child: Center(
                                     child: Text('TODAY BK',
                                         style: TextStyle(
-                                            fontSize: 10,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.w800,
                                             color: Color(0xFF64748B))))),
                             Padding(
@@ -1980,7 +1980,7 @@ class _DealershipSummaryScreenState
                                 child: Center(
                                     child: Text('MTD (L / BK / CONV)',
                                         style: TextStyle(
-                                            fontSize: 10,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.w800,
                                             color: Color(0xFF64748B))))),
                           ],
@@ -2010,7 +2010,7 @@ class _DealershipSummaryScreenState
                                       const EdgeInsets.symmetric(vertical: 8),
                                   child: Text(label,
                                       style: const TextStyle(
-                                          fontSize: 11.5,
+                                          fontSize: 12.5,
                                           fontWeight: FontWeight.w600,
                                           color: Color(0xFF1E293B)))),
                               Padding(
@@ -2019,7 +2019,7 @@ class _DealershipSummaryScreenState
                                   child: Center(
                                       child: Text('$tLeads',
                                           style: const TextStyle(
-                                              fontSize: 11.5,
+                                              fontSize: 12.5,
                                               fontWeight: FontWeight.w700,
                                               color: Color(0xFF2563EB))))),
                               Padding(
@@ -2028,7 +2028,7 @@ class _DealershipSummaryScreenState
                                   child: Center(
                                       child: Text('$tBk',
                                           style: const TextStyle(
-                                              fontSize: 11.5,
+                                              fontSize: 12.5,
                                               fontWeight: FontWeight.w700,
                                               color: Color(0xFF16A34A))))),
                               Padding(
@@ -2070,7 +2070,7 @@ class _DealershipSummaryScreenState
                                 color: Color(0xFF0F172A))),
                         Text('TODAY BK & MTD Conv',
                             style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: Color(0xFF94A3B8))),
                       ],
@@ -2095,7 +2095,7 @@ class _DealershipSummaryScreenState
                                 padding: EdgeInsets.only(bottom: 8),
                                 child: Text('SALES REP',
                                     style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w800,
                                         color: Color(0xFF64748B)))),
                             Padding(
@@ -2103,7 +2103,7 @@ class _DealershipSummaryScreenState
                                 child: Center(
                                     child: Text('TODAY BK',
                                         style: TextStyle(
-                                            fontSize: 10,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.w800,
                                             color: Color(0xFF64748B))))),
                             Padding(
@@ -2111,7 +2111,7 @@ class _DealershipSummaryScreenState
                                 child: Center(
                                     child: Text('MTD LEADS',
                                         style: TextStyle(
-                                            fontSize: 10,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.w800,
                                             color: Color(0xFF64748B))))),
                             Padding(
@@ -2119,7 +2119,7 @@ class _DealershipSummaryScreenState
                                 child: Center(
                                     child: Text('MTD BK',
                                         style: TextStyle(
-                                            fontSize: 10,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.w800,
                                             color: Color(0xFF64748B))))),
                             Padding(
@@ -2127,7 +2127,7 @@ class _DealershipSummaryScreenState
                                 child: Center(
                                     child: Text('CONV %',
                                         style: TextStyle(
-                                            fontSize: 10,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.w800,
                                             color: Color(0xFF64748B))))),
                           ],
@@ -2163,7 +2163,7 @@ class _DealershipSummaryScreenState
                                       const EdgeInsets.symmetric(vertical: 8),
                                   child: Text(label,
                                       style: const TextStyle(
-                                          fontSize: 11.5,
+                                          fontSize: 12.5,
                                           fontWeight: FontWeight.w600,
                                           color: Color(0xFF1E293B)))),
                               Padding(
@@ -2172,7 +2172,7 @@ class _DealershipSummaryScreenState
                                   child: Center(
                                       child: Text('$todayBk',
                                           style: const TextStyle(
-                                              fontSize: 11.5,
+                                              fontSize: 12.5,
                                               fontWeight: FontWeight.bold,
                                               color: Color(0xFF16A34A))))),
                               Padding(
@@ -2181,7 +2181,7 @@ class _DealershipSummaryScreenState
                                   child: Center(
                                       child: Text(mtdL,
                                           style: const TextStyle(
-                                              fontSize: 11.5,
+                                              fontSize: 12.5,
                                               color: Color(0xFF475569))))),
                               Padding(
                                   padding:
@@ -2189,7 +2189,7 @@ class _DealershipSummaryScreenState
                                   child: Center(
                                       child: Text(mtdB,
                                           style: const TextStyle(
-                                              fontSize: 11.5,
+                                              fontSize: 12.5,
                                               color: Color(0xFF475569))))),
                               Padding(
                                   padding:
@@ -2197,7 +2197,7 @@ class _DealershipSummaryScreenState
                                   child: Center(
                                       child: Text('$mtdC%',
                                           style: const TextStyle(
-                                              fontSize: 11.5,
+                                              fontSize: 12.5,
                                               fontWeight: FontWeight.w800,
                                               color: Color(0xFFDC2626))))),
                             ],
@@ -2224,13 +2224,13 @@ class _DealershipSummaryScreenState
       return Text(
         '$l / $b  $c%',
         style: const TextStyle(
-            fontSize: 11,
+            fontSize: 12.5,
             fontWeight: FontWeight.w700,
             color: Color(0xFFDC2626)),
       );
     }
     return Text(raw,
-        style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)));
+        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)));
   }
 
   Widget _buildSegmentedBar(List<Map<String, dynamic>> segments, int total) {
@@ -2267,13 +2267,13 @@ class _DealershipSummaryScreenState
         children: [
           Text(title,
               style: TextStyle(
-                  fontSize: 9,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w800,
                   color: fg.withValues(alpha: 0.8))),
           const SizedBox(height: 2),
           Text(val,
               style: TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w900, color: fg)),
+                  fontSize: 12.5, fontWeight: FontWeight.w900, color: fg)),
         ],
       ),
     );
@@ -2288,7 +2288,7 @@ class _DealershipSummaryScreenState
         const SizedBox(height: 2),
         Text(label,
             style: const TextStyle(
-                fontSize: 11,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF64748B))),
       ],
@@ -2305,7 +2305,7 @@ class _DealershipSummaryScreenState
                 color: Color(0xFF0F172A))),
         Text(label,
             style: const TextStyle(
-                fontSize: 9,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF94A3B8))),
       ],
@@ -2323,7 +2323,7 @@ class _DealershipSummaryScreenState
         const SizedBox(width: 4),
         Text(label,
             style: const TextStyle(
-                fontSize: 10.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF475569))),
       ],
