@@ -1816,15 +1816,17 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(11),
                       child: SmartMediaImage(
                         source: imgUrl,
-                        fit: BoxFit.contain,
-                        fallback: Icon(
-                          _getAccessoryFallbackIcon(name),
-                          size: 34,
-                          color: const Color(0xFF475569),
+                        fit: BoxFit.cover,
+                        fallback: Center(
+                          child: Icon(
+                            _getAccessoryFallbackIcon(name),
+                            size: 34,
+                            color: const Color(0xFF475569),
+                          ),
                         ),
                       ),
                     ),
