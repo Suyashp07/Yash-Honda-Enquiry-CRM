@@ -129,7 +129,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             _officeWindows
               ..clear()
               ..addAll(
-                (data['officeWindows'] as List).map((w) => {
+                (data['officeWindows'] as List).map<Map<String, dynamic>>((w) => {
                       'startTime': (w['startTime'] ?? '9:00 AM').toString(),
                       'endTime': (w['endTime'] ?? '1:00 PM').toString(),
                       'enabled': w['enabled'] == true,
