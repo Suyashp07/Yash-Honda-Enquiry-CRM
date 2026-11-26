@@ -323,16 +323,97 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     }
   }
 
-  Map<String, dynamic>? _findSessionForSlot(
+  List<Map<String, dynamic>> _findSessionsForSlot(
       List<dynamic> repSessions, String slot) {
+    final matches = <Map<String, dynamic>>[];
     for (final s in repSessions) {
-      if (s is Map<String, dynamic>) {
-        if (_getSessionSlot(s) == slot) {
-          return s;
+      if (s is Map<String, dynamic> && _getSessionSlot(s) == slot) {
+        matches.add(s);
+      }
+    }
+    return matches;
+  }
+
+  List<Map<String, dynamic>> _collectSlotSessions(
+    Map<String, dynamic> rep,
+    List<dynamic> repSessions,
+    String slot,
+    bool isNow,
+    bool isBusy,
+  ) {
+    final list = _findSessionsForSlot(repSessions, slot);
+    if (isNow && isBusy) {
+      final hasInProgress = list.any((s) =>
+          s['status'] == 'ACTIVE' ||
+          s['status'] == 'OPEN' ||
+          s['status'] == 'IN_PROGRESS');
+      if (!hasInProgress) {
+        final liveFallback = repSessions.cast<dynamic>().firstWhere(
+              (s) =>
+                  s is Map<String, dynamic> &&
+                  (s['status'] == 'ACTIVE' ||
+                      s['status'] == 'OPEN' ||
+                      s['status'] == 'IN_PROGRESS'),
+              orElse: () => null,
+            );
+        if (liveFallback is Map<String, dynamic>) {
+          if (!list.any((x) => x['id'] == liveFallback['id'])) {
+            list.insert(0, liveFallback);
+          }
+        } else {
+          list.insert(0, {
+            'id': 'live-${rep["id"]}',
+            'customer_name': rep['activeCustomerName'] ?? 'Walk-in Guest',
+            'vehicle_name': 'Honda Model',
+            'status': 'IN_PROGRESS',
+            'created_at': DateTime.now().toIso8601String(),
+          });
         }
       }
     }
-    return null;
+    return list;
+  }
+
+  Widget _buildSlotCellContent(
+    List<Map<String, dynamic>> slotSessions,
+    String repName, {
+    required String? repId,
+    required String slot,
+  }) {
+    if (slotSessions.isEmpty) {
+      return _buildEmptySlot(repId: repId, repName: repName, slot: slot);
+    }
+    if (slotSessions.length == 1) {
+      return _buildSessionBlock(slotSessions.first, repName);
+    }
+    final visible = slotSessions.take(2).toList();
+    final overflowCount = slotSessions.length - visible.length;
+    return Row(
+      children: [
+        for (int i = 0; i < visible.length; i++) ...[
+          if (i > 0) const SizedBox(width: 4),
+          Expanded(child: _buildSessionBlock(visible[i], repName)),
+        ],
+        if (overflowCount > 0) ...[
+          const SizedBox(width: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Text(
+              '+$overflowCount',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   @override
@@ -1388,32 +1469,14 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                       final isNow =
                           nowSlotTarget != null && slot == nowSlotTarget;
 
-                      // Display session block if slot matches representative's session
-                      var matchingSession =
-                          _findSessionForSlot(repSessions, slot);
-
-                      // If this is the current active 'NOW' slot and the rep is currently Busy:
-                      if (matchingSession == null && isNow && isBusy) {
-                        if (repSessions.isNotEmpty) {
-                          matchingSession = repSessions.firstWhere(
-                            (s) =>
-                                s['status'] == 'ACTIVE' ||
-                                s['status'] == 'OPEN' ||
-                                s['status'] == 'IN_PROGRESS',
-                            orElse: () => repSessions.first,
-                          );
-                        } else {
-                          final custName =
-                              rep['activeCustomerName'] ?? 'Walk-in Guest';
-                          matchingSession = {
-                            'id': 'live-${rep["id"]}',
-                            'customer_name': custName,
-                            'vehicle_name': 'Honda Model',
-                            'status': 'IN_PROGRESS',
-                            'created_at': DateTime.now().toIso8601String(),
-                          };
-                        }
-                      }
+                      // Collect ALL sessions in this 30-minute slot (completed quotes + active session)
+                      final slotSessions = _collectSlotSessions(
+                        Map<String, dynamic>.from(rep as Map),
+                        repSessions,
+                        slot,
+                        isNow,
+                        isBusy,
+                      );
 
                       return Container(
                         width: cellWidth,
@@ -1430,12 +1493,12 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                                 : BorderSide.none,
                           ),
                         ),
-                        child: matchingSession != null
-                            ? _buildSessionBlock(matchingSession, repName)
-                            : _buildEmptySlot(
-                                repId: rep['id']?.toString(),
-                                repName: repName,
-                                slot: slot),
+                        child: _buildSlotCellContent(
+                          slotSessions,
+                          repName,
+                          repId: rep['id']?.toString(),
+                          slot: slot,
+                        ),
                       );
                     }),
                   ],
@@ -1697,29 +1760,13 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                         final bt = b['created_at']?.toString() ?? '';
                         return bt.compareTo(at);
                       });
-                      var matchingSession =
-                          _findSessionForSlot(repSessions, slot);
-                      if (matchingSession == null && isNow && isBusy) {
-                        if (repSessions.isNotEmpty) {
-                          matchingSession = repSessions.firstWhere(
-                            (s) =>
-                                s['status'] == 'ACTIVE' ||
-                                s['status'] == 'OPEN' ||
-                                s['status'] == 'IN_PROGRESS',
-                            orElse: () => repSessions.first,
-                          );
-                        } else {
-                          final custName =
-                              rep['activeCustomerName'] ?? 'Walk-in Guest';
-                          matchingSession = {
-                            'id': 'live-${rep["id"]}',
-                            'customer_name': custName,
-                            'vehicle_name': 'Honda Model',
-                            'status': 'IN_PROGRESS',
-                            'created_at': DateTime.now().toIso8601String(),
-                          };
-                        }
-                      }
+                      final slotSessions = _collectSlotSessions(
+                        Map<String, dynamic>.from(rep as Map),
+                        repSessions,
+                        slot,
+                        isNow,
+                        isBusy,
+                      );
                       return Container(
                         width: repColWidth,
                         padding: const EdgeInsets.all(5),
@@ -1731,12 +1778,12 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                             right: BorderSide(color: Color(0xFFF1F5F9)),
                           ),
                         ),
-                        child: matchingSession != null
-                            ? _buildSessionBlock(matchingSession, repName)
-                            : _buildEmptySlot(
-                                repId: rep['id']?.toString(),
-                                repName: repName,
-                                slot: slot),
+                        child: _buildSlotCellContent(
+                          slotSessions,
+                          repName,
+                          repId: rep['id']?.toString(),
+                          slot: slot,
+                        ),
                       );
                     }),
                   ],
