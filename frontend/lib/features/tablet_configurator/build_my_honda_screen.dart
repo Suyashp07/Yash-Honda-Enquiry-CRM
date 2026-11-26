@@ -649,19 +649,25 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Honda Wing watermark matching designer mockups
+            // Original Honda Wing watermark in background
             if (_currentStep <= 6)
               Positioned(
-                top: 60,
-                right:
-                    300, // sits behind the left content stage, not over sidebar
+                top: 48,
+                right: 280,
                 child: IgnorePointer(
                   child: Opacity(
-                    opacity: 0.055,
-                    child: CustomPaint(
-                      size: const Size(560, 280),
-                      painter:
-                          _HondaWingPainter(color: const Color(0xFF0F172A)),
+                    opacity: 0.05,
+                    child: ColorFiltered(
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF0F172A),
+                        BlendMode.srcIn,
+                      ),
+                      child: Image.asset(
+                        'assets/honda_wing_logo.png',
+                        width: 520,
+                        height: 300,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ),
@@ -746,10 +752,12 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CustomPaint(
-                      size: const Size(44, 26),
-                      painter:
-                          _HondaWingPainter(color: const Color(0xFFDC2626)),
+                    Image.asset(
+                      'assets/honda_wing_logo.png',
+                      width: 44,
+                      height: 26,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
                     ),
                     const SizedBox(height: 1),
                     const Text(
@@ -757,8 +765,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       style: TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFFDC2626),
-                        letterSpacing: 1.1,
+                        color: Color(0xFFCC0000),
+                        letterSpacing: 1.2,
                       ),
                     ),
                   ],
@@ -1012,6 +1020,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       aspectRatio: 500 / 736,
                       child: _buildCategoryCard(
                         code: 'MC',
+                        title: 'MOTORCYCLES',
+                        subtitle: 'Commuter & Sport',
                         imagePath: 'assets/configurator/cat_mc_hq.jpg',
                       ),
                     ),
@@ -1022,6 +1032,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       aspectRatio: 500 / 736,
                       child: _buildCategoryCard(
                         code: 'Scooter',
+                        title: 'SCOOTERS',
+                        subtitle: 'Everyday Urban',
                         imagePath: 'assets/configurator/cat_scooter_hq.jpg',
                       ),
                     ),
@@ -1032,6 +1044,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       aspectRatio: 500 / 736,
                       child: _buildCategoryCard(
                         code: 'BigBike',
+                        title: 'BIG BIKES',
+                        subtitle: 'BigWing Premium',
                         imagePath: 'assets/configurator/cat_bigbike_hq.jpg',
                       ),
                     ),
@@ -1047,6 +1061,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
   Widget _buildCategoryCard({
     required String code,
+    required String title,
+    required String subtitle,
     required String imagePath,
   }) {
     final isSelected = _selectedCategory == code;
@@ -1074,27 +1090,99 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFFDC2626)
+                  ? const Color(0xFFCC0000)
                   : const Color(0xFFE2E8F0),
               width: isSelected ? 2.5 : 1.0,
             ),
             boxShadow: [
               BoxShadow(
                 color: isSelected
-                    ? const Color(0x2ADC2626)
-                    : const Color(0x0D000000),
-                blurRadius: isSelected ? 22 : 12,
-                offset: const Offset(0, 6),
+                    ? const Color(0x2ECC0000)
+                    : const Color(0x12000000),
+                blurRadius: isSelected ? 24 : 16,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: SmartMediaImage(source: imagePath, fit: BoxFit.fill),
+            borderRadius: BorderRadius.circular(22),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                SmartMediaImage(source: imagePath, fit: BoxFit.cover),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 120,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.92),
+                          Colors.white.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 20,
+                  left: 20,
+                  right: 20,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.4,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitle,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isSelected)
+                        Container(
+                          width: 26,
+                          height: 26,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFCC0000),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
