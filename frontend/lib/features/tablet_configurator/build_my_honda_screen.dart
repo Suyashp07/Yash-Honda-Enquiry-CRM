@@ -282,6 +282,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             'onRoadPrice': onRoad,
             'listingImageUrl': bv['listingImageUrl']?.toString(),
             'detailImageUrl': bv['detailImageUrl']?.toString(),
+            'brochureUrl': bv['brochureUrl']?.toString(),
             'colours': parsedColours,
           };
         }).toList();
@@ -1597,6 +1598,52 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                     ),
                   ),
                 ),
+
+                if ((_selectedVehicle?['brochureUrl']?.toString() ?? '')
+                    .isNotEmpty)
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: Material(
+                      color: Colors.black.withValues(alpha: 0.48),
+                      borderRadius: BorderRadius.circular(20),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () {
+                          final url =
+                              _selectedVehicle!['brochureUrl'].toString();
+                          launchUrl(Uri.parse(url),
+                              mode: LaunchMode.externalApplication);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.28),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.picture_as_pdf_rounded,
+                                  size: 15, color: Colors.white),
+                              SizedBox(width: 6),
+                              Text(
+                                'Brochure (PDF)',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
 
                 // Main Vehicle Showcase + Bottom Swatches & Colour Name Pill
                 Padding(
