@@ -38,7 +38,14 @@ export class EnquiriesService {
         customerId = customer.id;
       }
 
-      // 2. Create Enquiry
+      // 2. Create Enquiry (if Buying Immediately / Immediate -> mark as CUSTOMER_BOUGHT)
+      const isBuyingImmediately =
+        typeof dto.buyingWhen === 'string' &&
+        dto.buyingWhen.trim().toLowerCase().includes('immediate');
+      const initialStatus = isBuyingImmediately
+        ? EnquiryStatus.CUSTOMER_BOUGHT
+        : EnquiryStatus.ACTIVE;
+
       const enquiry = await tx.enquiry.create({
         data: {
           customerId,
@@ -52,10 +59,10 @@ export class EnquiriesService {
           exchange: dto.exchange || 'No',
           buyingWhen: dto.buyingWhen,
           remarks: dto.remarks,
-          status: EnquiryStatus.ACTIVE,
+          status: initialStatus,
           statusHistory: {
             create: {
-              toStatus: EnquiryStatus.ACTIVE,
+              toStatus: initialStatus,
             },
           },
         },

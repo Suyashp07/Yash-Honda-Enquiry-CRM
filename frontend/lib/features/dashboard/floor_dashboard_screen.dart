@@ -1894,59 +1894,47 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     final customer = session['customer_name'] ?? 'Guest';
     final vehicle = session['vehicle_name'] ?? 'Honda Model';
     final rawStatus = session['status']?.toString().toUpperCase() ?? '';
-    final isBooked = rawStatus == 'CUSTOMER_BOUGHT' || rawStatus == 'BOOKED';
+    final buyingWhen = session['buying_when']?.toString() ?? '';
+    final isImmediate = buyingWhen.toLowerCase().contains('immediate');
+    final isBooked = rawStatus == 'CUSTOMER_BOUGHT' ||
+        rawStatus == 'BOOKED' ||
+        isImmediate;
     final isInProgress = !isBooked &&
         (rawStatus == 'IN_PROGRESS' ||
             session['id']?.toString().startsWith('live-') == true);
-    final buyingWhen = session['buying_when']?.toString() ?? '';
-    final isImmediate =
-        !isBooked && buyingWhen.toLowerCase().contains('immediate');
 
-    // 1. Booked: Mint Green (#DEF7EC bg, #10B981 left accent) — Green already used for Booked
-    // 2. Buying Immediately (hot lead): Blue (#EFF6FF bg, #2563EB left accent)
-    // 3. In progress: Rose/Red (#FDE8E8 bg, #EF4444 left accent)
-    // 4. Quoted: Amber (#FEF3C7 bg, #F59E0B left accent)
+    // 1. Booked / Buying Immediately: Mint Green (#DEF7EC bg, #10B981 left accent)
+    // 2. In progress: Rose/Red (#FDE8E8 bg, #EF4444 left accent)
+    // 3. Quoted: Amber (#FEF3C7 bg, #F59E0B left accent)
     final Color bgColor = isBooked
         ? const Color(0xFFDEF7EC)
-        : (isImmediate
-            ? const Color(0xFFEFF6FF)
-            : (isInProgress
-                ? const Color(0xFFFDE8E8)
-                : const Color(0xFFFEF3C7)));
+        : (isInProgress
+            ? const Color(0xFFFDE8E8)
+            : const Color(0xFFFEF3C7));
     final Color accentColor = isBooked
         ? const Color(0xFF10B981)
-        : (isImmediate
-            ? const Color(0xFF2563EB)
-            : (isInProgress
-                ? const Color(0xFFEF4444)
-                : const Color(0xFFF59E0B)));
+        : (isInProgress
+            ? const Color(0xFFEF4444)
+            : const Color(0xFFF59E0B));
     final Color borderColor = isBooked
         ? const Color(0xFFA7F3D0)
-        : (isImmediate
-            ? const Color(0xFFBFDBFE)
-            : (isInProgress
-                ? const Color(0xFFFECACA)
-                : const Color(0xFFFDE68A)));
+        : (isInProgress
+            ? const Color(0xFFFECACA)
+            : const Color(0xFFFDE68A));
     final Color titleColor = isBooked
         ? const Color(0xFF065F46)
-        : (isImmediate
-            ? const Color(0xFF1E3A8A)
-            : (isInProgress
-                ? const Color(0xFF991B1B)
-                : const Color(0xFF78350F)));
+        : (isInProgress
+            ? const Color(0xFF991B1B)
+            : const Color(0xFF78350F));
     final Color subColor = isBooked
         ? const Color(0xFF047857)
-        : (isImmediate
-            ? const Color(0xFF2563EB)
-            : (isInProgress
-                ? const Color(0xFFDC2626)
-                : const Color(0xFF92400E)));
+        : (isInProgress
+            ? const Color(0xFFDC2626)
+            : const Color(0xFF92400E));
 
     final String statusLabel = isBooked
         ? 'Booked'
-        : (isInProgress
-            ? 'In progress'
-            : (isImmediate ? 'Quote · Immediate' : 'Quote'));
+        : (isInProgress ? 'In progress' : 'Quote');
     final bool showClock = isInProgress ||
         (isBooked && vehicle.toString().toLowerCase().contains('unicorn'));
 
@@ -2048,15 +2036,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         ),
         const SizedBox(width: 16),
         _buildLegendItem(
-          'Booked',
+          'Booked / Buying Immediately',
           const Color(0xFF16A34A),
-          tooltip: 'Vehicle booking confirmed with advance payment',
-        ),
-        const SizedBox(width: 16),
-        _buildLegendItem(
-          'Buying Immediately',
-          const Color(0xFF2563EB),
-          tooltip: 'Hot lead planning immediate purchase (Green is already used for Booked)',
+          tooltip: 'Vehicle booking confirmed or buying immediately',
         ),
         const SizedBox(width: 16),
         Tooltip(
