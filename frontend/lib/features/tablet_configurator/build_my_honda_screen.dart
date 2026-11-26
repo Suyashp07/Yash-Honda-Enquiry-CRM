@@ -2741,7 +2741,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                   const Text(
                                     'Your Configuration',
                                     style: TextStyle(
-                                      fontSize: 19,
+                                      fontSize: 22,
                                       fontWeight: FontWeight.w900,
                                       fontStyle: FontStyle.italic,
                                       color: Color(0xFF0F172A),
@@ -2960,23 +2960,25 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   }) {
     return Row(
       children: [
-        Icon(icon, size: 19, color: const Color(0xFF0F172A)),
+        Icon(icon, size: 21, color: const Color(0xFF0F172A)),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
-                  style:
-                      const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-              const SizedBox(height: 2),
+                  style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B))),
+              const SizedBox(height: 3),
               Row(
                 children: [
                   if (leadingSwatch != null)
                     Container(
-                      width: 12,
-                      height: 12,
-                      margin: const EdgeInsets.only(right: 6),
+                      width: 13,
+                      height: 13,
+                      margin: const EdgeInsets.only(right: 7),
                       decoration: BoxDecoration(
                         color: leadingSwatch,
                         shape: BoxShape.circle,
@@ -2989,7 +2991,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 15.5,
                         fontWeight: FontWeight.w800,
                         color: Color(0xFF0F172A),
                       ),
@@ -3002,9 +3004,9 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         ),
         IconButton(
           icon: const Icon(Icons.edit_outlined,
-              size: 16, color: Color(0xFFDC2626)),
+              size: 18, color: Color(0xFFDC2626)),
           onPressed: onEdit,
-          splashRadius: 16,
+          splashRadius: 18,
         ),
       ],
     );
@@ -3046,7 +3048,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           const Text(
             'Your Quotation',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.w900,
               color: Color(0xFF0F172A),
               letterSpacing: -0.4,
@@ -3056,7 +3058,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           const Text(
             'Build, customise and see your price in real time.',
             style: TextStyle(
-                fontSize: 11.5, color: Color(0xFF64748B), height: 1.3),
+                fontSize: 12.5, color: Color(0xFF64748B), height: 1.3),
           ),
           const SizedBox(height: 20),
           _buildSidebarPriceRow(
@@ -3143,7 +3145,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           const Text(
             'Estimated Price',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
               color: Color(0xFF475569),
             ),
@@ -3154,7 +3156,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                 ? '₹--,---'
                 : '${CurrencyFormatter.format(_estimatedTotal)}*',
             style: const TextStyle(
-              fontSize: 28,
+              fontSize: 30,
               fontWeight: FontWeight.w900,
               color: Color(0xFFDC2626),
               letterSpacing: -0.6,
@@ -3215,7 +3217,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 1),
-          child: Icon(icon, size: 17, color: const Color(0xFF0F172A)),
+          child: Icon(icon, size: 19, color: const Color(0xFF0F172A)),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -3225,7 +3227,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               Text(
                 label,
                 style: const TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF0F172A),
                 ),
@@ -3236,8 +3238,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   children: [
                     if (colorDot != null) ...[
                       Container(
-                        width: 8,
-                        height: 8,
+                        width: 9,
+                        height: 9,
                         margin: const EdgeInsets.only(right: 5),
                         decoration: BoxDecoration(
                           color: colorDot,
@@ -3255,7 +3257,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 12.5,
                           color: Color(0xFF64748B),
                         ),
                       ),
@@ -3270,7 +3272,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         Text(
           valueText,
           style: TextStyle(
-            fontSize: 12.5,
+            fontSize: 14,
             fontWeight: FontWeight.w800,
             color: valueColor,
           ),
