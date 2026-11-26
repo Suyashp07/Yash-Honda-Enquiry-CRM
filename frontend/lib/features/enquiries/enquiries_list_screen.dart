@@ -53,7 +53,6 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     'Open',
     'Booked',
     'Closed',
-    'Lost to competitor'
   ];
 
   @override
@@ -164,14 +163,6 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         if (status != 'CUSTOMER_BOUGHT' && status != 'RESOLVED') return false;
       } else if (_activeTab == 'Closed') {
         if (status != 'CLOSED') return false;
-      } else if (_activeTab == 'Lost to competitor' || _activeTab == 'Other Dealer') {
-        if (status != 'OTHER_DEALER' &&
-            !(e['remarks']?.toString().toLowerCase().contains('other dealer') ??
-                false) &&
-            !(e['remarks']?.toString().toLowerCase().contains('competitor') ??
-                false)) {
-          return false;
-        }
       }
 
       // Follow-ups due filter
