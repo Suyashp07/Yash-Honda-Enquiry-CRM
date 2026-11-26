@@ -1940,49 +1940,220 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                           style: TextStyle(
                               fontWeight: FontWeight.w600, fontSize: 12)),
                       const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: allColours.map((col) {
-                          final cid = col['id'].toString();
-                          final isChecked = selectedColourIds.contains(cid);
-                          final hexStr = col['hex']?.toString() ?? '#111827';
-                          return FilterChip(
-                            selected: isChecked,
-                            onSelected: (sel) {
-                              setDlgState(() {
-                                if (sel) {
-                                  selectedColourIds.add(cid);
-                                } else {
-                                  selectedColourIds.remove(cid);
-                                }
-                              });
-                            },
-                            avatar: Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: _parseColor(hexStr),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: const Color(0xFFCBD5E1), width: 0.8),
-                              ),
+                      InkWell(
+                        onTap: () async {
+                          String searchTxt = '';
+                          final tempSelected = Set<String>.from(selectedColourIds);
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (dCtx) => StatefulBuilder(
+                              builder: (c, setDrawerState) {
+                                final filteredCols = allColours.where((col) {
+                                  if (searchTxt.isEmpty) return true;
+                                  return (col['name'] ?? '')
+                                      .toString()
+                                      .toLowerCase()
+                                      .contains(searchTxt.toLowerCase());
+                                }).toList();
+                                return AlertDialog(
+                                  backgroundColor: Colors.white,
+                                  surfaceTintColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
+                                  titlePadding:
+                                      const EdgeInsets.fromLTRB(20, 18, 20, 8),
+                                  title: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Select Factory Colours',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 16)),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          TextButton(
+                                            onPressed: () => setDrawerState(() {
+                                              tempSelected.addAll(allColours.map(
+                                                  (e) => e['id'].toString()));
+                                            }),
+                                            child: const Text('All',
+                                                style: TextStyle(fontSize: 12)),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => setDrawerState(
+                                                () => tempSelected.clear()),
+                                            child: const Text('Clear',
+                                                style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF64748B))),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  content: SizedBox(
+                                    width: 360,
+                                    height: 340,
+                                    child: Column(
+                                      children: [
+                                        TextField(
+                                          decoration: InputDecoration(
+                                            hintText: 'Search colours...',
+                                            prefixIcon: const Icon(
+                                                Icons.search,
+                                                size: 18),
+                                            isDense: true,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 8),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          onChanged: (v) => setDrawerState(
+                                              () => searchTxt = v),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Expanded(
+                                          child: ListView.builder(
+                                            itemCount: filteredCols.length,
+                                            itemBuilder: (_, idx) {
+                                              final col = filteredCols[idx];
+                                              final cid = col['id'].toString();
+                                              final isChecked =
+                                                  tempSelected.contains(cid);
+                                              final hexStr =
+                                                  col['hex']?.toString() ??
+                                                      '#111827';
+                                              return CheckboxListTile(
+                                                dense: true,
+                                                controlAffinity:
+                                                    ListTileControlAffinity
+                                                        .leading,
+                                                activeColor:
+                                                    const Color(0xFFDC2626),
+                                                value: isChecked,
+                                                onChanged: (val) =>
+                                                    setDrawerState(() {
+                                                  if (val == true) {
+                                                    tempSelected.add(cid);
+                                                  } else {
+                                                    tempSelected.remove(cid);
+                                                  }
+                                                }),
+                                                secondary: Container(
+                                                  width: 18,
+                                                  height: 18,
+                                                  decoration: BoxDecoration(
+                                                    color: _parseColor(hexStr),
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
+                                                        color: const Color(
+                                                            0xFFCBD5E1)),
+                                                  ),
+                                                ),
+                                                title: Text(
+                                                  col['name']?.toString() ?? '',
+                                                  style: const TextStyle(
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w600),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(dCtx, false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFFDC2626),
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      onPressed: () =>
+                                          Navigator.pop(dCtx, true),
+                                      child: Text(
+                                          'Done (${tempSelected.length})'),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
-                            label: Text(
-                              col['name']?.toString() ?? '',
-                              style: const TextStyle(fontSize: 11.5),
-                            ),
-                            selectedColor: const Color(0xFFFEF2F2),
-                            checkmarkColor: const Color(0xFFDC2626),
-                            side: BorderSide(
-                              color: isChecked
-                                  ? const Color(0xFFDC2626)
-                                  : const Color(0xFFE2E8F0),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 0),
                           );
-                        }).toList(),
+                          if (confirmed == true) {
+                            setDlgState(() {
+                              selectedColourIds
+                                ..clear()
+                                ..addAll(tempSelected);
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFF94A3B8)),
+                          ),
+                          child: Row(
+                            children: [
+                              if (selectedColourIds.isNotEmpty) ...[
+                                ...allColours
+                                    .where((c) => selectedColourIds
+                                        .contains(c['id'].toString()))
+                                    .take(5)
+                                    .map((c) => Container(
+                                          width: 14,
+                                          height: 14,
+                                          margin:
+                                              const EdgeInsets.only(right: 4),
+                                          decoration: BoxDecoration(
+                                            color: _parseColor(
+                                                c['hex']?.toString() ??
+                                                    '#111827'),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                                color: const Color(0xFFCBD5E1)),
+                                          ),
+                                        )),
+                                const SizedBox(width: 6),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  selectedColourIds.isEmpty
+                                      ? 'Select factory colours...'
+                                      : '${selectedColourIds.length} colour${selectedColourIds.length == 1 ? '' : 's'} selected',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: selectedColourIds.isEmpty
+                                        ? const Color(0xFF64748B)
+                                        : const Color(0xFF0F172A),
+                                    fontWeight: selectedColourIds.isEmpty
+                                        ? FontWeight.w400
+                                        : FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const Icon(Icons.keyboard_arrow_down_rounded,
+                                  size: 20, color: Color(0xFF64748B)),
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                     ],
