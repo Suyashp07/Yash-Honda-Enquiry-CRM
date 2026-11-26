@@ -1475,26 +1475,33 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                                   .isNotEmpty)
                                                 SizedBox(
                                                   height: 24,
-                                                  child: Align(
+                                                  width: double.infinity,
+                                                  child: FittedBox(
+                                                    fit: BoxFit.scaleDown,
                                                     alignment:
                                                         Alignment.centerLeft,
-                                                    child: SmartMediaImage(
-                                                      source:
-                                                          v['wordmarkImageUrl']
-                                                              ?.toString(),
-                                                      fit: BoxFit.contain,
-                                                      fallback: Text(
-                                                        v['name']?.toString() ??
-                                                            '',
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: const TextStyle(
-                                                          fontSize: 14.5,
-                                                          fontWeight:
-                                                              FontWeight.w800,
-                                                          color:
-                                                              Color(0xFF0F172A),
+                                                    child: SizedBox(
+                                                      height: 24,
+                                                      child: SmartMediaImage(
+                                                        source: v[
+                                                                'wordmarkImageUrl']
+                                                            ?.toString(),
+                                                        fit: BoxFit.contain,
+                                                        fallback: Text(
+                                                          v['name']
+                                                                  ?.toString() ??
+                                                              '',
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 14.5,
+                                                            fontWeight:
+                                                                FontWeight.w800,
+                                                            color: Color(
+                                                                0xFF0F172A),
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
