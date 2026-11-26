@@ -193,6 +193,73 @@ class _DealershipSummaryScreenState
     }
   }
 
+  Future<void> _exportCsv() async {
+    if (_summaryData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No summary data loaded to export.')),
+      );
+      return;
+    }
+    try {
+      final branches = (_summaryData?['branches'] as List?) ?? [];
+      final buffer = StringBuffer();
+      buffer.writeln('Branch,Code,Leads,Walk-ins,Telephonic,Booked,Conversion %');
+      for (final b in branches) {
+        final name = (b['name'] ?? '').toString().replaceAll(',', ' ');
+        final code = (b['code'] ?? '').toString();
+        final total = b['total'] ?? b['totalLeads'] ?? 0;
+        final walkIns = b['walkIns'] ?? 0;
+        final calls = b['callsRecd'] ?? b['telephonic'] ?? 0;
+        final booked = b['booked'] ?? b['bookings'] ?? 0;
+        final conv = b['conversionRate'] ?? 0;
+        buffer.writeln('$name,$code,$total,$walkIns,$calls,$booked,$conv%');
+      }
+      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      await downloadTextFile(
+        buffer.toString(),
+        'dealership_summary_${_selectedPeriod}_$dateStr.csv',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: AppColors.success,
+            content: Text('Dealership summary CSV exported.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
+  }
+
+  Widget _buildSquareIconButton(IconData icon, VoidCallback onTap,
+      {String? tooltip}) {
+    final btn = InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        alignment: Alignment.center,
+        child: Icon(icon, size: 17, color: const Color(0xFF475569)),
+      ),
+    );
+
+    if (tooltip != null) {
+      return Tooltip(message: tooltip, child: btn);
+    }
+    return btn;
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<String>(selectedBranchIdProvider, (prev, next) {
@@ -505,21 +572,26 @@ class _DealershipSummaryScreenState
             ],
           ),
 
-          // Print & Refresh
+          // Download, Print & Refresh (matching Enquiries screen)
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
-                icon: const Icon(Icons.print_outlined,
-                    size: 20, color: Color(0xFF64748B)),
-                tooltip: 'Print / Export summary',
-                onPressed: _handlePrint,
+              _buildSquareIconButton(
+                Icons.file_download_outlined,
+                _exportCsv,
+                tooltip: 'Download summary CSV',
               ),
-              IconButton(
-                icon: const Icon(Icons.refresh,
-                    size: 20, color: Color(0xFF64748B)),
+              const SizedBox(width: 6),
+              _buildSquareIconButton(
+                Icons.print_outlined,
+                _handlePrint,
+                tooltip: 'Print dealership summary',
+              ),
+              const SizedBox(width: 6),
+              _buildSquareIconButton(
+                Icons.refresh,
+                _loadSummary,
                 tooltip: 'Reload latest dealership metrics from database',
-                onPressed: _loadSummary,
               ),
             ],
           ),
