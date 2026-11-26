@@ -68,6 +68,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     '8:30 PM',
     '9:00 PM',
     '9:30 PM',
+    '10:00 PM',
   ];
 
   Timer? _refreshTimer;
