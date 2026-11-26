@@ -3781,10 +3781,65 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     }
 
     if (actionType == 'email') {
-      final email = _customerEmailController.text.trim();
-      if (!email.contains('@')) {
-        _handleAction('email');
-        return;
+      String email = _customerEmailController.text.trim();
+      final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+      if (!emailRegex.hasMatch(email)) {
+        final entered = await showDialog<String>(
+          context: context,
+          builder: (ctx) {
+            final ctrl = TextEditingController(text: email);
+            String? errText;
+            return StatefulBuilder(
+              builder: (context, setDlgState) => AlertDialog(
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                title: const Text('Email Quotation',
+                    style:
+                        TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                content: TextField(
+                  controller: ctrl,
+                  keyboardType: TextInputType.emailAddress,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: 'Customer Email Address *',
+                    hintText: 'name@example.com',
+                    errorText: errText,
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDC2626),
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () {
+                      final val = ctrl.text.trim();
+                      if (!emailRegex.hasMatch(val)) {
+                        setDlgState(
+                            () => errText = 'Enter a valid email address');
+                        return;
+                      }
+                      Navigator.pop(ctx, val);
+                    },
+                    child: const Text('Send Email'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+        if (entered == null || entered.isEmpty) return;
+        email = entered;
+        _customerEmailController.text = entered;
       }
       try {
         final res = await dio.post('/communications/email', data: {
@@ -3792,7 +3847,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           'recipientEmail': email,
           'subject':
               'Your Official Honda Quotation (#$quoteNo) - Yash Honda Pune',
-          'quotationId': _createdQuotationId,
+          if (_createdQuotationId != null) 'quotationId': _createdQuotationId,
         });
         if (mounted) {
           final ok = res.data is Map && res.data['success'] == true;
@@ -3809,8 +3864,18 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('Email send error: $e')));
+          String msg = 'Failed to send email.';
+          if (e is DioException && e.response?.data is Map) {
+            final errData = e.response!.data as Map;
+            final rawMsg = errData['message'];
+            msg = rawMsg is List ? rawMsg.join(', ') : (rawMsg?.toString() ?? msg);
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFDC2626),
+              content: Text(msg),
+            ),
+          );
         }
       }
       return;
