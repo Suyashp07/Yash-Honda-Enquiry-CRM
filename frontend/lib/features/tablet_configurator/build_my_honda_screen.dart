@@ -4027,12 +4027,15 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               .trim()
               .replaceAll(RegExp(r'[^0-9]'), '');
           final vName = _selectedVehicle?['name']?.toString() ?? 'Honda';
+          final brochureUrl =
+              _selectedVehicle?['brochureUrl']?.toString() ?? '';
           final totalStr = CurrencyFormatter.format(_estimatedTotal);
           final text = Uri.encodeComponent(
             'Namaste $custName, thank you for configuring your $vName ($_selectedColourName) at Yash Honda!\n\n'
             '• Quote No: $quoteNo\n'
             '• Estimated Total: $totalStr*\n'
-            '• Print / View Quote: ${ApiConstants.baseUrl}/quotations/$quoteNo/print\n\n'
+            '• Quotation PDF / Print: ${ApiConstants.baseUrl}/quotations/$quoteNo/print\n'
+            '${brochureUrl.isNotEmpty ? '• Official Vehicle Brochure (PDF): $brochureUrl\n' : ''}\n'
             'Yash Honda Authorised Dealership, Pune.',
           );
           await launchUrl(Uri.parse('https://wa.me/91$mobile?text=$text'),

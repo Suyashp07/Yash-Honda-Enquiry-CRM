@@ -7,6 +7,7 @@ import {
   hasVerifiedCompanySettings,
   formatINR as canonicalFormatINR,
 } from '../quotations/quotation-renderer';
+import { generateQuotationPdfBuffer } from '../quotations/quotation-pdf';
 
 @Injectable()
 export class CommunicationsService {
@@ -137,6 +138,37 @@ export class CommunicationsService {
       sentAt: new Date().toISOString(),
     };
 
+    // Build 2 PDF attachments: (1) Generated Quotation PDF + (2) Official Vehicle Brochure PDF
+    const attachments: Array<{ name: string; content: string }> = [];
+    try {
+      const quotePdfBuf = await generateQuotationPdfBuffer(quotation, enquiry, settings);
+      attachments.push({
+        name: `Quotation_${quotation.quoteNumber}.pdf`,
+        content: quotePdfBuf.toString('base64'),
+      });
+    } catch (pdfErr: any) {
+      this.logger.warn(`Could not generate quotation PDF buffer: ${pdfErr.message}`);
+    }
+
+    const brochureUrl = quotation.vehicle?.brochureUrl?.toString()?.trim();
+    if (brochureUrl && /^https?:\/\//i.test(brochureUrl)) {
+      try {
+        const bRes = await fetch(brochureUrl, { signal: AbortSignal.timeout(8000) });
+        if (bRes.ok) {
+          const bBuf = Buffer.from(await bRes.arrayBuffer());
+          const safeModel = (quotation.vehicle?.name || 'Honda_Vehicle')
+            .replace(/[^a-zA-Z0-9_-]+/g, '_');
+          attachments.push({
+            name: `${safeModel}_Brochure.pdf`,
+            content: bBuf.toString('base64'),
+          });
+        }
+      } catch (bErr: any) {
+        this.logger.warn(`Could not fetch brochure PDF (${brochureUrl}): ${bErr.message}`);
+      }
+    }
+    responsePayload.attachments = attachments.map((a) => a.name);
+
     if (brevoApiKey && brevoApiKey.length > 10) {
       this.logger.log(`Dispatching live Brevo transactional email to: ${recipientEmail}`);
       try {
@@ -153,6 +185,7 @@ export class CommunicationsService {
             subject,
             htmlContent,
             textContent,
+            ...(attachments.length > 0 ? { attachment: attachments } : {}),
           }),
         });
 

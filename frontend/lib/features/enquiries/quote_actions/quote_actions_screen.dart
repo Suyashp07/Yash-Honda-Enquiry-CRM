@@ -92,11 +92,14 @@ class _QuoteActionsScreenState extends ConsumerState<QuoteActionsScreen> {
           );
         } else {
           final signedUrl = await _getSignedPrintUrl();
+          final brochureUrl =
+              widget.quotation['vehicle']?['brochureUrl']?.toString() ?? '';
           final text = Uri.encodeComponent(
             'Namaste $custName, thank you for visiting Yash Honda! Here is your official quotation for $vName:\n\n'
             '• Quote No: $quoteNumber\n'
             '• Grand Total: $grandTotal\n'
-            '• View / Print Quote: $signedUrl\n\n'
+            '• Quotation PDF / Print: $signedUrl\n'
+            '${brochureUrl.isNotEmpty ? '• Official Vehicle Brochure (PDF): $brochureUrl\n' : ''}\n'
             'Our sales team will follow up with you shortly. Yash Honda Pune.',
           );
           final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
