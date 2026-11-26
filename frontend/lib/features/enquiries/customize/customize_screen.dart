@@ -1206,7 +1206,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                             : null,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Expanded(
                               child: Column(
@@ -1522,11 +1522,11 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   Widget _buildQuoteLogo({bool isBigWing = false}) {
     if (isBigWing) {
       return Container(
-        constraints: const BoxConstraints(maxHeight: 38, maxWidth: 110),
+        constraints: const BoxConstraints(maxHeight: 68, maxWidth: 150),
         alignment: Alignment.centerRight,
         child: Image.asset(
           'assets/honda_bigwing_logo.png',
-          height: 32,
+          height: 58,
           fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => const HondaWingLogo(),
         ),
@@ -1535,7 +1535,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     final logoUrl = _settings?['logoUrl']?.toString();
     if (logoUrl != null && logoUrl.isNotEmpty) {
       return Container(
-        constraints: const BoxConstraints(maxHeight: 38, maxWidth: 110),
+        constraints: const BoxConstraints(maxHeight: 60, maxWidth: 140),
         alignment: Alignment.centerRight,
         child: _buildBrandingImage(logoUrl, fallback: const HondaWingLogo()),
       );
