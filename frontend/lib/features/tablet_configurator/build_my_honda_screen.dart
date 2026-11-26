@@ -282,6 +282,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             'onRoadPrice': onRoad,
             'listingImageUrl': bv['listingImageUrl']?.toString(),
             'detailImageUrl': bv['detailImageUrl']?.toString(),
+            'wordmarkImageUrl': bv['wordmarkImageUrl']?.toString(),
             'brochureUrl': bv['brochureUrl']?.toString(),
             'colours': parsedColours,
           };
@@ -1468,17 +1469,50 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                v['name']?.toString() ?? '',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontSize: 14.5,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: Color(0xFF0F172A),
+                                              if ((v['wordmarkImageUrl']
+                                                          ?.toString() ??
+                                                      '')
+                                                  .isNotEmpty)
+                                                SizedBox(
+                                                  height: 24,
+                                                  child: Align(
+                                                    alignment:
+                                                        Alignment.centerLeft,
+                                                    child: SmartMediaImage(
+                                                      source:
+                                                          v['wordmarkImageUrl']
+                                                              ?.toString(),
+                                                      fit: BoxFit.contain,
+                                                      fallback: Text(
+                                                        v['name']?.toString() ??
+                                                            '',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: const TextStyle(
+                                                          fontSize: 14.5,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          color:
+                                                              Color(0xFF0F172A),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )
+                                              else
+                                                Text(
+                                                  v['name']?.toString() ?? '',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 14.5,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: Color(0xFF0F172A),
+                                                  ),
                                                 ),
-                                              ),
-                                              const SizedBox(height: 3),
+                                              const SizedBox(height: 4),
                                               Text(
                                                 '${CurrencyFormatter.format(displayPrice)}*',
                                                 style: const TextStyle(

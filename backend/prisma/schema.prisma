@@ -98,6 +98,7 @@ model Vehicle {
   brochureUrl      String?
   listingImageUrl  String? // Step 2 card image (4:3 landscape)
   detailImageUrl   String? // Step 3-7 large left panel (default colour image)
+  wordmarkImageUrl String? // Stylized Honda model name wordmark (PNG/WebP)
   ccDisplacement   Int? // 100, 110, 125, 150, 160, 300, 650 (CC filter)
   status           String          @default("Active")
   colours          VehicleColour[]

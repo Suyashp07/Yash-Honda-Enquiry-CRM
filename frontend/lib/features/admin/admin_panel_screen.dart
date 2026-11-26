@@ -1722,6 +1722,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         text: editingItem?['letterhead'] ?? 'Yash Honda – Red Wing');
     final brochureUrlCtrl =
         TextEditingController(text: editingItem?['brochureUrl'] ?? '');
+    final wordmarkUrlCtrl =
+        TextEditingController(text: editingItem?['wordmarkImageUrl'] ?? '');
     PlatformFile? pickedBrochurePdf;
     final addressCtrl =
         TextEditingController(text: editingItem?['address'] ?? '');
@@ -2369,6 +2371,18 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: wordmarkUrlCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Stylized Name Wordmark (PNG / URL)',
+                          hintText:
+                              'Optional PNG/WebP URL or data URI for model font logo',
+                          prefixIcon: const Icon(Icons.title_rounded),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
                       if (editingItem != null) ...[
                         const SizedBox(height: 14),
                         SizedBox(
@@ -2595,6 +2609,9 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       final bUrl = brochureUrlCtrl.text.trim().isNotEmpty
                           ? brochureUrlCtrl.text.trim()
                           : null;
+                      final wUrl = wordmarkUrlCtrl.text.trim().isNotEmpty
+                          ? wordmarkUrlCtrl.text.trim()
+                          : null;
                       String? savedVehicleId;
                       if (editingItem != null) {
                         savedVehicleId = editingItem['id']?.toString();
@@ -2608,6 +2625,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                           'onRoadPrice': onRoad,
                           if (ccVal != null) 'ccDisplacement': ccVal,
                           'brochureUrl': bUrl,
+                          'wordmarkImageUrl': wUrl,
                           'colourIds': selectedColourIds.toList(),
                         });
                       } else {
@@ -2630,6 +2648,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                           'onRoadPrice': onRoad,
                           if (ccVal != null) 'ccDisplacement': ccVal,
                           'brochureUrl': bUrl,
+                          'wordmarkImageUrl': wUrl,
                           'colourIds': selectedColourIds.toList(),
                         });
                         savedVehicleId = createRes.data?['id']?.toString();

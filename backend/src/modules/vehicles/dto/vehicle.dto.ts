@@ -112,6 +112,11 @@ export class CreateVehicleDto {
   @IsString()
   @IsOptional()
   detailImageUrl?: string | null;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  wordmarkImageUrl?: string | null;
 }
 
 export class UpdateVehicleDto {
@@ -159,6 +164,11 @@ export class UpdateVehicleDto {
   @IsString()
   @IsOptional()
   detailImageUrl?: string | null;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  wordmarkImageUrl?: string | null;
 
   @ApiProperty({ required: false })
   @IsString()
