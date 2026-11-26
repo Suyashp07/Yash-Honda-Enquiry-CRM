@@ -685,35 +685,6 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                 onChanged: (val) => setState(() => _buyingWhen = val ?? 'Immediate'),
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildDropdownField<String>(
-                label: 'Sales Rep',
-                value: _selectedRepId,
-                hintText: 'Select sales rep',
-                items: _salesReps.map((r) {
-                  return DropdownMenuItem(value: r['id'].toString(), child: Text(r['name'] ?? 'Rep'));
-                }).toList(),
-                onChanged: (val) {
-                  setState(() {
-                    _selectedRepId = val;
-                    // Auto-sync rep's branch if known
-                    final repObj = _salesReps.firstWhere(
-                      (r) => r['id']?.toString() == val,
-                      orElse: () => null,
-                    );
-                    if (repObj != null && repObj['userBranches'] is List && (repObj['userBranches'] as List).isNotEmpty) {
-                      final repBranchId = repObj['userBranches'][0]['branch']?['id']?.toString() ??
-                          repObj['userBranches'][0]['branchId']?.toString();
-                      if (repBranchId != null && repBranchId.isNotEmpty) {
-                        _selectedBranchId = repBranchId;
-                      }
-                    }
-                  });
-                  _syncLiveFloorSession();
-                },
-              ),
-            ),
           ],
         ),
         const SizedBox(height: 14),
