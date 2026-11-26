@@ -1680,7 +1680,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                   'Guest';
 
               return Container(
-                height: (72.0 * (_zoomLevel / 100.0)).clamp(46.0, 108.0),
+                height: (72.0 * (_zoomLevel / 100.0)).clamp(54.0, 108.0),
                 decoration: const BoxDecoration(
                   border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
                 ),
@@ -1693,7 +1693,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                       child: Container(
                         width: 200,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
+                            horizontal: 14, vertical: 4),
                         decoration: const BoxDecoration(
                           color: Colors.white,
                           border: Border(
@@ -1721,6 +1721,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                                 children: [
                                   Text(
                                     repName,
+                                    maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       fontSize: 13,
@@ -1732,6 +1733,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                                   if (isBusy)
                                     Text(
                                       'With $customerName',
+                                      maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         fontSize: 11,
@@ -1742,6 +1744,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                                   else
                                     const Text(
                                       'Available',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w500,
