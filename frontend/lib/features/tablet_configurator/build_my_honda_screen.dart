@@ -1466,158 +1466,174 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   }
 
   // ==========================================================
-  // STEP 3: CHOOSE YOUR COLOUR (BIG SHOWCASE + GLOSSY SWATCHES)
+  // STEP 3: CHOOSE YOUR COLOUR (HONDA STUDIO STAGE + SWATCHES)
   // ==========================================================
   Widget _buildStep3ChooseColour() {
     final v = _selectedVehicle;
     final swatches = _getColoursForVehicle(v);
+    final activeColor = _selectedColourValue;
+    final isVeryLight = activeColor.computeLuminance() > 0.72;
+    final stageCenter = isVeryLight
+        ? const Color(0xFF475569)
+        : (Color.lerp(activeColor, Colors.white, 0.28) ?? activeColor);
+    final stageMid = isVeryLight
+        ? const Color(0xFF1E293B)
+        : (Color.lerp(activeColor, Colors.black, 0.45) ?? activeColor);
+    final stageEdge = isVeryLight
+        ? const Color(0xFF0F172A)
+        : (Color.lerp(activeColor, Colors.black, 0.78) ?? const Color(0xFF0F172A));
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildHeroHeadline('CHOOSE YOUR ', 'COLOUR',
+            subtitle: '${v?['name'] ?? 'Honda'} · Make it truly yours.'),
+        const SizedBox(height: 12),
         Expanded(
-          flex: 7,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeroHeadline('CHOOSE YOUR ', 'COLOUR',
-                  subtitle: 'Make it truly yours.'),
-              _buildShowcaseImageBox(animate: true),
-              const SizedBox(height: 8),
-              Center(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: _selectedColourValue,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFCBD5E1)),
-                        ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOut,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: RadialGradient(
+                center: const Alignment(-0.15, -0.1),
+                radius: 1.05,
+                colors: [stageCenter, stageMid, stageEdge],
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x28000000),
+                  blurRadius: 24,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // Subtle floor glow / ground shadow under the vehicle
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 130,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(24),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${v?['name'] ?? ''} · $_selectedColourName',
-                        style: const TextStyle(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.0),
+                          Colors.black.withValues(alpha: 0.42),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Main Vehicle Showcase + Bottom Swatches & Colour Name Pill
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 20, 28, 20),
+                  child: Column(
+                    children: [
+                      _buildShowcaseImageBox(animate: true),
+                      const SizedBox(height: 12),
+
+                      // Centered Horizontal Colour Swatches (Shine 100 style)
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.center,
+                        children: swatches.map((opt) {
+                          final cName = opt['name']?.toString() ?? 'Standard';
+                          final col = _parseColor(opt['hex']?.toString());
+                          final isSel = _selectedColourName == cName;
+                          final isDark = col.computeLuminance() < 0.45;
+
+                          return Tooltip(
+                            message: cName,
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _selectedColourName = cName;
+                                  _selectedColourValue = col;
+                                  _selectedColourImageUrl =
+                                      opt['colourImageUrl']?.toString();
+                                  _invalidateQuoteCache();
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(24),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 160),
+                                width: isSel ? 34 : 28,
+                                height: isSel ? 34 : 28,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: col,
+                                  border: Border.all(
+                                    color: isSel
+                                        ? Colors.white
+                                        : Colors.white.withValues(alpha: 0.55),
+                                    width: isSel ? 2.5 : 1.5,
+                                  ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x40000000),
+                                      blurRadius: 6,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: isSel
+                                    ? Icon(
+                                        Icons.check,
+                                        size: 16,
+                                        color: isDark
+                                            ? Colors.white
+                                            : const Color(0xFF0F172A),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // White Pill showing selected colour name
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x26000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          _selectedColourName,
+                          style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF334155)),
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-
-        const SizedBox(width: 24),
-
-        // Center-Right Column: / COLOUR + Vertical Glossy Swatches (Mockup 3)
-        Expanded(
-          flex: 3,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('/ ',
-                      style: TextStyle(
-                          color: Color(0xFFDC2626),
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900)),
-                  Text(
-                    'COLOUR',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      fontStyle: FontStyle.italic,
-                      letterSpacing: 0.6,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              ...swatches.map((opt) {
-                final cName = opt['name']?.toString() ?? 'Standard';
-                final col = _parseColor(opt['hex']?.toString());
-                final isSel = _selectedColourName == cName;
-                final isLight = col.computeLuminance() > 0.78;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 18),
-                  child: Tooltip(
-                    message: cName,
-                    child: InkWell(
-                      onTap: () {
-                        setState(() {
-                          _selectedColourName = cName;
-                          _selectedColourValue = col;
-                          _selectedColourImageUrl =
-                              opt['colourImageUrl']?.toString();
-                          _invalidateQuoteCache();
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(32),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isSel
-                                ? const Color(0xFFDC2626)
-                                : Colors.transparent,
-                            width: 2.2,
-                          ),
-                        ),
-                        child: Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              center: const Alignment(-0.35, -0.35),
-                              radius: 0.9,
-                              colors: [
-                                Color.lerp(col, Colors.white, 0.32) ?? col,
-                                col,
-                                Color.lerp(col, Colors.black, 0.25) ?? col,
-                              ],
-                            ),
-                            border: Border.all(
-                              color: isLight
-                                  ? const Color(0xFFCBD5E1)
-                                  : Colors.transparent,
-                              width: 1,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x24000000),
-                                blurRadius: 8,
-                                offset: Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ],
+              ],
+            ),
           ),
         ),
       ],
