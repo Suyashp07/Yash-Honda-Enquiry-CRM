@@ -76,7 +76,7 @@ function buildWordmarkSvg(name: string, code: string): string {
 
   // 6. Hornet series — aggressive geometric uppercase
   if (lower.includes('hornet')) {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 160" width="900" height="160">
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 160" width="1400" height="160">
       <g transform="skewX(-15) translate(38, 0)">
         <text x="0" y="106" font-family="'Arial Black', 'Impact', sans-serif" font-size="74" font-weight="900" letter-spacing="3" fill="#0F172A">${escXml(n.toUpperCase())}</text>
       </g>
@@ -86,7 +86,7 @@ function buildWordmarkSvg(name: string, code: string): string {
 
   // 7. Heritage CB350 / H'ness / CB350C / CB350RS — classic BigWing neo-retro serif
   if (lower.includes('cb350') || lower.includes('h\'ness') || lower.includes('rebel')) {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 160" width="900" height="160">
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 160" width="1400" height="160">
       <text x="16" y="102" font-family="'Georgia', 'Times New Roman', serif" font-size="76" font-weight="700" letter-spacing="1.5" fill="#0F172A">${escXml(n)}</text>
       <line x1="18" y1="122" x2="260" y2="122" stroke="#CC0000" stroke-width="6" stroke-linecap="round"/>
       <line x1="272" y1="122" x2="340" y2="122" stroke="#94A3B8" stroke-width="6" stroke-linecap="round"/>
@@ -102,7 +102,7 @@ function buildWordmarkSvg(name: string, code: string): string {
     lower.includes('gold wing') ||
     lower.includes('cb500')
   ) {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 160" width="900" height="160">
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 160" width="1400" height="160">
       <g transform="skewX(-12) translate(32, 0)">
         <text x="0" y="104" font-family="'Arial Black', 'Impact', sans-serif" font-size="70" font-weight="900" letter-spacing="2.5" fill="#0F172A">${escXml(n.toUpperCase())}</text>
       </g>
@@ -112,7 +112,7 @@ function buildWordmarkSvg(name: string, code: string): string {
   }
 
   // 9. Default (Unicorn, Livo, CB300R, etc.) — clean bold Honda italic
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 160" width="900" height="160">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 160" width="1400" height="160">
     <g transform="skewX(-10) translate(28, 0)">
       <text x="0" y="102" font-family="'Helvetica Neue', 'Arial', sans-serif" font-size="78" font-weight="900" font-style="italic" letter-spacing="0.5" fill="#0F172A">${escXml(n)}</text>
     </g>
