@@ -3471,6 +3471,20 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
       final custMobile = _customerMobileController.text.trim();
       final custEmail = _customerEmailController.text.trim();
       final vName = _selectedVehicle?['name']?.toString() ?? 'Honda Vehicle';
+      final mgName = _selectedVehicle?['modelGroup']?.toString() ?? '';
+      final isBigWing = mgName.toLowerCase().contains('big') ||
+          _selectedCategory == 'BigBike' ||
+          quoteNo.toUpperCase().startsWith('BW');
+      final wingColorHex = isBigWing ? '#E2E8F0' : '#DC2626';
+      final wingSvg = '''
+<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+  <polygon points="6,55 96,55 78,47 14,47" fill="$wingColorHex"/>
+  <path d="M14,44 Q32,8 98,6 L93,13 Q36,16 24,44 Z" fill="$wingColorHex"/>
+  <path d="M18,44 Q36,18 92,16 L87,23 Q40,26 28,44 Z" fill="$wingColorHex"/>
+  <path d="M22,44 Q40,28 86,26 L81,33 Q44,36 32,44 Z" fill="$wingColorHex"/>
+  <path d="M26,44 Q44,38 80,36 L75,43 Q48,45 36,44 Z" fill="$wingColorHex"/>
+</svg>
+''';
       final branchObj = _backendBranches.firstWhere(
         (b) => b['id']?.toString() == _selectedBranchId,
         orElse: () => <String, dynamic>{},
@@ -3494,11 +3508,16 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           build: (ctx) => pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // Brand Header
+              // Brand Header (BigWing = Black + Silver Wing + Gold; RedWing = White + Red Wing)
               pw.Container(
                 padding: const pw.EdgeInsets.all(16),
                 decoration: pw.BoxDecoration(
-                  color: PdfColor.fromHex('#DC2626'),
+                  color: isBigWing
+                      ? PdfColor.fromHex('#0F172A')
+                      : PdfColors.white,
+                  border: isBigWing
+                      ? null
+                      : pw.Border.all(color: PdfColor.fromHex('#E2E8F0')),
                   borderRadius: pw.BorderRadius.circular(8),
                 ),
                 child: pw.Row(
@@ -3510,44 +3529,51 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                         pw.Text(
                           'YASH HONDA',
                           style: pw.TextStyle(
-                            color: PdfColors.white,
+                            color: isBigWing
+                                ? PdfColors.white
+                                : PdfColor.fromHex('#DC2626'),
                             fontSize: 20,
                             fontWeight: pw.FontWeight.bold,
                           ),
                         ),
                         pw.SizedBox(height: 2),
                         pw.Text(
-                          'Authorised Honda Two-Wheeler Dealership · $branchLabel',
-                          style: const pw.TextStyle(
-                            color: PdfColors.white,
+                          isBigWing
+                              ? 'Authorised Honda BigWing Dealer · $branchLabel'
+                              : 'Authorised Honda RedWing Dealer · $branchLabel',
+                          style: pw.TextStyle(
+                            color: isBigWing
+                                ? PdfColor.fromHex('#F59E0B')
+                                : PdfColor.fromHex('#DC2626'),
                             fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          'Quotation #$quoteNo  ·  Date: $dateStr',
+                          style: pw.TextStyle(
+                            color: isBigWing
+                                ? PdfColor.fromHex('#CBD5E1')
+                                : PdfColor.fromHex('#475569'),
+                            fontSize: 9.5,
                           ),
                         ),
                       ],
                     ),
                     pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
                       children: [
+                        pw.SvgImage(svg: wingSvg, width: 46, height: 28),
+                        pw.SizedBox(height: 2),
                         pw.Text(
-                          'QUOTATION',
+                          isBigWing ? 'HONDA BigWing' : 'HONDA',
                           style: pw.TextStyle(
-                            color: PdfColors.white,
-                            fontSize: 13,
+                            color: isBigWing
+                                ? PdfColor.fromHex('#E2E8F0')
+                                : PdfColor.fromHex('#DC2626'),
+                            fontSize: 8,
                             fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.Text(
-                          '#$quoteNo',
-                          style: const pw.TextStyle(
-                            color: PdfColors.white,
-                            fontSize: 11,
-                          ),
-                        ),
-                        pw.Text(
-                          'Date: $dateStr',
-                          style: const pw.TextStyle(
-                            color: PdfColors.white,
-                            fontSize: 9.5,
                           ),
                         ),
                       ],
@@ -3735,8 +3761,13 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               pw.Container(
                 padding: const pw.EdgeInsets.all(14),
                 decoration: pw.BoxDecoration(
-                  color: PdfColor.fromHex('#FEF2F2'),
-                  border: pw.Border.all(color: PdfColor.fromHex('#FECACA')),
+                  color: isBigWing
+                      ? PdfColor.fromHex('#FFFBEB')
+                      : PdfColor.fromHex('#FEF2F2'),
+                  border: pw.Border.all(
+                      color: isBigWing
+                          ? PdfColor.fromHex('#FDE68A')
+                          : PdfColor.fromHex('#FECACA')),
                   borderRadius: pw.BorderRadius.circular(8),
                 ),
                 child: pw.Row(
@@ -3752,7 +3783,9 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       style: pw.TextStyle(
                         fontSize: 18,
                         fontWeight: pw.FontWeight.bold,
-                        color: PdfColor.fromHex('#DC2626'),
+                        color: isBigWing
+                            ? PdfColor.fromHex('#D97706')
+                            : PdfColor.fromHex('#DC2626'),
                       ),
                     ),
                   ],

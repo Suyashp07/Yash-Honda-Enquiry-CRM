@@ -277,9 +277,17 @@ export class QuotationsService {
     const customer: any = quote.enquiry?.customer || {};
     const vehicle: any = quote.vehicle || {};
     const branch: any = quote.branch || {};
-    const wing = branch.wing || (quote.quoteNumber.startsWith('BW') ? 'BigWing' : 'RedWing');
-    const wingColor = wing === 'BigWing' ? '#1E293B' : '#CC0000';
+    const vehicleWing =
+      vehicle.modelGroup?.name?.toLowerCase().includes('big') || vehicle.category === 'BigBike'
+        ? 'BigWing'
+        : vehicle.modelGroup?.name
+        ? 'RedWing'
+        : null;
+    const wing = vehicleWing || branch.wing || (quote.quoteNumber.startsWith('BW') ? 'BigWing' : 'RedWing');
+    const wingColor = wing === 'BigWing' ? '#0F172A' : '#CC0000';
     const isBigWing = wing === 'BigWing';
+    const wingSvgColor = isBigWing ? '#E2E8F0' : '#DC2626';
+    const wingLogoSvg = `<svg width="46" height="28" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg"><polygon points="6,55 96,55 78,47 14,47" fill="${wingSvgColor}"/><path d="M14,44 Q32,8 98,6 L93,13 Q36,16 24,44 Z" fill="${wingSvgColor}"/><path d="M18,44 Q36,18 92,16 L87,23 Q40,26 28,44 Z" fill="${wingSvgColor}"/><path d="M22,44 Q40,28 86,26 L81,33 Q44,36 32,44 Z" fill="${wingSvgColor}"/><path d="M26,44 Q44,38 80,36 L75,43 Q48,45 36,44 Z" fill="${wingSvgColor}"/></svg>`;
 
     const items = quote.items || [];
     const accessories = quote.accessories || [];
@@ -391,30 +399,30 @@ export class QuotationsService {
 
   <div class="page-container">
     <!-- Header -->
-    <table style="width: 100%; border-bottom: 2px solid ${wingColor}; padding-bottom: 18px; margin-bottom: 22px;">
+    <table style="width: 100%; background: ${isBigWing ? '#0F172A' : '#FFFFFF'}; color: ${isBigWing ? '#FFFFFF' : '#0F172A'}; border-radius: 8px; padding: 18px 20px; border: 1px solid ${isBigWing ? '#0F172A' : '#E2E8F0'}; border-bottom: 3px solid ${isBigWing ? '#F59E0B' : '#DC2626'}; margin-bottom: 22px;">
       <tr>
         <td style="vertical-align: top;">
           <div style="display: flex; align-items: center; gap: 12px;">
-            ${settings.logoUrl ? `<img src="${settings.logoUrl}" alt="${settings.companyName || 'Yash Honda'}" style="max-height: 44px; max-width: 140px; object-fit: contain;" />` : ''}
-            <div style="font-size: 26px; font-weight: 900; color: #CC0000; letter-spacing: -0.5px;">${settings.companyName || 'Yash Honda'}</div>
-            <span style="background: ${isBigWing ? '#0F172A' : '#FEE2E2'}; color: ${isBigWing ? '#F8FAFC' : '#DC2626'}; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+            <div style="font-size: 26px; font-weight: 900; color: ${isBigWing ? '#FFFFFF' : '#CC0000'}; letter-spacing: -0.5px;">${settings.companyName || 'Yash Honda'}</div>
+            <span style="background: ${isBigWing ? '#1E293B' : '#FEE2E2'}; color: ${isBigWing ? '#F59E0B' : '#DC2626'}; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
               ${wing}
             </span>
           </div>
-          <div style="font-size: 12px; color: #475569; margin-top: 4px; font-weight: 500;">
-            Authorized Dealer • Honda Motorcycle and Scooter India Pvt. Ltd.
+          <div style="font-size: 12px; color: ${isBigWing ? '#F59E0B' : '#DC2626'}; margin-top: 4px; font-weight: 700;">
+            Authorised ${wing} Dealer • Honda Motorcycle and Scooter India Pvt. Ltd.
           </div>
-          <div style="font-size: 11.5px; color: #64748B; margin-top: 4px; line-height: 1.4;">
+          <div style="font-size: 11.5px; color: ${isBigWing ? '#CBD5E1' : '#64748B'}; margin-top: 4px; line-height: 1.4;">
             <strong>Branch:</strong> ${branch.name || 'Phursungi Showroom'} (${branch.code || ''})<br>
             ${branch.address || settings.address}<br>
             <strong>GSTIN:</strong> ${settings.gstNumber || '24XXXXXXXXXXXZ5'}
           </div>
         </td>
         <td style="vertical-align: top; text-align: right;">
-          <div style="font-size: 11px; font-weight: 800; color: #64748B; letter-spacing: 1px; text-transform: uppercase;">
+          <div style="margin-bottom: 8px;">${wingLogoSvg}</div>
+          <div style="font-size: 11px; font-weight: 800; color: ${isBigWing ? '#94A3B8' : '#64748B'}; letter-spacing: 1px; text-transform: uppercase;">
             Official Quotation
           </div>
-          <div style="font-size: 16px; font-weight: 800; color: #0F172A; margin-top: 2px; font-family: monospace;">
+          <div style="font-size: 16px; font-weight: 800; color: ${isBigWing ? '#FFFFFF' : '#0F172A'}; margin-top: 2px; font-family: monospace;">
             #${quote.quoteNumber}
           </div>
           <div style="font-size: 11.5px; color: #475569; margin-top: 8px;">
