@@ -772,7 +772,13 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
           const SizedBox(width: AppSpacing.s8),
           IconButton(
             tooltip: 'AI Dealership Assistant',
-            icon: const Icon(AppIcons.ai, color: AppColors.aiAccent),
+            icon: Image.asset(
+              'assets/ai_icon.png',
+              width: 22,
+              height: 22,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+            ),
             onPressed: () => _showAiInsightsDialog(context, ref),
           ),
           IconButton(
@@ -1060,7 +1066,13 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                   },
                 ),
               ListTile(
-                leading: const Icon(AppIcons.ai, color: AppColors.aiAccent),
+                leading: Image.asset(
+                  'assets/ai_icon.png',
+                  width: 22,
+                  height: 22,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
                 title: const Text('AI Dealership Assistant'),
                 onTap: () {
                   Navigator.pop(ctx);

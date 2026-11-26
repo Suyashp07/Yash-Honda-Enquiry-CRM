@@ -125,7 +125,13 @@ class _AiSummaryCardState extends ConsumerState<AiSummaryCard> {
                       color: AppColors.aiAccent.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Icon(Icons.auto_awesome_outlined, size: 16, color: AppColors.aiAccent),
+                    child: Image.asset(
+                      'assets/ai_icon.png',
+                      width: 18,
+                      height: 18,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   const Text(
