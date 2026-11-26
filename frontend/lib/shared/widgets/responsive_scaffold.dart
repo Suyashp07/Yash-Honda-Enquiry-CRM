@@ -436,17 +436,66 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                             ),
                           )
                         else
-                          Tooltip(
-                            message: 'Admin Panel',
-                            child: IconButton(
-                              icon: Icon(
-                                Icons.settings_outlined,
-                                color: widget.currentRoute.startsWith('/admin')
-                                    ? const Color(0xFFDC2626)
-                                    : const Color(0xFF64748B),
+                          Center(
+                            child: PopupMenuButton<String>(
+                              tooltip: 'Admin Panel modules',
+                              offset: const Offset(56, 0),
+                              color: Colors.white,
+                              surfaceTintColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: const BorderSide(color: Color(0xFFE2E8F0)),
                               ),
-                              onPressed: () =>
-                                  context.go(adminItems.first.route),
+                              onSelected: (route) => context.go(route),
+                              itemBuilder: (_) => adminItems.map((subItem) {
+                                final isSubSelected =
+                                    widget.currentRoute == subItem.route;
+                                return PopupMenuItem<String>(
+                                  value: subItem.route,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        subItem.icon,
+                                        size: 16,
+                                        color: isSubSelected
+                                            ? const Color(0xFFDC2626)
+                                            : const Color(0xFF64748B),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        subItem.title,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: isSubSelected
+                                              ? FontWeight.w700
+                                              : FontWeight.w500,
+                                          color: isSubSelected
+                                              ? const Color(0xFFDC2626)
+                                              : const Color(0xFF334155),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                              child: Container(
+                                height: 38,
+                                width: 44,
+                                decoration: BoxDecoration(
+                                  color: widget.currentRoute.startsWith('/admin')
+                                      ? const Color(0xFFFEE2E2)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  Icons.settings_outlined,
+                                  size: 18,
+                                  color: widget.currentRoute.startsWith('/admin')
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFF64748B),
+                                ),
+                              ),
                             ),
                           ),
                         if (!collapsed && _isAdminExpanded)
