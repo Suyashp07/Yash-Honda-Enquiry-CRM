@@ -183,7 +183,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         final nowSlot = _getNowSlot();
         final idx = _timeSlots.indexOf(nowSlot);
         if (idx > 1) {
-          final cellW = 130.0 * (_zoomLevel / 100.0);
+          final cellW = 165.0 * (_zoomLevel / 100.0);
           final targetOffset = (idx - 1) * cellW;
           _timelineScrollController.animateTo(
             math.min(targetOffset,
@@ -1534,7 +1534,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
       );
     }
 
-    final double cellWidth = 130.0 * (_zoomLevel / 100.0);
+    final double cellWidth = 165.0 * (_zoomLevel / 100.0);
     final String currentSlot = _getNowSlot();
     final bool isToday = DateFormat('yyyy-MM-dd').format(_currentDate) ==
         DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -2145,18 +2145,21 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
         onTap: () => _showSessionDetails(session, repName),
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(6),
-            border: Border(
-              left: BorderSide(color: accentColor, width: 3.5),
-              top: BorderSide(color: borderColor, width: 0.5),
-              right: BorderSide(color: borderColor, width: 0.5),
-              bottom: BorderSide(color: borderColor, width: 0.5),
-            ),
+            border: Border.all(color: borderColor, width: 0.5),
           ),
-          child: Column(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(5.5),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: accentColor, width: 3.5),
+                ),
+              ),
+              child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -2193,7 +2196,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   // Empty slot: stays visually clean/blank by default (matching the prototype)
