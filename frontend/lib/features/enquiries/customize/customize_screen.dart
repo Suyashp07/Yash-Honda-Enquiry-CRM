@@ -31,6 +31,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   // Exchange Controllers
   final _exchangeMakeModelController = TextEditingController();
   final _exchangeYearController = TextEditingController();
+  final _exchangeKmsController = TextEditingController();
   final _exchangeExpectedController = TextEditingController();
 
   // Master Data Lists
@@ -151,6 +152,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     _remarksController.dispose();
     _exchangeMakeModelController.dispose();
     _exchangeYearController.dispose();
+    _exchangeKmsController.dispose();
     _exchangeExpectedController.dispose();
     super.dispose();
   }
@@ -341,6 +343,23 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       final dio = ref.read(dioProvider);
       final accList = _selectedAccessoryIds.map((id) => {'accessoryId': id}).toList();
 
+      final baseRemarks = _remarksController.text.trim();
+      final exchParts = <String>[];
+      if (_exchange != 'no') {
+        final mm = _exchangeMakeModelController.text.trim();
+        final yr = _exchangeYearController.text.trim();
+        final kms = _exchangeKmsController.text.trim();
+        final exp = _exchangeExpectedController.text.trim();
+        if (mm.isNotEmpty) exchParts.add(mm);
+        if (yr.isNotEmpty) exchParts.add('Year: $yr');
+        if (kms.isNotEmpty) exchParts.add('Kms: $kms');
+        if (exp.isNotEmpty) exchParts.add('Expected: ₹$exp');
+      }
+      final combinedRemarks = [
+        if (exchParts.isNotEmpty) 'Exchange (${exchParts.join(', ')})',
+        if (baseRemarks.isNotEmpty) baseRemarks,
+      ].join(' • ');
+
       final res = await dio.post('/enquiries', data: {
         'branchId': _selectedBranchId,
         'customer': {
@@ -356,7 +375,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         'financierId': _purchaseMode == 'Finance' ? _selectedFinancierId : null,
         'exchange': _exchange == 'yes_print' ? 'Yes & Print' : (_exchange == 'yes' ? 'Yes' : 'No'),
         'buyingWhen': _buyingWhen,
-        'remarks': _remarksController.text.trim().isEmpty ? null : _remarksController.text.trim(),
+        'remarks': combinedRemarks.isEmpty ? null : combinedRemarks,
         'quotation': {
           'vehicleId': _selectedVehicleId,
           'colourName': _selectedColour,
@@ -867,6 +886,16 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   label: 'Year',
                   controller: _exchangeYearController,
                   hint: 'e.g. 2018',
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildInputField(
+                  label: 'Kms Run',
+                  controller: _exchangeKmsController,
+                  hint: 'e.g. 18000',
+                  keyboardType: TextInputType.number,
                 ),
               ),
               const SizedBox(width: 10),
