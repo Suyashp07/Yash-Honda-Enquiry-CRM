@@ -1441,49 +1441,6 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     );
   }
 
-  Widget _buildOwnershipBadge(String ownership) {
-    final isOwned = ownership == 'Owned';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: isOwned ? const Color(0xFFECFDF5) : const Color(0xFFFEF3C7),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-            color: isOwned ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 5,
-            height: 5,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color:
-                  isOwned ? const Color(0xFF059669) : const Color(0xFFD97706),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            ownership,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color:
-                  isOwned ? const Color(0xFF059669) : const Color(0xFFD97706),
-            ),
-          ),
-          const SizedBox(width: 2),
-          Icon(
-            Icons.keyboard_arrow_down,
-            size: 14,
-            color: isOwned ? const Color(0xFF059669) : const Color(0xFFD97706),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     ref.listen<String>(selectedBranchIdProvider, (prev, next) {
@@ -1925,11 +1882,6 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                             style: _headerStyle),
                                         tooltip:
                                             'Showroom sales representative handling this customer'),
-                                    const DataColumn(
-                                        label: Text('Ownership',
-                                            style: _headerStyle),
-                                        tooltip:
-                                            'Lead assignment ownership status'),
                                     const DataColumn(
                                         label:
                                             Text('Buying', style: _headerStyle),
@@ -2416,9 +2368,6 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                             ),
                                           ),
                                         ),
-
-                                        // Ownership badge
-                                        DataCell(_buildOwnershipBadge('Owned')),
 
                                         // Buying
                                         DataCell(Text(
