@@ -15,7 +15,8 @@ class CustomizeScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> vehicle;
   final String? initialRepId;
 
-  const CustomizeScreen({super.key, this.vehicle = const {}, this.initialRepId});
+  const CustomizeScreen(
+      {super.key, this.vehicle = const {}, this.initialRepId});
 
   @override
   ConsumerState<CustomizeScreen> createState() => _CustomizeScreenState();
@@ -183,7 +184,10 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       final users = results[7].data as List;
 
       // Filter sales reps
-      final reps = users.where((u) => u['role'] == 'SALES_EXEC' || u['role'] == 'BRANCH_MANAGER').toList();
+      final reps = users
+          .where(
+              (u) => u['role'] == 'SALES_EXEC' || u['role'] == 'BRANCH_MANAGER')
+          .toList();
 
       // Initial vehicle selection: ONLY pre-select if explicitly passed via widget.vehicle
       Map<String, dynamic>? initialVehicle;
@@ -195,14 +199,16 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       String? initialColour;
       final vColours = (initialVehicle?['colours'] as List?) ?? [];
       if (vColours.isNotEmpty) {
-        initialColour = vColours.first['colour']?['name']?.toString() ?? 'Black';
+        initialColour =
+            vColours.first['colour']?['name']?.toString() ?? 'Black';
       }
 
       // Initial branch selection
       final user = ref.read(authStateProvider).user;
       final activeBranchId = ref.read(selectedBranchIdProvider);
       String? initialBranchId;
-      if (activeBranchId != 'all' && branches.any((b) => b['id'].toString() == activeBranchId)) {
+      if (activeBranchId != 'all' &&
+          branches.any((b) => b['id'].toString() == activeBranchId)) {
         initialBranchId = activeBranchId;
       } else if (user != null && user.branches.isNotEmpty) {
         initialBranchId = user.branches.first.id;
@@ -212,7 +218,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
 
       // Initial sales rep selection: query param -> logged-in user -> first rep
       String? initialRepId = widget.initialRepId;
-      if (initialRepId == null || !reps.any((r) => r['id'].toString() == initialRepId)) {
+      if (initialRepId == null ||
+          !reps.any((r) => r['id'].toString() == initialRepId)) {
         if (user != null && reps.any((r) => r['id'].toString() == user.id)) {
           initialRepId = user.id;
         } else if (reps.isNotEmpty) {
@@ -238,7 +245,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         // Start from scratch: leave source, area, financier unselected
         _selectedSourceId = null;
         _selectedAreaId = null;
-        _selectedRepId = initialRepId ?? (reps.isNotEmpty ? reps.first['id'].toString() : null);
+        _selectedRepId = initialRepId ??
+            (reps.isNotEmpty ? reps.first['id'].toString() : null);
         _selectedFinancierId = null;
 
         _isLoadingMasters = false;
@@ -268,7 +276,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
 
     try {
       final dio = ref.read(dioProvider);
-      final accList = _selectedAccessoryIds.map((id) => {'accessoryId': id}).toList();
+      final accList =
+          _selectedAccessoryIds.map((id) => {'accessoryId': id}).toList();
 
       final res = await dio.post('/quotations/calculate', data: {
         'vehicleId': _selectedVehicleId,
@@ -305,7 +314,9 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       });
       return;
     }
-    final found = _vehicles.firstWhere((v) => v['id'].toString() == newVehicleId, orElse: () => null);
+    final found = _vehicles.firstWhere(
+        (v) => v['id'].toString() == newVehicleId,
+        orElse: () => null);
     if (found != null) {
       String? newColour;
       final vColours = (found['colours'] as List?) ?? [];
@@ -335,7 +346,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
 
     if (mobile.isEmpty || mobile.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid 10-digit Mobile Number')),
+        const SnackBar(
+            content: Text('Please enter a valid 10-digit Mobile Number')),
       );
       return;
     }
@@ -350,7 +362,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     setState(() => _isSaving = true);
     try {
       final dio = ref.read(dioProvider);
-      final accList = _selectedAccessoryIds.map((id) => {'accessoryId': id}).toList();
+      final accList =
+          _selectedAccessoryIds.map((id) => {'accessoryId': id}).toList();
 
       final baseRemarks = _remarksController.text.trim();
       final exchParts = <String>[];
@@ -374,7 +387,9 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         'customer': {
           'name': name,
           'mobile': mobile,
-          'email': _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+          'email': _emailController.text.trim().isEmpty
+              ? null
+              : _emailController.text.trim(),
           'areaId': _selectedAreaId,
         },
         'enquiryType': _selectedType,
@@ -382,7 +397,9 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         'assignedToId': _selectedRepId,
         'purchaseMode': _purchaseMode,
         'financierId': _purchaseMode == 'Finance' ? _selectedFinancierId : null,
-        'exchange': _exchange == 'yes_print' ? 'Yes & Print' : (_exchange == 'yes' ? 'Yes' : 'No'),
+        'exchange': _exchange == 'yes_print'
+            ? 'Yes & Print'
+            : (_exchange == 'yes' ? 'Yes' : 'No'),
         'buyingWhen': _buyingWhen,
         'remarks': combinedRemarks.isEmpty ? null : combinedRemarks,
         'quotation': {
@@ -436,7 +453,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
             children: [
               CircularProgressIndicator(color: AppColors.primary),
               SizedBox(height: 14),
-              Text('Initializing Enquiry & Live Quotation Engine...', style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+              Text('Initializing Enquiry & Live Quotation Engine...',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
             ],
           ),
         ),
@@ -469,7 +487,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                           Expanded(
                             flex: 6,
                             child: SingleChildScrollView(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 16),
                               child: _buildEnquiryForm(),
                             ),
                           ),
@@ -531,7 +550,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
             children: [
               if (_selectedVehicle != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(20),
@@ -542,19 +562,26 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                     children: [
                       Text(
                         '$vehicleName + add-ons/charges',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF475569)),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         CurrencyFormatter.format(grandTotal),
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primary),
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary),
                       ),
                     ],
                   ),
                 )
               else
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(20),
@@ -563,11 +590,15 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.two_wheeler_outlined, size: 14, color: Color(0xFF94A3B8)),
+                      Icon(Icons.two_wheeler_outlined,
+                          size: 14, color: Color(0xFF94A3B8)),
                       SizedBox(width: 6),
                       Text(
                         'Select a vehicle to configure quotation',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF64748B)),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF64748B)),
                       ),
                     ],
                   ),
@@ -578,12 +609,16 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   foregroundColor: const Color(0xFFDC2626),
                   side: const BorderSide(color: Color(0xFFFCA5A5)),
                   backgroundColor: const Color(0xFFFEF2F2),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () => context.go('/build-my-honda'),
                 icon: const Icon(Icons.two_wheeler_outlined, size: 14),
-                label: const Text('Build My Honda Wizard', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                label: const Text('Build My Honda Wizard',
+                    style:
+                        TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -652,10 +687,13 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                 value: _selectedType,
                 items: const [
                   DropdownMenuItem(value: 'Walk-in', child: Text('Walk-in')),
-                  DropdownMenuItem(value: 'Telephonic', child: Text('Telephonic')),
-                  DropdownMenuItem(value: 'Online', child: Text('Online / Web')),
+                  DropdownMenuItem(
+                      value: 'Telephonic', child: Text('Telephonic')),
+                  DropdownMenuItem(
+                      value: 'Online', child: Text('Online / Web')),
                 ],
-                onChanged: (val) => setState(() => _selectedType = val ?? 'Walk-in'),
+                onChanged: (val) =>
+                    setState(() => _selectedType = val ?? 'Walk-in'),
               ),
             ),
             const SizedBox(width: 10),
@@ -665,7 +703,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                 value: _selectedSourceId,
                 hintText: 'Select source',
                 items: _leadSources.map((ls) {
-                  return DropdownMenuItem(value: ls['id'].toString(), child: Text(ls['name']));
+                  return DropdownMenuItem(
+                      value: ls['id'].toString(), child: Text(ls['name']));
                 }).toList(),
                 onChanged: (val) => setState(() => _selectedSourceId = val),
               ),
@@ -677,12 +716,17 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                 value: _buyingWhen,
                 hintText: 'Select timeline',
                 items: const [
-                  DropdownMenuItem(value: 'Immediate', child: Text('Immediate')),
-                  DropdownMenuItem(value: 'Within 7 Days', child: Text('Within 7 Days')),
-                  DropdownMenuItem(value: 'Within 15 Days', child: Text('Within 15 Days')),
-                  DropdownMenuItem(value: 'This Month', child: Text('This Month')),
+                  DropdownMenuItem(
+                      value: 'Immediate', child: Text('Immediate')),
+                  DropdownMenuItem(
+                      value: 'Within 7 Days', child: Text('Within 7 Days')),
+                  DropdownMenuItem(
+                      value: 'Within 15 Days', child: Text('Within 15 Days')),
+                  DropdownMenuItem(
+                      value: 'This Month', child: Text('This Month')),
                 ],
-                onChanged: (val) => setState(() => _buyingWhen = val ?? 'Immediate'),
+                onChanged: (val) =>
+                    setState(() => _buyingWhen = val ?? 'Immediate'),
               ),
             ),
           ],
@@ -700,7 +744,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                 hintText: 'Select vehicle model',
                 highlightBorder: _selectedVehicleId == null,
                 items: _vehicles.map((v) {
-                  return DropdownMenuItem(value: v['id'].toString(), child: Text(v['name']));
+                  return DropdownMenuItem(
+                      value: v['id'].toString(), child: Text(v['name']));
                 }).toList(),
                 onChanged: _onVehicleChanged,
               ),
@@ -711,12 +756,16 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
               child: _buildDropdownField<String>(
                 label: 'Colour',
                 value: _selectedColour,
-                hintText: _selectedVehicle == null ? 'Select vehicle first' : 'Select colour',
+                hintText: _selectedVehicle == null
+                    ? 'Select vehicle first'
+                    : 'Select colour',
                 items: vColours.isEmpty
                     ? <DropdownMenuItem<String>>[]
                     : vColours.map<DropdownMenuItem<String>>((vc) {
-                        final cName = vc['colour']?['name']?.toString() ?? 'Colour';
-                        return DropdownMenuItem<String>(value: cName, child: Text(cName));
+                        final cName =
+                            vc['colour']?['name']?.toString() ?? 'Colour';
+                        return DropdownMenuItem<String>(
+                            value: cName, child: Text(cName));
                       }).toList(),
                 onChanged: _selectedVehicle == null
                     ? null
@@ -734,7 +783,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                 value: _purchaseMode,
                 items: const [
                   DropdownMenuItem(value: 'Cash', child: Text('Cash')),
-                  DropdownMenuItem(value: 'Finance', child: Text('Finance (Loan)')),
+                  DropdownMenuItem(
+                      value: 'Finance', child: Text('Finance (Loan)')),
                 ],
                 onChanged: (val) {
                   setState(() => _purchaseMode = val ?? 'Cash');
@@ -748,9 +798,12 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
               child: _buildDropdownField<String>(
                 label: 'Financier',
                 value: _purchaseMode == 'Finance' ? _selectedFinancierId : null,
-                hintText: _purchaseMode == 'Finance' ? 'Select financier' : 'N/A (Cash)',
+                hintText: _purchaseMode == 'Finance'
+                    ? 'Select financier'
+                    : 'N/A (Cash)',
                 items: _financiers.map((f) {
-                  return DropdownMenuItem(value: f['id'].toString(), child: Text(f['name']));
+                  return DropdownMenuItem(
+                      value: f['id'].toString(), child: Text(f['name']));
                 }).toList(),
                 onChanged: _purchaseMode == 'Finance'
                     ? (val) => setState(() => _selectedFinancierId = val)
@@ -764,7 +817,11 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         // ADD-ONS Section
         const Text(
           'ADD-ONS',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+          style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF64748B),
+              letterSpacing: 0.5),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -787,12 +844,14 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
               },
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: isChecked ? const Color(0xFFFEF2F2) : Colors.white,
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: isChecked ? AppColors.primary : const Color(0xFFE2E8F0),
+                    color:
+                        isChecked ? AppColors.primary : const Color(0xFFE2E8F0),
                   ),
                 ),
                 child: Row(
@@ -804,7 +863,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                       child: Checkbox(
                         value: isChecked,
                         activeColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(3)),
                         onChanged: (val) {
                           setState(() {
                             if (val == true) {
@@ -823,7 +883,9 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: isChecked ? AppColors.primary : const Color(0xFF334155),
+                        color: isChecked
+                            ? AppColors.primary
+                            : const Color(0xFF334155),
                       ),
                     ),
                   ],
@@ -837,7 +899,11 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         // EXCHANGE Section
         const Text(
           'EXCHANGE',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+          style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF64748B),
+              letterSpacing: 0.5),
         ),
         const SizedBox(height: 8),
         Row(
@@ -895,7 +961,10 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         // Remarks Section
         const Text(
           'Remarks',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+          style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF334155)),
         ),
         const SizedBox(height: 6),
         TextField(
@@ -923,11 +992,14 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         // Checkboxes: Send by email, Send by WhatsApp, Marketing consent
         Row(
           children: [
-            _buildCheckboxOption('Send by email', _sendEmail, (v) => setState(() => _sendEmail = v ?? false)),
+            _buildCheckboxOption('Send by email', _sendEmail,
+                (v) => setState(() => _sendEmail = v ?? false)),
             const SizedBox(width: 16),
-            _buildCheckboxOption('Send by WhatsApp', _sendWhatsApp, (v) => setState(() => _sendWhatsApp = v ?? false)),
+            _buildCheckboxOption('Send by WhatsApp', _sendWhatsApp,
+                (v) => setState(() => _sendWhatsApp = v ?? false)),
             const SizedBox(width: 16),
-            _buildCheckboxOption('Marketing consent', _marketingConsent, (v) => setState(() => _marketingConsent = v ?? true)),
+            _buildCheckboxOption('Marketing consent', _marketingConsent,
+                (v) => setState(() => _marketingConsent = v ?? true)),
           ],
         ),
       ],
@@ -969,27 +1041,37 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
 
     final rawEx = _liveCalculation?['exShowroom'];
     final exShowroom = _selectedVehicle != null
-        ? (rawEx is num ? rawEx.toDouble() : (double.tryParse(rawEx?.toString() ?? '') ?? 0.0))
+        ? (rawEx is num
+            ? rawEx.toDouble()
+            : (double.tryParse(rawEx?.toString() ?? '') ?? 0.0))
         : 0.0;
 
     final rawTax = _liveCalculation?['roadTax'];
     final roadTax = _selectedVehicle != null
-        ? (rawTax is num ? rawTax.toDouble() : (double.tryParse(rawTax?.toString() ?? '') ?? 0.0))
+        ? (rawTax is num
+            ? rawTax.toDouble()
+            : (double.tryParse(rawTax?.toString() ?? '') ?? 0.0))
         : 0.0;
 
     final rawIns = _liveCalculation?['insurance'];
     final insurance = _selectedVehicle != null
-        ? (rawIns is num ? rawIns.toDouble() : (double.tryParse(rawIns?.toString() ?? '') ?? 0.0))
+        ? (rawIns is num
+            ? rawIns.toDouble()
+            : (double.tryParse(rawIns?.toString() ?? '') ?? 0.0))
         : 0.0;
 
     final rawStd = _liveCalculation?['stdAccessories'];
     final stdAccessories = _selectedVehicle != null
-        ? (rawStd is num ? rawStd.toDouble() : (double.tryParse(rawStd?.toString() ?? '') ?? 1800.0))
+        ? (rawStd is num
+            ? rawStd.toDouble()
+            : (double.tryParse(rawStd?.toString() ?? '') ?? 1800.0))
         : 0.0;
 
     final rawTotal = _liveCalculation?['grandTotal'];
     final grandTotal = _selectedVehicle != null
-        ? (rawTotal is num ? rawTotal.toDouble() : (double.tryParse(rawTotal?.toString() ?? '') ?? 0.0))
+        ? (rawTotal is num
+            ? rawTotal.toDouble()
+            : (double.tryParse(rawTotal?.toString() ?? '') ?? 0.0))
         : 0.0;
 
     final calcAccessories = (_liveCalculation?['accessories'] as List?) ?? [];
@@ -1015,8 +1097,11 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   ),
                 ),
                 Text(
-                  _selectedVehicle != null ? vehicleName : 'No vehicle selected',
-                  style: const TextStyle(fontSize: 12, color: AppColors.secondary),
+                  _selectedVehicle != null
+                      ? vehicleName
+                      : 'No vehicle selected',
+                  style:
+                      const TextStyle(fontSize: 12, color: AppColors.secondary),
                 ),
               ],
             ),
@@ -1029,28 +1114,38 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.secondary,
                       side: const BorderSide(color: AppColors.border),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6)),
                     ),
                     icon: const Icon(Icons.print_outlined, size: 14),
-                    label: const Text('PDF after create', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                    label: const Text('PDF after create',
+                        style: TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Quotation email will be dispatched on creation.')),
+                      const SnackBar(
+                          content: Text(
+                              'Quotation email will be dispatched on creation.')),
                     );
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF0F172A),
                     side: const BorderSide(color: Color(0xFFCBD5E1)),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6)),
                   ),
                   icon: const Icon(Icons.email_outlined, size: 14),
-                  label: const Text('Email', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                  label: const Text('Email',
+                      style:
+                          TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -1060,7 +1155,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         if (_isCalculating)
           const Padding(
             padding: EdgeInsets.only(bottom: 6),
-            child: LinearProgressIndicator(minHeight: 2, color: AppColors.primary),
+            child:
+                LinearProgressIndicator(minHeight: 2, color: AppColors.primary),
           ),
 
         // The Official Yash Honda Quotation Paper Card
@@ -1104,16 +1200,21 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                             const SizedBox(height: 2),
                             Text(
                               branchAddress,
-                              style: const TextStyle(fontSize: 9, color: Color(0xFF64748B)),
+                              style: const TextStyle(
+                                  fontSize: 9, color: Color(0xFF64748B)),
                             ),
                             Text(
                               'GSTIN: $gstin',
-                              style: const TextStyle(fontSize: 9, color: Color(0xFF64748B)),
+                              style: const TextStyle(
+                                  fontSize: 9, color: Color(0xFF64748B)),
                             ),
                             const SizedBox(height: 2),
                             const Text(
                               'Authorised Dealer · Pune',
-                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFCC0000)),
+                              style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFCC0000)),
                             ),
                           ],
                         ),
@@ -1128,7 +1229,11 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   Row(
                     children: [
                       Expanded(child: _buildMetaCell('Quote No.', 'Draft')),
-                      Expanded(child: _buildMetaCell('Date', DateFormat('dd MMM yyyy').format(DateTime.now()))),
+                      Expanded(
+                          child: _buildMetaCell(
+                              'Date',
+                              DateFormat('dd MMM yyyy')
+                                  .format(DateTime.now()))),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -1145,17 +1250,22 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                     children: [
                       Text(
                         _selectedVehicle != null ? vehicleName : '—',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A)),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'Color: ${_selectedColour ?? '—'}',
-                        style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                        style: const TextStyle(
+                            fontSize: 10, color: Color(0xFF64748B)),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'Mode: $_purchaseMode',
-                        style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                        style: const TextStyle(
+                            fontSize: 10, color: Color(0xFF64748B)),
                       ),
                     ],
                   ),
@@ -1172,7 +1282,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.touch_app_outlined, size: 20, color: Color(0xFFDC2626)),
+                          Icon(Icons.touch_app_outlined,
+                              size: 20, color: Color(0xFFDC2626)),
                           SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -1180,12 +1291,16 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                               children: [
                                 Text(
                                   'No vehicle selected',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF0F172A)),
                                 ),
                                 SizedBox(height: 2),
                                 Text(
                                   'Choose a model from the left to calculate real-time on-road prices, road tax, and insurance.',
-                                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  style: TextStyle(
+                                      fontSize: 11, color: Color(0xFF64748B)),
                                 ),
                               ],
                             ),
@@ -1195,16 +1310,23 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                     ),
                   ] else ...[
                     // Itemized Price List
-                    _buildPriceRow('Ex-showroom', CurrencyFormatter.format(exShowroom)),
-                    _buildPriceRow('Road Tax', CurrencyFormatter.format(roadTax)),
-                    _buildPriceRow('Insurance', CurrencyFormatter.format(insurance)),
-                    _buildPriceRow('Standard Accessories', CurrencyFormatter.format(stdAccessories)),
+                    _buildPriceRow(
+                        'Ex-showroom', CurrencyFormatter.format(exShowroom)),
+                    _buildPriceRow(
+                        'Road Tax', CurrencyFormatter.format(roadTax)),
+                    _buildPriceRow(
+                        'Insurance', CurrencyFormatter.format(insurance)),
+                    _buildPriceRow('Standard Accessories',
+                        CurrencyFormatter.format(stdAccessories)),
 
                     // Add-on Accessories List
                     ...calcAccessories.map((acc) {
                       final rawAmt = acc['amount'];
-                      final amt = rawAmt is num ? rawAmt.toDouble() : (double.tryParse(rawAmt?.toString() ?? '') ?? 0.0);
-                      return _buildPriceRow(acc['name'] ?? 'Accessory', CurrencyFormatter.format(amt));
+                      final amt = rawAmt is num
+                          ? rawAmt.toDouble()
+                          : (double.tryParse(rawAmt?.toString() ?? '') ?? 0.0);
+                      return _buildPriceRow(acc['name'] ?? 'Accessory',
+                          CurrencyFormatter.format(amt));
                     }),
 
                     // Hypothecation Charge if Finance
@@ -1220,11 +1342,17 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                     children: [
                       const Text(
                         'Grand Total',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFFCC0000)),
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFFCC0000)),
                       ),
                       Text(
                         CurrencyFormatter.format(grandTotal),
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFFCC0000)),
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFFCC0000)),
                       ),
                     ],
                   ),
@@ -1234,15 +1362,32 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                     const Divider(height: 20, color: Color(0xFFE2E8F0)),
                     const Text(
                       'Finance Option',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1E293B)),
                     ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Expanded(child: _buildEmiBox('Down Payment', CurrencyFormatter.format(grandTotal * 0.20))),
-                        Expanded(child: _buildEmiBox('EMI · 24m', CurrencyFormatter.format((grandTotal * 0.80 * 1.12) / 24))),
-                        Expanded(child: _buildEmiBox('EMI · 36m', CurrencyFormatter.format((grandTotal * 0.80 * 1.18) / 36))),
-                        Expanded(child: _buildEmiBox('EMI · 48m', CurrencyFormatter.format((grandTotal * 0.80 * 1.24) / 48))),
+                        Expanded(
+                            child: _buildEmiBox('Down Payment',
+                                CurrencyFormatter.format(grandTotal * 0.20))),
+                        Expanded(
+                            child: _buildEmiBox(
+                                'EMI · 24m',
+                                CurrencyFormatter.format(
+                                    (grandTotal * 0.80 * 1.12) / 24))),
+                        Expanded(
+                            child: _buildEmiBox(
+                                'EMI · 36m',
+                                CurrencyFormatter.format(
+                                    (grandTotal * 0.80 * 1.18) / 36))),
+                        Expanded(
+                            child: _buildEmiBox(
+                                'EMI · 48m',
+                                CurrencyFormatter.format(
+                                    (grandTotal * 0.80 * 1.24) / 48))),
                       ],
                     ),
                   ],
@@ -1252,7 +1397,10 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   // Payment Section & QR Code
                   const Text(
                     'Payment',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1E293B)),
                   ),
                   const SizedBox(height: 6),
                   Row(
@@ -1274,16 +1422,18 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-        if (_isCalculating)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 6),
-            child: LinearProgressIndicator(minHeight: 2, color: AppColors.primary),
-          ),
+                  if (_isCalculating)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 6),
+                      child: LinearProgressIndicator(
+                          minHeight: 2, color: AppColors.primary),
+                    ),
 
                   // Legal Disclaimer
                   const Text(
                     'Prices indicative and subject to change. Insurance as applicable. Delivery subject to availability. Exchange value declared by customer and recorded for reference only. E&OE.',
-                    style: TextStyle(fontSize: 8, color: Color(0xFF94A3B8), height: 1.3),
+                    style: TextStyle(
+                        fontSize: 8, color: Color(0xFF94A3B8), height: 1.3),
                   ),
                 ],
               ),
@@ -1296,7 +1446,9 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
 
   String _resolveImageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
-    if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) return path;
+    if (path.startsWith('data:') ||
+        path.startsWith('http://') ||
+        path.startsWith('https://')) return path;
     final base = ApiConstants.baseUrl.endsWith('/api')
         ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 4)
         : ApiConstants.baseUrl;
@@ -1309,7 +1461,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     if (clean.startsWith('data:image')) {
       try {
         final commaIdx = clean.indexOf(',');
-        final base64Data = commaIdx != -1 ? clean.substring(commaIdx + 1) : clean;
+        final base64Data =
+            commaIdx != -1 ? clean.substring(commaIdx + 1) : clean;
         final bytes = base64Decode(base64Data);
         return Image.memory(
           bytes,
@@ -1385,7 +1538,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       qrApiUrl,
       fit: BoxFit.contain,
       errorBuilder: (_, __, ___) => const Center(
-        child: Icon(Icons.qr_code_2_rounded, size: 36, color: Color(0xFF0F172A)),
+        child:
+            Icon(Icons.qr_code_2_rounded, size: 36, color: Color(0xFF0F172A)),
       ),
     );
   }
@@ -1394,11 +1548,15 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 9, color: Color(0xFF64748B))),
+        Text(label,
+            style: const TextStyle(fontSize: 9, color: Color(0xFF64748B))),
         const SizedBox(height: 1),
         Text(
           value,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+          style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0F172A)),
         ),
       ],
     );
@@ -1410,8 +1568,13 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 10.5, color: Color(0xFF475569))),
-          Text(amount, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+          Text(label,
+              style: const TextStyle(fontSize: 10.5, color: Color(0xFF475569))),
+          Text(amount,
+              style: const TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0F172A))),
         ],
       ),
     );
@@ -1421,8 +1584,13 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 8.5, color: Color(0xFF64748B))),
-        Text(amount, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+        Text(label,
+            style: const TextStyle(fontSize: 8.5, color: Color(0xFF64748B))),
+        Text(amount,
+            style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0F172A))),
       ],
     );
   }
@@ -1432,8 +1600,17 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       padding: const EdgeInsets.symmetric(vertical: 1.5),
       child: Row(
         children: [
-          SizedBox(width: 50, child: Text(label, style: const TextStyle(fontSize: 9.5, color: Color(0xFF64748B)))),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)))),
+          SizedBox(
+              width: 50,
+              child: Text(label,
+                  style: const TextStyle(
+                      fontSize: 9.5, color: Color(0xFF64748B)))),
+          Expanded(
+              child: Text(value,
+                  style: const TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0F172A)))),
         ],
       ),
     );
@@ -1458,9 +1635,11 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
               foregroundColor: const Color(0xFF475569),
               side: const BorderSide(color: Color(0xFFCBD5E1)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Cancel', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            child: const Text('Cancel',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(width: 12),
           ElevatedButton(
@@ -1469,12 +1648,19 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
               elevation: 0,
             ),
             child: _isSaving
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('+ Create Enquiry', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2))
+                : const Text('+ Create Enquiry',
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -1492,7 +1678,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.ink),
+          style: const TextStyle(
+              fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.ink),
         ),
         const SizedBox(height: 4),
         ConstrainedBox(
@@ -1503,10 +1690,14 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: const TextStyle(fontSize: 13, color: AppColors.secondary, fontWeight: FontWeight.normal),
+              hintStyle: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.secondary,
+                  fontWeight: FontWeight.normal),
               filled: true,
               fillColor: AppColors.background,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
                 borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -1539,7 +1730,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.ink),
+          style: const TextStyle(
+              fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.ink),
         ),
         const SizedBox(height: 4),
         Container(
@@ -1556,8 +1748,15 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
             child: DropdownButton<T>(
               value: value,
               isExpanded: true,
-              hint: hintText != null ? Text(hintText, style: const TextStyle(fontSize: 13, color: AppColors.secondary)) : null,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.ink),
+              hint: hintText != null
+                  ? Text(hintText,
+                      style: const TextStyle(
+                          fontSize: 13, color: AppColors.secondary))
+                  : null,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.ink),
               items: items,
               onChanged: onChanged,
             ),
@@ -1593,7 +1792,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     );
   }
 
-  Widget _buildCheckboxOption(String label, bool value, void Function(bool?) onChanged) {
+  Widget _buildCheckboxOption(
+      String label, bool value, void Function(bool?) onChanged) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1603,12 +1803,17 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
           child: Checkbox(
             value: value,
             activeColor: AppColors.primary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
             onChanged: onChanged,
           ),
         ),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF334155), fontWeight: FontWeight.w500)),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF334155),
+                fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -1653,24 +1858,30 @@ class _HondaWingPainter extends CustomPainter {
     // Feather 1 (Top / longest curved wing feather)
     final p1 = Path();
     p1.moveTo(size.width * 0.1, size.height * 0.95);
-    p1.quadraticBezierTo(size.width * 0.5, size.height * 0.35, size.width * 0.98, size.height * 0.05);
-    p1.quadraticBezierTo(size.width * 0.65, size.height * 0.25, size.width * 0.35, size.height * 0.65);
+    p1.quadraticBezierTo(size.width * 0.5, size.height * 0.35,
+        size.width * 0.98, size.height * 0.05);
+    p1.quadraticBezierTo(size.width * 0.65, size.height * 0.25,
+        size.width * 0.35, size.height * 0.65);
     p1.close();
     canvas.drawPath(p1, paint);
 
     // Feather 2 (Middle curved feather)
     final p2 = Path();
     p2.moveTo(size.width * 0.05, size.height * 0.95);
-    p2.quadraticBezierTo(size.width * 0.45, size.height * 0.55, size.width * 0.85, size.height * 0.28);
-    p2.quadraticBezierTo(size.width * 0.55, size.height * 0.45, size.width * 0.25, size.height * 0.78);
+    p2.quadraticBezierTo(size.width * 0.45, size.height * 0.55,
+        size.width * 0.85, size.height * 0.28);
+    p2.quadraticBezierTo(size.width * 0.55, size.height * 0.45,
+        size.width * 0.25, size.height * 0.78);
     p2.close();
     canvas.drawPath(p2, paint);
 
     // Feather 3 (Bottom curved feather)
     final p3 = Path();
     p3.moveTo(0, size.height * 0.95);
-    p3.quadraticBezierTo(size.width * 0.35, size.height * 0.75, size.width * 0.70, size.height * 0.52);
-    p3.quadraticBezierTo(size.width * 0.45, size.height * 0.65, size.width * 0.15, size.height * 0.90);
+    p3.quadraticBezierTo(size.width * 0.35, size.height * 0.75,
+        size.width * 0.70, size.height * 0.52);
+    p3.quadraticBezierTo(size.width * 0.45, size.height * 0.65,
+        size.width * 0.15, size.height * 0.90);
     p3.close();
     canvas.drawPath(p3, paint);
   }
