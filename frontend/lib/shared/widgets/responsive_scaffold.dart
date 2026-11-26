@@ -5,6 +5,7 @@ import '../../core/constants/breakpoints.dart';
 import '../../core/providers/branch_provider.dart';
 import '../../core/networking/api_client.dart';
 import '../../features/auth/auth_notifier.dart';
+import 'honda_wing_logo.dart';
 import '../models/user_model.dart';
 import 'ai_summary/ai_copilot_chat_dialog.dart';
 
@@ -226,21 +227,15 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                       child: Row(
                         children: [
                           Container(
-                            width: 32,
-                            height: 32,
+                            width: 42,
+                            height: 36,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFDC2626),
-                              borderRadius: BorderRadius.circular(6),
+                              color: const Color(0xFFFEF2F2),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFFECACA)),
                             ),
                             alignment: Alignment.center,
-                            child: const Text(
-                              'H',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 19,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
+                            child: const HondaWingLogo(width: 30, height: 18),
                           ),
                           const SizedBox(width: 10),
                           Column(
