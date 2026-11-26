@@ -853,11 +853,16 @@ export const HONDA_2WHEELERS_CATALOG: HardcodedHondaVehicle[] = [
     "exShowroomPrice": 82500,
     "onRoadPrice": 95288,
     "brochureUrl": "https://edge.sitecorecloud.io/hondamotorc388f-hmsi8ece-prodb777-e813/media/Project/HONDA2WI/honda2wheelersindia/scooter/Activa125-Anniversary-Edition/Brochure/activa110-anniversary-edition-1.pdf",
-    "listingImageUrl": "https://edge.sitecorecloud.io/hondamotorc388f-hmsi8ece-prodb777-e813/media/Project/HONDA2WI/honda2wheelersindia/new_asset_compressed/product-banners/Activa110-Anniversary-Edition/mobile.jpg",
-    "detailImageUrl": "https://edge.sitecorecloud.io/hondamotorc388f-hmsi8ece-prodb777-e813/media/Project/HONDA2WI/honda2wheelersindia/new_asset_compressed/Scooter/activa110-anniversary/360/2/color-profile-1920-1392-black.png",
+    "listingImageUrl": "https://edge.sitecorecloud.io/hondamotorc388f-hmsi8ece-prodb777-e813/media/Project/HONDA2WI/honda2wheelersindia/new_asset_compressed/Scooter/activa110-anniversary/ProductEMICalculator/calculator.png",
+    "detailImageUrl": "https://edge.sitecorecloud.io/hondamotorc388f-hmsi8ece-prodb777-e813/media/Project/HONDA2WI/honda2wheelersindia/new_asset_compressed/Scooter/activa110-anniversary/ProductEMICalculator/calculator.png",
     "colours": [
       {
-        "name": "Matte Steel Black Metallic.",
+        "name": "Pearl Siren Blue",
+        "hex": "#194C75",
+        "imageUrl": "https://edge.sitecorecloud.io/hondamotorc388f-hmsi8ece-prodb777-e813/media/Project/HONDA2WI/honda2wheelersindia/new_asset_compressed/Scooter/activa110-anniversary/ProductEMICalculator/calculator.png"
+      },
+      {
+        "name": "Matte Steel Black Metallic",
         "hex": "#282828",
         "imageUrl": "https://edge.sitecorecloud.io/hondamotorc388f-hmsi8ece-prodb777-e813/media/Project/HONDA2WI/honda2wheelersindia/new_asset_compressed/Scooter/activa110-anniversary/360/2/color-profile-1920-1392-black.png"
       }
