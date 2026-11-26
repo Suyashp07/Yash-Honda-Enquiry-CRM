@@ -8,3 +8,7 @@ Future<bool> downloadTextFile(String content, String filename,
     [String mimeType = 'text/csv;charset=utf-8']) async {
   return false;
 }
+
+void printHtmlDocument(String htmlContent) {
+  // No-op on non-web platforms.
+}

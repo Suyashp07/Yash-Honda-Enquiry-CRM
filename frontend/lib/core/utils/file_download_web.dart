@@ -20,3 +20,21 @@ Future<bool> downloadTextFile(String content, String filename,
   downloadFileBytes(Uint8List.fromList(utf8.encode(content)), filename, mimeType);
   return true;
 }
+
+void printHtmlDocument(String htmlContent) {
+  final blob = html.Blob([htmlContent], 'text/html;charset=utf-8');
+  final url = html.Url.createObjectUrlFromBlob(blob);
+  final iframe = html.IFrameElement()
+    ..src = url
+    ..style.position = 'fixed'
+    ..style.right = '0'
+    ..style.bottom = '0'
+    ..style.width = '0'
+    ..style.height = '0'
+    ..style.border = 'none';
+  html.document.body?.children.add(iframe);
+  Future.delayed(const Duration(seconds: 60), () {
+    iframe.remove();
+    html.Url.revokeObjectUrl(url);
+  });
+}

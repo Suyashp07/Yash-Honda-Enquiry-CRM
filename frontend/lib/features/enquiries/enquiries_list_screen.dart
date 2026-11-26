@@ -261,72 +261,60 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     }
 
     try {
-      final doc = pw.Document();
-      final previewRows = rows.take(40).toList();
-      doc.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4.landscape,
-          margin: const pw.EdgeInsets.all(24),
-          build: (ctx) => [
-            pw.Text(
-              'Yash Honda — Enquiries Directory Report',
-              style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 4),
-            pw.Text(
-              'Total Enquiries: ${rows.length} (Tab: $_activeTab)',
-              style: const pw.TextStyle(fontSize: 10),
-            ),
-            pw.SizedBox(height: 12),
-            pw.TableHelper.fromTextArray(
-              headerStyle:
-                  pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
-              cellStyle: const pw.TextStyle(fontSize: 8.5),
-              headers: [
-                'Name',
-                'Mobile',
-                'Type',
-                'Branch',
-                'Model',
-                'Payment',
-                'Date',
-                'Status',
-              ],
-              data: previewRows.map((e) {
-                final c = e['customer'] ?? {};
-                final q = (e['quotations'] as List?)?.firstOrNull ?? {};
-                final v = q['vehicle'] ?? {};
-                return [
-                  (c['name'] ?? '-').toString(),
-                  (c['mobile'] ?? '-').toString(),
-                  (e['enquiryType'] ?? '-').toString(),
-                  (e['branch']?['name'] ?? '-').toString(),
-                  (v['name'] ?? '-').toString(),
-                  (e['purchaseMode'] ?? '-').toString(),
-                  DateFormatter.formatDate(e['createdAt']),
-                  _mapStatusToDisplay((e['status'] ?? 'ACTIVE').toString()),
-                ];
-              }).toList(),
-            ),
-          ],
-        ),
-      );
-      final bytes = await doc.save();
-      downloadFileBytes(
-          bytes, 'yash_honda_enquiries_report.pdf', 'application/pdf');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF16A34A),
-            content: Text(
-                'Generated PDF report (${previewRows.length} rows) — yash_honda_enquiries_report.pdf'),
-          ),
-        );
-      }
+      String esc(dynamic v) => (v ?? '')
+          .toString()
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;');
+
+      final rowsHtml = rows.take(100).map((e) {
+        final c = e['customer'] ?? {};
+        final q = (e['quotations'] as List?)?.firstOrNull ?? {};
+        final v = q['vehicle'] ?? {};
+        final name = esc(c['name'] ?? '-');
+        final mobile = esc(MaskUtil.maskMobile((c['mobile'] ?? '').toString()));
+        final type = esc(e['enquiryType'] ?? '-');
+        final branch = esc(e['branch']?['name'] ?? '-');
+        final model = esc(v['name'] ?? '-');
+        final mode = esc(e['purchaseMode'] ?? '-');
+        final date = esc(DateFormatter.formatDate(e['createdAt']));
+        final status = esc(_mapStatusToDisplay((e['status'] ?? 'ACTIVE').toString()));
+        return '<tr><td>$name</td><td>$mobile</td><td>$type</td><td>$branch</td><td>$model</td><td>$mode</td><td>$date</td><td>$status</td></tr>';
+      }).join('');
+
+      final htmlDoc = '''<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Yash Honda - Enquiries Directory</title>
+<style>
+  body { font-family: Arial, sans-serif; color: #0F172A; margin: 24px; }
+  h1 { font-size: 18px; margin: 0 0 4px 0; color: #CC0000; }
+  p { font-size: 12px; color: #475569; margin: 0 0 16px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  th, td { border: 1px solid #CBD5E1; padding: 6px 8px; text-align: left; }
+  th { background: #F1F5F9; font-weight: 700; }
+  @page { size: A4 landscape; margin: 10mm; }
+</style>
+</head>
+<body>
+  <h1>Yash Honda — Enquiries Directory</h1>
+  <p>Tab: ${esc(_activeTab)} &bull; Printed ${rows.take(100).length} of ${rows.length} enquiries</p>
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Mobile</th><th>Type</th><th>Branch</th><th>Model</th><th>Payment</th><th>Date</th><th>Status</th></tr>
+    </thead>
+    <tbody>$rowsHtml</tbody>
+  </table>
+  <script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 250); });</script>
+</body>
+</html>''';
+
+      printHtmlDocument(htmlDoc);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not generate report: $e')),
+          SnackBar(content: Text('Could not print enquiries: $e')),
         );
       }
     }

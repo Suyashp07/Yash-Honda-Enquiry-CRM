@@ -14,10 +14,12 @@ class DealershipSummaryScreen extends ConsumerStatefulWidget {
   const DealershipSummaryScreen({super.key, this.isEmbedded = false});
 
   @override
-  ConsumerState<DealershipSummaryScreen> createState() => _DealershipSummaryScreenState();
+  ConsumerState<DealershipSummaryScreen> createState() =>
+      _DealershipSummaryScreenState();
 }
 
-class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScreen> {
+class _DealershipSummaryScreenState
+    extends ConsumerState<DealershipSummaryScreen> {
   String _activeView = 'matrix'; // 'matrix', 'summary2'
   String _selectedPeriod = 'today'; // 'today', 'week', 'mtd', 'ytd', 'custom'
   DateTime _selectedDate = DateTime.now();
@@ -55,7 +57,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
         queryParams['to'] = DateFormat('yyyy-MM-dd').format(_toDate);
       }
 
-      final res = await dio.get('/analytics/summary/dealership', queryParameters: queryParams);
+      final res = await dio.get('/analytics/summary/dealership',
+          queryParameters: queryParams);
 
       if (!mounted) return;
       ref.read(lastDataUpdatedProvider.notifier).state = DateTime.now();
@@ -91,9 +94,11 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
       } else if (_selectedPeriod == 'week') {
         _selectedDate = _selectedDate.add(Duration(days: delta * 7));
       } else if (_selectedPeriod == 'mtd') {
-        _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + delta, _selectedDate.day);
+        _selectedDate = DateTime(
+            _selectedDate.year, _selectedDate.month + delta, _selectedDate.day);
       } else if (_selectedPeriod == 'ytd') {
-        _selectedDate = DateTime(_selectedDate.year + delta, _selectedDate.month, _selectedDate.day);
+        _selectedDate = DateTime(
+            _selectedDate.year + delta, _selectedDate.month, _selectedDate.day);
       } else {
         _selectedDate = _selectedDate.add(Duration(days: delta));
       }
@@ -123,41 +128,66 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
   Future<void> _handlePrint() async {
     if (_summaryData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No summary data loaded to export.')),
+        const SnackBar(content: Text('No summary data loaded to print.')),
       );
       return;
     }
     try {
       final branches = (_summaryData?['branches'] as List?) ?? [];
-      final buffer = StringBuffer();
-      buffer.writeln('Branch,Code,Leads,Walk-ins,Telephonic,Booked,Conversion %');
-      for (final b in branches) {
-        final name = (b['name'] ?? '').toString().replaceAll(',', ' ');
-        final code = (b['code'] ?? '').toString();
+      final periodLabel = _selectedPeriod == 'custom'
+          ? '${DateFormat('dd MMM yyyy').format(_fromDate)} to ${DateFormat('dd MMM yyyy').format(_toDate)}'
+          : '${_selectedPeriod.toUpperCase()} (${DateFormat('dd MMM yyyy').format(_selectedDate)})';
+
+      String esc(dynamic v) => (v ?? '')
+          .toString()
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;');
+
+      final rowsHtml = branches.map((b) {
+        final name = esc(b['name']);
+        final code = esc(b['code']);
         final total = b['total'] ?? b['totalLeads'] ?? 0;
         final walkIns = b['walkIns'] ?? 0;
         final calls = b['callsRecd'] ?? b['telephonic'] ?? 0;
         final booked = b['booked'] ?? b['bookings'] ?? 0;
         final conv = b['conversionRate'] ?? 0;
-        buffer.writeln('$name,$code,$total,$walkIns,$calls,$booked,$conv%');
-      }
-      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-      await downloadTextFile(
-        buffer.toString(),
-        'dealership_summary_${_selectedPeriod}_$dateStr.csv',
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: AppColors.success,
-            content: Text('Dealership summary CSV exported.'),
-          ),
-        );
-      }
+        return '<tr><td>$name ($code)</td><td>$total</td><td>$walkIns</td><td>$calls</td><td>$booked</td><td>$conv%</td></tr>';
+      }).join('');
+
+      final htmlDoc = '''<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Yash Honda - Dealership Summary</title>
+<style>
+  body { font-family: Arial, sans-serif; color: #0F172A; margin: 24px; }
+  h1 { font-size: 18px; margin: 0 0 4px 0; color: #CC0000; }
+  p { font-size: 12px; color: #475569; margin: 0 0 16px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { border: 1px solid #CBD5E1; padding: 8px 10px; text-align: left; }
+  th { background: #F1F5F9; font-weight: 700; }
+  @page { size: A4 landscape; margin: 12mm; }
+</style>
+</head>
+<body>
+  <h1>Yash Honda — Dealership Summary</h1>
+  <p>Period: ${esc(periodLabel)}</p>
+  <table>
+    <thead>
+      <tr><th>Branch</th><th>Total Leads</th><th>Walk-ins</th><th>Telephonic</th><th>Bookings</th><th>Conversion</th></tr>
+    </thead>
+    <tbody>$rowsHtml</tbody>
+  </table>
+  <script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 250); });</script>
+</body>
+</html>''';
+
+      printHtmlDocument(htmlDoc);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
+          SnackBar(content: Text('Print failed: $e')),
         );
       }
     }
@@ -197,7 +227,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                     children: [
                       CircularProgressIndicator(color: AppColors.primary),
                       SizedBox(height: 16),
-                      Text('Calculating dealership analytics...', style: TextStyle(color: Color(0xFF64748B))),
+                      Text('Calculating dealership analytics...',
+                          style: TextStyle(color: Color(0xFF64748B))),
                     ],
                   ),
                 ),
@@ -210,7 +241,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                child: const Center(child: Text('No summary data available for this range.')),
+                child: const Center(
+                    child: Text('No summary data available for this range.')),
               )
             else ...[
               if (_activeView == 'matrix') _buildMatrixView(),
@@ -230,7 +262,10 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Wrap(
@@ -250,8 +285,14 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildViewTab('matrix', 'Branch comparison', Icons.table_chart_outlined, tooltip: 'Performance matrix comparing branches, walk-ins, bookings & conversion rates'),
-                _buildViewTab('summary2', 'Executive overview', Icons.grid_view_outlined, tooltip: 'Executive KPI cards and model contribution analytics'),
+                _buildViewTab(
+                    'matrix', 'Branch comparison', Icons.table_chart_outlined,
+                    tooltip:
+                        'Performance matrix comparing branches, walk-ins, bookings & conversion rates'),
+                _buildViewTab(
+                    'summary2', 'Executive overview', Icons.grid_view_outlined,
+                    tooltip:
+                        'Executive KPI cards and model contribution analytics'),
               ],
             ),
           ),
@@ -259,7 +300,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
           // In Matrix View: Swap Rows / Cols Button
           if (_activeView == 'matrix')
             Tooltip(
-              message: 'Transpose matrix dimensions (swap rows and columns between branches and metrics)',
+              message:
+                  'Transpose matrix dimensions (swap rows and columns between branches and metrics)',
               child: InkWell(
                 onTap: () => setState(() => _swapRowsCols = !_swapRowsCols),
                 borderRadius: BorderRadius.circular(6),
@@ -267,9 +309,13 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                   height: 36,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: _swapRowsCols ? const Color(0xFFFEE2E2) : Colors.white,
+                    color:
+                        _swapRowsCols ? const Color(0xFFFEE2E2) : Colors.white,
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: _swapRowsCols ? AppColors.primary : const Color(0xFFCBD5E1)),
+                    border: Border.all(
+                        color: _swapRowsCols
+                            ? AppColors.primary
+                            : const Color(0xFFCBD5E1)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -277,7 +323,9 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                       Icon(
                         Icons.swap_horiz,
                         size: 16,
-                        color: _swapRowsCols ? AppColors.primary : const Color(0xFF334155),
+                        color: _swapRowsCols
+                            ? AppColors.primary
+                            : const Color(0xFF334155),
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -285,7 +333,9 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: _swapRowsCols ? AppColors.primary : const Color(0xFF334155),
+                          color: _swapRowsCols
+                              ? AppColors.primary
+                              : const Color(0xFF334155),
                         ),
                       ),
                     ],
@@ -306,10 +356,26 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
               mainAxisSize: MainAxisSize.min,
               children: [
                 {'id': 'today', 'label': 'TODAY', 'tip': 'Analytics for today'},
-                {'id': 'week', 'label': 'WEEK', 'tip': 'Analytics for this week'},
-                {'id': 'mtd', 'label': 'MTD', 'tip': 'Month-to-Date cumulative analytics'},
-                {'id': 'ytd', 'label': 'YTD', 'tip': 'Year-to-Date annual metrics'},
-                {'id': 'custom', 'label': 'CUSTOM', 'tip': 'Select custom from-to date range'},
+                {
+                  'id': 'week',
+                  'label': 'WEEK',
+                  'tip': 'Analytics for this week'
+                },
+                {
+                  'id': 'mtd',
+                  'label': 'MTD',
+                  'tip': 'Month-to-Date cumulative analytics'
+                },
+                {
+                  'id': 'ytd',
+                  'label': 'YTD',
+                  'tip': 'Year-to-Date annual metrics'
+                },
+                {
+                  'id': 'custom',
+                  'label': 'CUSTOM',
+                  'tip': 'Select custom from-to date range'
+                },
               ].map((item) {
                 final p = item['id']!;
                 final isSel = _selectedPeriod == p;
@@ -326,7 +392,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                     },
                     borderRadius: BorderRadius.circular(5),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: isSel ? AppColors.primary : Colors.transparent,
                         borderRadius: BorderRadius.circular(5),
@@ -367,7 +434,11 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                       border: Border.all(color: const Color(0xFFCBD5E1)),
                     ),
                     alignment: Alignment.center,
-                    child: const Text('Jump Today', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFEA580C))),
+                    child: const Text('Jump Today',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFEA580C))),
                   ),
                 ),
               ),
@@ -384,7 +455,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                     ? 'Click to change custom date range'
                     : 'Selected date: ${DateFormat('EEEE, d MMMM yyyy').format(_selectedDate)}',
                 child: InkWell(
-                  onTap: _selectedPeriod == 'custom' ? _pickCustomDateRange : null,
+                  onTap:
+                      _selectedPeriod == 'custom' ? _pickCustomDateRange : null,
                   borderRadius: BorderRadius.circular(6),
                   child: Container(
                     height: 36,
@@ -403,13 +475,15 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (_selectedPeriod == 'custom') ...[
-                          const Icon(Icons.date_range, size: 15, color: AppColors.primary),
+                          const Icon(Icons.date_range,
+                              size: 15, color: AppColors.primary),
                           const SizedBox(width: 6),
                         ],
                         Text(
                           _selectedPeriod == 'custom'
                               ? '${DateFormat('dd MMM').format(_fromDate)} – ${DateFormat('dd MMM yyyy').format(_toDate)}'
-                              : DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
+                              : DateFormat('EEE, dd MMM yyyy')
+                                  .format(_selectedDate),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -436,12 +510,14 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(Icons.print_outlined, size: 20, color: Color(0xFF64748B)),
+                icon: const Icon(Icons.print_outlined,
+                    size: 20, color: Color(0xFF64748B)),
                 tooltip: 'Print / Export summary',
                 onPressed: _handlePrint,
               ),
               IconButton(
-                icon: const Icon(Icons.refresh, size: 20, color: Color(0xFF64748B)),
+                icon: const Icon(Icons.refresh,
+                    size: 20, color: Color(0xFF64748B)),
                 tooltip: 'Reload latest dealership metrics from database',
                 onPressed: _loadSummary,
               ),
@@ -452,7 +528,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
     );
   }
 
-  Widget _buildViewTab(String id, String label, IconData icon, {String? tooltip}) {
+  Widget _buildViewTab(String id, String label, IconData icon,
+      {String? tooltip}) {
     final isSel = _activeView == id;
     final tab = InkWell(
       onTap: () => setState(() => _activeView = id),
@@ -466,7 +543,9 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: isSel ? Colors.white : const Color(0xFF475569)),
+            Icon(icon,
+                size: 14,
+                color: isSel ? Colors.white : const Color(0xFF475569)),
             const SizedBox(width: 6),
             Text(
               label,
@@ -539,7 +618,10 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: SingleChildScrollView(
@@ -552,7 +634,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
               height: 48,
               decoration: const BoxDecoration(
                 color: Color(0xFFF1F5F9),
-                border: Border(bottom: BorderSide(color: Color(0xFFCBD5E1), width: 1.5)),
+                border: Border(
+                    bottom: BorderSide(color: Color(0xFFCBD5E1), width: 1.5)),
               ),
               child: Row(
                 children: [
@@ -562,7 +645,11 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                     alignment: Alignment.centerLeft,
                     child: const Text(
                       'METRIC / BREAKDOWN',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF334155), letterSpacing: 0.5),
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF334155),
+                          letterSpacing: 0.5),
                     ),
                   ),
                   ...branches.map((b) {
@@ -571,13 +658,21 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                       width: 175,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: const BoxDecoration(
-                        border: Border(left: BorderSide(color: Color(0xFFE2E8F0))),
+                        border:
+                            Border(left: BorderSide(color: Color(0xFFE2E8F0))),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text('LOCATION $index', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
-                          Text(b['name'] ?? '', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                          Text('LOCATION $index',
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF0F172A))),
+                          Text(b['name'] ?? '',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 10, color: Color(0xFF64748B))),
                         ],
                       ),
                     );
@@ -588,13 +683,20 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: const BoxDecoration(
                       color: Color(0xFFFEF3C7),
-                      border: Border(left: BorderSide(color: Color(0xFFFDE68A), width: 2)),
+                      border: Border(
+                          left: BorderSide(color: Color(0xFFFDE68A), width: 2)),
                     ),
                     child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('CONSOLIDATED', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFFB45309))),
-                        Text('All Dealerships', style: TextStyle(fontSize: 10, color: Color(0xFF92400E))),
+                        Text('CONSOLIDATED',
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFFB45309))),
+                        Text('All Dealerships',
+                            style: TextStyle(
+                                fontSize: 10, color: Color(0xFF92400E))),
                       ],
                     ),
                   ),
@@ -604,45 +706,93 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
 
             // Section 1: AS ON DATE
             _buildSectionHeader('AS ON DATE ($date)'),
-            _buildMatrixDataRow('TOTAL LEADS', branches, branchIds, (id) => (totalLeads[id] ?? 0).toString(), isBold: true, highlightColor: const Color(0xFF2563EB)),
-            _buildMatrixDataRow('TOTAL BK', branches, branchIds, (id) => (totalBk[id] ?? 0).toString(), isBold: true, highlightColor: const Color(0xFF16A34A)),
-            _buildMatrixDataRow('CONVERSION', branches, branchIds, (id) => (conversion[id] ?? '0.00%').toString(), isBold: true, highlightColor: const Color(0xFFDC2626)),
+            _buildMatrixDataRow('TOTAL LEADS', branches, branchIds,
+                (id) => (totalLeads[id] ?? 0).toString(),
+                isBold: true, highlightColor: const Color(0xFF2563EB)),
+            _buildMatrixDataRow('TOTAL BK', branches, branchIds,
+                (id) => (totalBk[id] ?? 0).toString(),
+                isBold: true, highlightColor: const Color(0xFF16A34A)),
+            _buildMatrixDataRow('CONVERSION', branches, branchIds,
+                (id) => (conversion[id] ?? '0.00%').toString(),
+                isBold: true, highlightColor: const Color(0xFFDC2626)),
 
             // Section 2: MODE BREAK UP
             _buildSectionHeader('MODE BREAK UP'),
-            ...modeBreakup.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? 0).toString())),
+            ...modeBreakup.map((row) => _buildMatrixDataRow(
+                row['label'] ?? '',
+                branches,
+                branchIds,
+                (id) => (row['values']?[id] ?? 0).toString())),
 
             // Section 3: SOURCE
             _buildSectionHeader('SOURCE'),
-            ...sourceBreakup.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? 0).toString())),
+            ...sourceBreakup.map((row) => _buildMatrixDataRow(
+                row['label'] ?? '',
+                branches,
+                branchIds,
+                (id) => (row['values']?[id] ?? 0).toString())),
 
             // Section 4: MODEL WISE LEADS
             _buildSectionHeader('MODEL WISE LEADS'),
-            ...modelWiseLeads.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? 0).toString())),
+            ...modelWiseLeads.map((row) => _buildMatrixDataRow(
+                row['label'] ?? '',
+                branches,
+                branchIds,
+                (id) => (row['values']?[id] ?? 0).toString())),
 
             // Section 5: MODEL WISE BK
             _buildSectionHeader('MODEL WISE BK'),
-            ...modelWiseBk.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? 0).toString(), highlightColor: const Color(0xFF16A34A))),
+            ...modelWiseBk.map((row) => _buildMatrixDataRow(
+                row['label'] ?? '',
+                branches,
+                branchIds,
+                (id) => (row['values']?[id] ?? 0).toString(),
+                highlightColor: const Color(0xFF16A34A))),
 
             // Section 6: SALES EX WISE BK
             _buildSectionHeader('SALES EX WISE BK'),
-            ...salesExWiseBk.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? 0).toString())),
+            ...salesExWiseBk.map((row) => _buildMatrixDataRow(
+                row['label'] ?? '',
+                branches,
+                branchIds,
+                (id) => (row['values']?[id] ?? 0).toString())),
 
             // Section 7: MTD LEADS TO CONVERSION
-            _buildSectionHeader('MTD LEADS TO CONVERSION ($monthStart TO $date)'),
-            ...mtdModelConv.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? '-').toString(), isConvFormat: true)),
+            _buildSectionHeader(
+                'MTD LEADS TO CONVERSION ($monthStart TO $date)'),
+            ...mtdModelConv.map((row) => _buildMatrixDataRow(
+                row['label'] ?? '',
+                branches,
+                branchIds,
+                (id) => (row['values']?[id] ?? '-').toString(),
+                isConvFormat: true)),
 
             // Section 8: MTD SALES EX WISE CONV
             _buildSectionHeader('MTD SALES EX WISE CONV'),
-            ...mtdSalesExConv.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? '-').toString(), isConvFormat: true)),
+            ...mtdSalesExConv.map((row) => _buildMatrixDataRow(
+                row['label'] ?? '',
+                branches,
+                branchIds,
+                (id) => (row['values']?[id] ?? '-').toString(),
+                isConvFormat: true)),
 
             // Section 9: SOURCE WISE CONVERSION (MTD)
             _buildSectionHeader('SOURCE WISE CONVERSION (MTD)'),
-            ...mtdSourceConv.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? '-').toString(), isConvFormat: true)),
+            ...mtdSourceConv.map((row) => _buildMatrixDataRow(
+                row['label'] ?? '',
+                branches,
+                branchIds,
+                (id) => (row['values']?[id] ?? '-').toString(),
+                isConvFormat: true)),
 
             // Section 10: MODE WISE BREAKUP (MTD)
             _buildSectionHeader('MODE WISE BREAKUP (MTD)'),
-            ...mtdModeConv.map((row) => _buildMatrixDataRow(row['label'] ?? '', branches, branchIds, (id) => (row['values']?[id] ?? '-').toString(), isConvFormat: true)),
+            ...mtdModeConv.map((row) => _buildMatrixDataRow(
+                row['label'] ?? '',
+                branches,
+                branchIds,
+                (id) => (row['values']?[id] ?? '-').toString(),
+                isConvFormat: true)),
           ],
         ),
       ),
@@ -698,116 +848,125 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
 
       // 2. Modes
       ...modeBreakup.map((row) => {
-        'section': 'mode',
-        'sectionTitle': 'MODE BREAK UP',
-        'label': (row['label'] ?? '').toString(),
-        'width': 110.0,
-        'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
-        'color': const Color(0xFF0F172A),
-        'isBold': false,
-      }),
+            'section': 'mode',
+            'sectionTitle': 'MODE BREAK UP',
+            'label': (row['label'] ?? '').toString(),
+            'width': 110.0,
+            'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
+            'color': const Color(0xFF0F172A),
+            'isBold': false,
+          }),
 
       // 3. Sources
       ...sourceBreakup.map((row) => {
-        'section': 'source',
-        'sectionTitle': 'SOURCE',
-        'label': (row['label'] ?? '').toString(),
-        'width': 150.0,
-        'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
-        'color': const Color(0xFF0F172A),
-        'isBold': false,
-      }),
+            'section': 'source',
+            'sectionTitle': 'SOURCE',
+            'label': (row['label'] ?? '').toString(),
+            'width': 150.0,
+            'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
+            'color': const Color(0xFF0F172A),
+            'isBold': false,
+          }),
 
       // 4. Model Wise Leads
       ...modelWiseLeads.map((row) => {
-        'section': 'model',
-        'sectionTitle': 'MODEL LEADS',
-        'label': (row['label'] ?? '').toString(),
-        'width': 140.0,
-        'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
-        'color': const Color(0xFF0F172A),
-        'isBold': false,
-      }),
+            'section': 'model',
+            'sectionTitle': 'MODEL LEADS',
+            'label': (row['label'] ?? '').toString(),
+            'width': 140.0,
+            'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
+            'color': const Color(0xFF0F172A),
+            'isBold': false,
+          }),
 
       // 5. Model Wise Bookings
       ...modelWiseBk.map((row) => {
-        'section': 'model',
-        'sectionTitle': 'MODEL BK',
-        'label': '${row['label'] ?? ''} (BK)',
-        'width': 140.0,
-        'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
-        'color': const Color(0xFF16A34A),
-        'isBold': true,
-      }),
+            'section': 'model',
+            'sectionTitle': 'MODEL BK',
+            'label': '${row['label'] ?? ''} (BK)',
+            'width': 140.0,
+            'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
+            'color': const Color(0xFF16A34A),
+            'isBold': true,
+          }),
 
       // 6. Sales Executive Wise Bookings
       ...salesExWiseBk.map((row) => {
-        'section': 'sales',
-        'sectionTitle': 'SALES EX BK',
-        'label': (row['label'] ?? '').toString(),
-        'width': 145.0,
-        'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
-        'color': const Color(0xFF0F172A),
-        'isBold': false,
-      }),
+            'section': 'sales',
+            'sectionTitle': 'SALES EX BK',
+            'label': (row['label'] ?? '').toString(),
+            'width': 145.0,
+            'getValue': (String id) => (row['values']?[id] ?? 0).toString(),
+            'color': const Color(0xFF0F172A),
+            'isBold': false,
+          }),
 
       // 7. MTD Model Conversion
       ...mtdModelConv.map((row) => {
-        'section': 'mtd',
-        'sectionTitle': 'MTD MODEL CONV',
-        'label': '${row['label'] ?? ''} (MTD)',
-        'width': 155.0,
-        'getValue': (String id) => (row['values']?[id] ?? '-').toString(),
-        'color': const Color(0xFF0F172A),
-        'isBold': false,
-      }),
+            'section': 'mtd',
+            'sectionTitle': 'MTD MODEL CONV',
+            'label': '${row['label'] ?? ''} (MTD)',
+            'width': 155.0,
+            'getValue': (String id) => (row['values']?[id] ?? '-').toString(),
+            'color': const Color(0xFF0F172A),
+            'isBold': false,
+          }),
 
       // 8. MTD Sales Executive Conversion
       ...mtdSalesExConv.map((row) => {
-        'section': 'mtd',
-        'sectionTitle': 'MTD REP CONV',
-        'label': '${row['label'] ?? ''} (MTD)',
-        'width': 155.0,
-        'getValue': (String id) => (row['values']?[id] ?? '-').toString(),
-        'color': const Color(0xFF0F172A),
-        'isBold': false,
-      }),
+            'section': 'mtd',
+            'sectionTitle': 'MTD REP CONV',
+            'label': '${row['label'] ?? ''} (MTD)',
+            'width': 155.0,
+            'getValue': (String id) => (row['values']?[id] ?? '-').toString(),
+            'color': const Color(0xFF0F172A),
+            'isBold': false,
+          }),
 
       // 9. MTD Source Conversion
       ...mtdSourceConv.map((row) => {
-        'section': 'mtd',
-        'sectionTitle': 'MTD SOURCE CONV',
-        'label': '${row['label'] ?? ''} (MTD)',
-        'width': 160.0,
-        'getValue': (String id) => (row['values']?[id] ?? '-').toString(),
-        'color': const Color(0xFF0F172A),
-        'isBold': false,
-      }),
+            'section': 'mtd',
+            'sectionTitle': 'MTD SOURCE CONV',
+            'label': '${row['label'] ?? ''} (MTD)',
+            'width': 160.0,
+            'getValue': (String id) => (row['values']?[id] ?? '-').toString(),
+            'color': const Color(0xFF0F172A),
+            'isBold': false,
+          }),
 
       // 10. MTD Mode Conversion
       ...mtdModeConv.map((row) => {
-        'section': 'mtd',
-        'sectionTitle': 'MTD MODE CONV',
-        'label': '${row['label'] ?? ''} (MTD)',
-        'width': 150.0,
-        'getValue': (String id) => (row['values']?[id] ?? '-').toString(),
-        'color': const Color(0xFF0F172A),
-        'isBold': false,
-      }),
+            'section': 'mtd',
+            'sectionTitle': 'MTD MODE CONV',
+            'label': '${row['label'] ?? ''} (MTD)',
+            'width': 150.0,
+            'getValue': (String id) => (row['values']?[id] ?? '-').toString(),
+            'color': const Color(0xFF0F172A),
+            'isBold': false,
+          }),
     ];
 
     final filteredColumns = _transposedFilter == 'all'
         ? allColumns
-        : allColumns.where((col) => col['section'] == _transposedFilter).toList();
+        : allColumns
+            .where((col) => col['section'] == _transposedFilter)
+            .toList();
 
     final filterTabs = [
       {'id': 'all', 'label': 'All Details (${allColumns.length})'},
       {'id': 'core', 'label': 'Core KPIs (3)'},
       {'id': 'mode', 'label': 'Payment Modes (${modeBreakup.length})'},
       {'id': 'source', 'label': 'Lead Sources (${sourceBreakup.length})'},
-      {'id': 'model', 'label': 'Models (${modelWiseLeads.length + modelWiseBk.length})'},
+      {
+        'id': 'model',
+        'label': 'Models (${modelWiseLeads.length + modelWiseBk.length})'
+      },
       {'id': 'sales', 'label': 'Sales Reps (${salesExWiseBk.length})'},
-      {'id': 'mtd', 'label': 'MTD Conversions (${mtdModelConv.length + mtdSalesExConv.length + mtdSourceConv.length + mtdModeConv.length})'},
+      {
+        'id': 'mtd',
+        'label':
+            'MTD Conversions (${mtdModelConv.length + mtdSalesExConv.length + mtdSourceConv.length + mtdModeConv.length})'
+      },
     ];
 
     return Container(
@@ -816,7 +975,10 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -834,28 +996,44 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  const Text('FILTER METRICS: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF64748B), letterSpacing: 0.5)),
+                  const Text('FILTER METRICS: ',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF64748B),
+                          letterSpacing: 0.5)),
                   const SizedBox(width: 8),
                   ...filterTabs.map((tab) {
                     final isSelected = _transposedFilter == tab['id'];
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: InkWell(
-                        onTap: () => setState(() => _transposedFilter = tab['id'] as String),
+                        onTap: () => setState(
+                            () => _transposedFilter = tab['id'] as String),
                         borderRadius: BorderRadius.circular(6),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFFDC2626) : Colors.white,
+                            color: isSelected
+                                ? const Color(0xFFDC2626)
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: isSelected ? const Color(0xFFDC2626) : const Color(0xFFCBD5E1)),
+                            border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFFDC2626)
+                                    : const Color(0xFFCBD5E1)),
                           ),
                           child: Text(
                             tab['label'] as String,
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                              color: isSelected ? Colors.white : const Color(0xFF334155),
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF334155),
                             ),
                           ),
                         ),
@@ -878,7 +1056,9 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                   height: 48,
                   decoration: const BoxDecoration(
                     color: Color(0xFFF1F5F9),
-                    border: Border(bottom: BorderSide(color: Color(0xFFCBD5E1), width: 1.5)),
+                    border: Border(
+                        bottom:
+                            BorderSide(color: Color(0xFFCBD5E1), width: 1.5)),
                   ),
                   child: Row(
                     children: [
@@ -890,8 +1070,14 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('LOCATION', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
-                            Text('Showroom Branch', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                            Text('LOCATION',
+                                style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF1E293B))),
+                            Text('Showroom Branch',
+                                style: TextStyle(
+                                    fontSize: 10, color: Color(0xFF64748B))),
                           ],
                         ),
                       ),
@@ -899,7 +1085,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                         return Container(
                           width: col['width'] as double,
                           decoration: const BoxDecoration(
-                            border: Border(left: BorderSide(color: Color(0xFFE2E8F0))),
+                            border: Border(
+                                left: BorderSide(color: Color(0xFFE2E8F0))),
                           ),
                           padding: const EdgeInsets.symmetric(horizontal: 6),
                           alignment: Alignment.center,
@@ -908,7 +1095,11 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                             children: [
                               Text(
                                 (col['sectionTitle'] ?? '').toString(),
-                                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.3),
+                                style: const TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF64748B),
+                                    letterSpacing: 0.3),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -918,7 +1109,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
-                                  color: col['color'] as Color? ?? const Color(0xFF0F172A),
+                                  color: col['color'] as Color? ??
+                                      const Color(0xFF0F172A),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -936,16 +1128,20 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                   final isAll = bId == 'all';
                   final b = branches.firstWhere(
                     (element) => element['id'].toString() == bId,
-                    orElse: () => {'name': 'Consolidated Dealerships', 'code': 'ALL'},
+                    orElse: () =>
+                        {'name': 'Consolidated Dealerships', 'code': 'ALL'},
                   );
-                  final bName = isAll ? 'CONSOLIDATED (All Dealerships)' : (b['name'] ?? '');
+                  final bName = isAll
+                      ? 'CONSOLIDATED (All Dealerships)'
+                      : (b['name'] ?? '');
                   final bCode = isAll ? '' : (b['code'] ?? '');
 
                   return Container(
                     height: 42,
                     decoration: BoxDecoration(
                       color: isAll ? const Color(0xFFFEF3C7) : Colors.white,
-                      border: const Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+                      border: const Border(
+                          bottom: BorderSide(color: Color(0xFFF1F5F9))),
                     ),
                     child: Row(
                       children: [
@@ -960,8 +1156,12 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                                   bName,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: isAll ? FontWeight.w900 : FontWeight.w600,
-                                    color: isAll ? const Color(0xFFB45309) : const Color(0xFF0F172A),
+                                    fontWeight: isAll
+                                        ? FontWeight.w900
+                                        : FontWeight.w600,
+                                    color: isAll
+                                        ? const Color(0xFFB45309)
+                                        : const Color(0xFF0F172A),
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -969,31 +1169,39 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                               if (bCode.isNotEmpty)
                                 Container(
                                   margin: const EdgeInsets.only(left: 6),
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 5, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFF1F5F9),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
                                     bCode,
-                                    style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                                    style: const TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF64748B)),
                                   ),
                                 ),
                             ],
                           ),
                         ),
                         ...filteredColumns.map((col) {
-                          final getter = col['getValue'] as String Function(String);
+                          final getter =
+                              col['getValue'] as String Function(String);
                           final val = getter(bId);
-                          final isBold = isAll || (col['isBold'] as bool? ?? false);
+                          final isBold =
+                              isAll || (col['isBold'] as bool? ?? false);
                           final color = isAll
                               ? const Color(0xFFB45309)
-                              : (col['color'] as Color? ?? const Color(0xFF334155));
+                              : (col['color'] as Color? ??
+                                  const Color(0xFF334155));
 
                           return Container(
                             width: col['width'] as double,
                             decoration: const BoxDecoration(
-                              border: Border(left: BorderSide(color: Color(0xFFF1F5F9))),
+                              border: Border(
+                                  left: BorderSide(color: Color(0xFFF1F5F9))),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 6),
                             alignment: Alignment.center,
@@ -1001,7 +1209,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                               val,
                               style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: isBold ? FontWeight.w800 : FontWeight.w500,
+                                fontWeight:
+                                    isBold ? FontWeight.w800 : FontWeight.w500,
                                 color: color,
                               ),
                               maxLines: 1,
@@ -1022,7 +1231,10 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
   }
 
   int _findBreakupVal(List list, String label, String bId) {
-    final item = list.firstWhere((e) => (e['label'] ?? '').toString().toUpperCase() == label.toUpperCase(), orElse: () => null);
+    final item = list.firstWhere(
+        (e) =>
+            (e['label'] ?? '').toString().toUpperCase() == label.toUpperCase(),
+        orElse: () => null);
     if (item == null) return 0;
     return (item['values']?[bId] ?? 0) as int;
   }
@@ -1040,7 +1252,11 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
       ),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF1E293B), letterSpacing: 0.5),
+        style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF1E293B),
+            letterSpacing: 0.5),
       ),
     );
   }
@@ -1080,14 +1296,17 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
             final isAll = bId == 'all';
             final bName = isAll
                 ? 'All Dealerships'
-                : (branches.firstWhere((b) => b['id'].toString() == bId, orElse: () => {'name': ''})['name'] ?? '');
+                : (branches.firstWhere((b) => b['id'].toString() == bId,
+                        orElse: () => {'name': ''})['name'] ??
+                    '');
 
             return Container(
               width: isAll ? 185 : 175,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               decoration: BoxDecoration(
                 color: isAll ? const Color(0xFFFFFBEB) : Colors.white,
-                border: const Border(left: BorderSide(color: Color(0xFFF1F5F9))),
+                border:
+                    const Border(left: BorderSide(color: Color(0xFFF1F5F9))),
               ),
               alignment: Alignment.center,
               child: isConvFormat
@@ -1096,7 +1315,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                       val,
                       style: TextStyle(
                         fontSize: isBold ? 13 : 11.5,
-                        fontWeight: isBold || isAll ? FontWeight.w800 : FontWeight.w600,
+                        fontWeight:
+                            isBold || isAll ? FontWeight.w800 : FontWeight.w600,
                         color: isAll
                             ? (highlightColor ?? const Color(0xFFB45309))
                             : (highlightColor ?? const Color(0xFF1E293B)),
@@ -1124,17 +1344,21 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildBadge('${leadsStr.padLeft(2, '0')}L', const Color(0xFFEFF6FF), const Color(0xFF2563EB)),
+            _buildBadge('${leadsStr.padLeft(2, '0')}L', const Color(0xFFEFF6FF),
+                const Color(0xFF2563EB)),
             const SizedBox(width: 4),
-            _buildBadge('${bkStr.padLeft(2, '0')}BK', const Color(0xFFF0FDF4), const Color(0xFF16A34A)),
+            _buildBadge('${bkStr.padLeft(2, '0')}BK', const Color(0xFFF0FDF4),
+                const Color(0xFF16A34A)),
             const SizedBox(width: 4),
-            _buildBadge('${convStr.padLeft(2, '0')}%', const Color(0xFFFEF2F2), const Color(0xFFDC2626)),
+            _buildBadge('${convStr.padLeft(2, '0')}%', const Color(0xFFFEF2F2),
+                const Color(0xFFDC2626)),
           ],
         ),
       );
     }
 
-    return Text(val, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)));
+    return Text(val,
+        style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)));
   }
 
   Widget _buildBadge(String text, Color bg, Color fg) {
@@ -1215,7 +1439,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                       const SizedBox(height: 3),
                       const Text(
                         'Click any location card below to drill down, or click here for all locations',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                        style:
+                            TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                       ),
                     ],
                   ),
@@ -1234,12 +1459,18 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildLargeKpi('Total Leads', leadsAll.toString(), const Color(0xFF0F172A)),
-                  _buildLargeKpi('Walk-ins', walkIns.toString(), const Color(0xFF2563EB)),
-                  _buildLargeKpi('Calls', calls.toString(), const Color(0xFF0D9488)),
-                  _buildLargeKpi('Online', online.toString(), const Color(0xFFF59E0B)),
-                  _buildLargeKpi('Referrals', referrals.toString(), const Color(0xFF8B5CF6)),
-                  _buildLargeKpi('Booked / Sold', bkAll.toString(), const Color(0xFF16A34A)),
+                  _buildLargeKpi('Total Leads', leadsAll.toString(),
+                      const Color(0xFF0F172A)),
+                  _buildLargeKpi(
+                      'Walk-ins', walkIns.toString(), const Color(0xFF2563EB)),
+                  _buildLargeKpi(
+                      'Calls', calls.toString(), const Color(0xFF0D9488)),
+                  _buildLargeKpi(
+                      'Online', online.toString(), const Color(0xFFF59E0B)),
+                  _buildLargeKpi('Referrals', referrals.toString(),
+                      const Color(0xFF8B5CF6)),
+                  _buildLargeKpi('Booked / Sold', bkAll.toString(),
+                      const Color(0xFF16A34A)),
                 ],
               ),
             ],
@@ -1263,7 +1494,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
 
                 return Expanded(
                   child: Padding(
-                    padding: EdgeInsets.only(right: i < branches.length - 1 ? 12 : 0),
+                    padding: EdgeInsets.only(
+                        right: i < branches.length - 1 ? 12 : 0),
                     child: InkWell(
                       onTap: () {
                         setState(() => _selectedBranch = isSel ? 'all' : bId);
@@ -1276,11 +1508,16 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                           color: isSel ? const Color(0xFFFEF2F2) : Colors.white,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: isSel ? AppColors.primary : const Color(0xFFE2E8F0),
+                            color: isSel
+                                ? AppColors.primary
+                                : const Color(0xFFE2E8F0),
                             width: isSel ? 1.5 : 1,
                           ),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+                            BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.02),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2)),
                           ],
                         ),
                         child: Column(
@@ -1289,8 +1526,16 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('LOCATION ${i + 1}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))),
-                                Text(conv, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFFDC2626))),
+                                Text('LOCATION ${i + 1}',
+                                    style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF64748B))),
+                                Text(conv,
+                                    style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFFDC2626))),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -1298,7 +1543,10 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                               b['name'] ?? '',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF0F172A)),
                             ),
                             const SizedBox(height: 10),
                             Row(
@@ -1342,7 +1590,11 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('DEALERSHIP LEADS VS BOOKINGS (TODAY)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                        const Text('DEALERSHIP LEADS VS BOOKINGS (TODAY)',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A))),
                         Row(
                           children: [
                             _buildLegendItem('Leads', const Color(0xFF2563EB)),
@@ -1369,8 +1621,16 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('LOC $index · ${b['name']}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1E293B))),
-                                Text('${l}L / ${bk}BK ($c)', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFFDC2626))),
+                                Text('LOC $index · ${b['name']}',
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF1E293B))),
+                                Text('${l}L / ${bk}BK ($c)',
+                                    style: const TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFFDC2626))),
                               ],
                             ),
                             const SizedBox(height: 5),
@@ -1433,8 +1693,14 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('SOURCE & PAYMENT MIX (TODAY)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
-                        Text('All Locations', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                        Text('SOURCE & PAYMENT MIX (TODAY)',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A))),
+                        Text('All Locations',
+                            style: TextStyle(
+                                fontSize: 11, color: Color(0xFF64748B))),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -1443,8 +1709,14 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Enquiry Sources', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
-                        Text('$leadsAll total leads', style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                        const Text('Enquiry Sources',
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF475569))),
+                        Text('$leadsAll total leads',
+                            style: const TextStyle(
+                                fontSize: 10, color: Color(0xFF64748B))),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -1458,10 +1730,18 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                     Wrap(
                       spacing: 12,
                       children: [
-                        _buildLegendItem('WALK IN $walkIns (${leadsAll > 0 ? ((walkIns / leadsAll) * 100).round() : 0}%)', const Color(0xFF2563EB)),
-                        _buildLegendItem('TELE $calls (${leadsAll > 0 ? ((calls / leadsAll) * 100).round() : 0}%)', const Color(0xFF0D9488)),
-                        _buildLegendItem('ONLINE $online (${leadsAll > 0 ? ((online / leadsAll) * 100).round() : 0}%)', const Color(0xFFF59E0B)),
-                        _buildLegendItem('REFERRAL $referrals (${leadsAll > 0 ? ((referrals / leadsAll) * 100).round() : 0}%)', const Color(0xFF8B5CF6)),
+                        _buildLegendItem(
+                            'WALK IN $walkIns (${leadsAll > 0 ? ((walkIns / leadsAll) * 100).round() : 0}%)',
+                            const Color(0xFF2563EB)),
+                        _buildLegendItem(
+                            'TELE $calls (${leadsAll > 0 ? ((calls / leadsAll) * 100).round() : 0}%)',
+                            const Color(0xFF0D9488)),
+                        _buildLegendItem(
+                            'ONLINE $online (${leadsAll > 0 ? ((online / leadsAll) * 100).round() : 0}%)',
+                            const Color(0xFFF59E0B)),
+                        _buildLegendItem(
+                            'REFERRAL $referrals (${leadsAll > 0 ? ((referrals / leadsAll) * 100).round() : 0}%)',
+                            const Color(0xFF8B5CF6)),
                       ],
                     ),
 
@@ -1471,23 +1751,44 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Payment Modes', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
-                        Text('$leadsAll total leads', style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                        const Text('Payment Modes',
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF475569))),
+                        Text('$leadsAll total leads',
+                            style: const TextStyle(
+                                fontSize: 10, color: Color(0xFF64748B))),
                       ],
                     ),
                     const SizedBox(height: 6),
                     _buildSegmentedBar([
-                      {'val': _findBreakupVal(modeBreakup, 'CASH', 'all'), 'color': const Color(0xFF16A34A)},
-                      {'val': _findBreakupVal(modeBreakup, 'FINANCE', 'all'), 'color': const Color(0xFF2563EB)},
-                      {'val': _findBreakupVal(modeBreakup, 'EXCHANGE', 'all'), 'color': const Color(0xFFEA580C)},
+                      {
+                        'val': _findBreakupVal(modeBreakup, 'CASH', 'all'),
+                        'color': const Color(0xFF16A34A)
+                      },
+                      {
+                        'val': _findBreakupVal(modeBreakup, 'FINANCE', 'all'),
+                        'color': const Color(0xFF2563EB)
+                      },
+                      {
+                        'val': _findBreakupVal(modeBreakup, 'EXCHANGE', 'all'),
+                        'color': const Color(0xFFEA580C)
+                      },
                     ], leadsAll),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 12,
                       children: [
-                        _buildLegendItem('CASH ${_findBreakupVal(modeBreakup, "CASH", "all")} (${leadsAll > 0 ? ((_findBreakupVal(modeBreakup, "CASH", "all") / leadsAll) * 100).round() : 0}%)', const Color(0xFF16A34A)),
-                        _buildLegendItem('FINANCE ${_findBreakupVal(modeBreakup, "FINANCE", "all")} (${leadsAll > 0 ? ((_findBreakupVal(modeBreakup, "FINANCE", "all") / leadsAll) * 100).round() : 0}%)', const Color(0xFF2563EB)),
-                        _buildLegendItem('EXCHANGE ${_findBreakupVal(modeBreakup, "EXCHANGE", "all")} (${leadsAll > 0 ? ((_findBreakupVal(modeBreakup, "EXCHANGE", "all") / leadsAll) * 100).round() : 0}%)', const Color(0xFFEA580C)),
+                        _buildLegendItem(
+                            'CASH ${_findBreakupVal(modeBreakup, "CASH", "all")} (${leadsAll > 0 ? ((_findBreakupVal(modeBreakup, "CASH", "all") / leadsAll) * 100).round() : 0}%)',
+                            const Color(0xFF16A34A)),
+                        _buildLegendItem(
+                            'FINANCE ${_findBreakupVal(modeBreakup, "FINANCE", "all")} (${leadsAll > 0 ? ((_findBreakupVal(modeBreakup, "FINANCE", "all") / leadsAll) * 100).round() : 0}%)',
+                            const Color(0xFF2563EB)),
+                        _buildLegendItem(
+                            'EXCHANGE ${_findBreakupVal(modeBreakup, "EXCHANGE", "all")} (${leadsAll > 0 ? ((_findBreakupVal(modeBreakup, "EXCHANGE", "all") / leadsAll) * 100).round() : 0}%)',
+                            const Color(0xFFEA580C)),
                       ],
                     ),
 
@@ -1552,8 +1853,16 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('MODEL-WISE PERFORMANCE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
-                        Text('TODAY & MTD', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+                        Text('MODEL-WISE PERFORMANCE',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A))),
+                        Text('TODAY & MTD',
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF94A3B8))),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -1566,30 +1875,95 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                       },
                       children: [
                         const TableRow(
-                          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0)))),
+                          decoration: BoxDecoration(
+                              border: Border(
+                                  bottom:
+                                      BorderSide(color: Color(0xFFE2E8F0)))),
                           children: [
-                            Padding(padding: EdgeInsets.only(bottom: 8), child: Text('MODEL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B)))),
-                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('TODAY LEADS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
-                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('TODAY BK', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
-                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('MTD (L / BK / CONV)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
+                            Padding(
+                                padding: EdgeInsets.only(bottom: 8),
+                                child: Text('MODEL',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF64748B)))),
+                            Padding(
+                                padding: EdgeInsets.only(bottom: 8),
+                                child: Center(
+                                    child: Text('TODAY LEADS',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF64748B))))),
+                            Padding(
+                                padding: EdgeInsets.only(bottom: 8),
+                                child: Center(
+                                    child: Text('TODAY BK',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF64748B))))),
+                            Padding(
+                                padding: EdgeInsets.only(bottom: 8),
+                                child: Center(
+                                    child: Text('MTD (L / BK / CONV)',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF64748B))))),
                           ],
                         ),
                         ...modelWiseLeads.map((m) {
                           final label = m['label'] ?? '';
                           final tLeads = (m['values']?['all'] ?? 0) as int;
-                          final bkItem = modelWiseBk.firstWhere((e) => e['label'] == label, orElse: () => null);
+                          final bkItem = modelWiseBk.firstWhere(
+                              (e) => e['label'] == label,
+                              orElse: () => null);
                           final tBk = (bkItem?['values']?['all'] ?? 0) as int;
 
-                          final mtdItem = mtdModelConv.firstWhere((e) => e['label'] == label, orElse: () => null);
-                          final mtdVal = (mtdItem?['values']?['all'] ?? '-').toString();
+                          final mtdItem = mtdModelConv.firstWhere(
+                              (e) => e['label'] == label,
+                              orElse: () => null);
+                          final mtdVal =
+                              (mtdItem?['values']?['all'] ?? '-').toString();
 
                           return TableRow(
-                            decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9)))),
+                            decoration: const BoxDecoration(
+                                border: Border(
+                                    bottom:
+                                        BorderSide(color: Color(0xFFF1F5F9)))),
                             children: [
-                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)))),
-                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Text('$tLeads', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF2563EB))))),
-                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Text('$tBk', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF16A34A))))),
-                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: _buildMtdShortText(mtdVal))),
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: Text(label,
+                                      style: const TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF1E293B)))),
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: Center(
+                                      child: Text('$tLeads',
+                                          style: const TextStyle(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF2563EB))))),
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: Center(
+                                      child: Text('$tBk',
+                                          style: const TextStyle(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF16A34A))))),
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: Center(
+                                      child: _buildMtdShortText(mtdVal))),
                             ],
                           );
                         }),
@@ -1617,8 +1991,16 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('SALES EXECUTIVE PERFORMANCE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
-                        Text('TODAY BK & MTD Conv', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+                        Text('SALES EXECUTIVE PERFORMANCE',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A))),
+                        Text('TODAY BK & MTD Conv',
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF94A3B8))),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -1632,34 +2014,120 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                       },
                       children: [
                         const TableRow(
-                          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0)))),
+                          decoration: BoxDecoration(
+                              border: Border(
+                                  bottom:
+                                      BorderSide(color: Color(0xFFE2E8F0)))),
                           children: [
-                            Padding(padding: EdgeInsets.only(bottom: 8), child: Text('SALES REP', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B)))),
-                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('TODAY BK', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
-                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('MTD LEADS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
-                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('MTD BK', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
-                            Padding(padding: EdgeInsets.only(bottom: 8), child: Center(child: Text('CONV %', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B))))),
+                            Padding(
+                                padding: EdgeInsets.only(bottom: 8),
+                                child: Text('SALES REP',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF64748B)))),
+                            Padding(
+                                padding: EdgeInsets.only(bottom: 8),
+                                child: Center(
+                                    child: Text('TODAY BK',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF64748B))))),
+                            Padding(
+                                padding: EdgeInsets.only(bottom: 8),
+                                child: Center(
+                                    child: Text('MTD LEADS',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF64748B))))),
+                            Padding(
+                                padding: EdgeInsets.only(bottom: 8),
+                                child: Center(
+                                    child: Text('MTD BK',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF64748B))))),
+                            Padding(
+                                padding: EdgeInsets.only(bottom: 8),
+                                child: Center(
+                                    child: Text('CONV %',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF64748B))))),
                           ],
                         ),
                         ...salesExWiseBk.map((rep) {
                           final label = rep['label'] ?? '';
                           final todayBk = (rep['values']?['all'] ?? 0) as int;
 
-                          final mtdItem = mtdSalesExConv.firstWhere((e) => e['label'] == label, orElse: () => null);
-                          final mtdRaw = (mtdItem?['values']?['all'] ?? '').toString();
+                          final mtdItem = mtdSalesExConv.firstWhere(
+                              (e) => e['label'] == label,
+                              orElse: () => null);
+                          final mtdRaw =
+                              (mtdItem?['values']?['all'] ?? '').toString();
                           final parts = mtdRaw.split('/');
-                          final mtdL = parts.isNotEmpty ? parts[0].replaceAll(RegExp(r'[^0-9]'), '') : '0';
-                          final mtdB = parts.length > 1 ? parts[1].replaceAll(RegExp(r'[^0-9]'), '') : '0';
-                          final mtdC = parts.length > 2 ? parts[2].replaceAll(RegExp(r'[^0-9]'), '') : '0';
+                          final mtdL = parts.isNotEmpty
+                              ? parts[0].replaceAll(RegExp(r'[^0-9]'), '')
+                              : '0';
+                          final mtdB = parts.length > 1
+                              ? parts[1].replaceAll(RegExp(r'[^0-9]'), '')
+                              : '0';
+                          final mtdC = parts.length > 2
+                              ? parts[2].replaceAll(RegExp(r'[^0-9]'), '')
+                              : '0';
 
                           return TableRow(
-                            decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9)))),
+                            decoration: const BoxDecoration(
+                                border: Border(
+                                    bottom:
+                                        BorderSide(color: Color(0xFFF1F5F9)))),
                             children: [
-                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)))),
-                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Text('$todayBk', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))))),
-                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Text(mtdL, style: const TextStyle(fontSize: 11.5, color: Color(0xFF475569))))),
-                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Text(mtdB, style: const TextStyle(fontSize: 11.5, color: Color(0xFF475569))))),
-                              Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Text('$mtdC%', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Color(0xFFDC2626))))),
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: Text(label,
+                                      style: const TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF1E293B)))),
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: Center(
+                                      child: Text('$todayBk',
+                                          style: const TextStyle(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF16A34A))))),
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: Center(
+                                      child: Text(mtdL,
+                                          style: const TextStyle(
+                                              fontSize: 11.5,
+                                              color: Color(0xFF475569))))),
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: Center(
+                                      child: Text(mtdB,
+                                          style: const TextStyle(
+                                              fontSize: 11.5,
+                                              color: Color(0xFF475569))))),
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: Center(
+                                      child: Text('$mtdC%',
+                                          style: const TextStyle(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: Color(0xFFDC2626))))),
                             ],
                           );
                         }),
@@ -1683,10 +2151,14 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
       final c = parts[2].replaceAll(RegExp(r'[^0-9]'), '');
       return Text(
         '$l / $b  $c%',
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFDC2626)),
+        style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFFDC2626)),
       );
     }
-    return Text(raw, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)));
+    return Text(raw,
+        style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)));
   }
 
   Widget _buildSegmentedBar(List<Map<String, dynamic>> segments, int total) {
@@ -1721,9 +2193,15 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: fg.withValues(alpha: 0.8))),
+          Text(title,
+              style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  color: fg.withValues(alpha: 0.8))),
           const SizedBox(height: 2),
-          Text(val, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: fg)),
+          Text(val,
+              style: TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.w900, color: fg)),
         ],
       ),
     );
@@ -1732,9 +2210,15 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
   Widget _buildLargeKpi(String label, String value, Color color) {
     return Column(
       children: [
-        Text(value, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: color)),
+        Text(value,
+            style: TextStyle(
+                fontSize: 26, fontWeight: FontWeight.w900, color: color)),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF64748B))),
       ],
     );
   }
@@ -1742,8 +2226,16 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
   Widget _buildMiniSubKpi(String val, String label) {
     return Column(
       children: [
-        Text(val, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
-        Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8))),
+        Text(val,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F172A))),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF94A3B8))),
       ],
     );
   }
@@ -1752,11 +2244,17 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF475569))),
       ],
     );
   }
-
 }
