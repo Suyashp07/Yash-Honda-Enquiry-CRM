@@ -206,8 +206,13 @@ class _QuoteActionsScreenState extends ConsumerState<QuoteActionsScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String msg = 'Email send error.';
+        if (e is DioException && e.response?.data is Map) {
+          final rawMsg = (e.response!.data as Map)['message'];
+          msg = rawMsg is List ? rawMsg.join(', ') : (rawMsg?.toString() ?? msg);
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Email send error: $e')),
+          SnackBar(backgroundColor: AppColors.danger, content: Text(msg)),
         );
       }
     } finally {

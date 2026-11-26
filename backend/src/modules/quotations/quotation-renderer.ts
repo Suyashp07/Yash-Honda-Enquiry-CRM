@@ -29,7 +29,7 @@ export function hasVerifiedCompanySettings(settings: any): {
 } {
   const missing: string[] = [];
   if (!settings?.companyName?.trim()) missing.push('Company Name');
-  if (!settings?.gstNumber?.trim() || String(settings.gstNumber).includes('XXXX')) {
+  if (!settings?.gstNumber?.trim()) {
     missing.push('GST Number');
   }
   if (!settings?.bankName?.trim()) missing.push('Bank Name');
