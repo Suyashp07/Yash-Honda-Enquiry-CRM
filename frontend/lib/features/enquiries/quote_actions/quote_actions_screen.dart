@@ -11,6 +11,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/networking/api_client.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/file_download.dart';
+import '../../../shared/widgets/app_components.dart';
 
 class QuoteActionsScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> enquiry;
@@ -32,12 +33,23 @@ class _QuoteActionsScreenState extends ConsumerState<QuoteActionsScreen> {
   bool _isDownloadingPdf = false;
   bool _waSent = false;
   bool _emailSent = false;
+  String? _waStatus;
+  String? _emailStatus;
 
   String _pdfRs(num amount) =>
       CurrencyFormatter.format(amount).replaceAll('₹', 'Rs. ');
 
+  Future<String> _getSignedPrintUrl() async {
+    final q = widget.quotation;
+    final quoteIdOrNum = (q['id'] ?? q['quoteNumber'] ?? '').toString();
+    final dio = ref.read(dioProvider);
+    final res = await dio.get('/quotations/$quoteIdOrNum/signed-print-url');
+    final relUrl = res.data?['url']?.toString() ?? '';
+    final baseOrigin = ApiConstants.baseUrl.replaceFirst(RegExp(r'/api/?$'), '');
+    return '$baseOrigin$relUrl';
+  }
+
   Future<void> _sendWhatsApp() async {
-    setState(() => _isSendingWA = true);
     final customer = widget.enquiry['customer'] ?? {};
     final mobile = customer['mobile']?.toString() ?? '';
     final custName = customer['name']?.toString() ?? 'Customer';
@@ -46,6 +58,16 @@ class _QuoteActionsScreenState extends ConsumerState<QuoteActionsScreen> {
     final grandTotal = CurrencyFormatter.format(q['grandTotal']);
     final vName = q['vehicle']?['name']?.toString() ?? 'Honda Vehicle';
 
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Confirm WhatsApp Dispatch',
+      message:
+          'Send Quotation #$quoteNumber ($grandTotal) for $vName to $custName (+91 $mobile)?',
+      confirmLabel: 'Send WhatsApp',
+    );
+    if (!confirmed || !mounted) return;
+
+    setState(() => _isSendingWA = true);
     try {
       final dio = ref.read(dioProvider);
       final res = await dio.post('/communications/whatsapp', data: {
@@ -55,21 +77,26 @@ class _QuoteActionsScreenState extends ConsumerState<QuoteActionsScreen> {
       });
       if (mounted) {
         final mode = res.data['mode']?.toString();
-        setState(() => _waSent = true);
+        final status = res.data['status']?.toString() ?? 'accepted';
+        setState(() {
+          _waSent = status != 'failed';
+          _waStatus = status;
+        });
         if (mode == 'live_meta') {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              backgroundColor: Color(0xFF16A34A),
+              backgroundColor: AppColors.info,
               content:
-                  Text('Official quotation dispatched via Meta WhatsApp!'),
+                  Text('Quotation accepted by Meta WhatsApp (awaiting delivery webhook).'),
             ),
           );
         } else {
+          final signedUrl = await _getSignedPrintUrl();
           final text = Uri.encodeComponent(
             'Namaste $custName, thank you for visiting Yash Honda! Here is your official quotation for $vName:\n\n'
             '• Quote No: $quoteNumber\n'
             '• Grand Total: $grandTotal\n'
-            '• View / Print Quote: ${ApiConstants.baseUrl}/quotations/$quoteNumber/print\n\n'
+            '• View / Print Quote: $signedUrl\n\n'
             'Our sales team will follow up with you shortly. Yash Honda Pune.',
           );
           final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
@@ -78,9 +105,9 @@ class _QuoteActionsScreenState extends ConsumerState<QuoteActionsScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                backgroundColor: Color(0xFF16A34A),
+                backgroundColor: AppColors.warning,
                 content:
-                    Text('Opening WhatsApp with pre-filled quotation...'),
+                    Text('Simulated API send recorded; opening WhatsApp composer.'),
               ),
             );
           }
@@ -88,8 +115,12 @@ class _QuoteActionsScreenState extends ConsumerState<QuoteActionsScreen> {
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _waStatus = 'failed');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('WhatsApp send error: $e')),
+          SnackBar(
+            backgroundColor: AppColors.danger,
+            content: Text('Could not send WhatsApp quotation: $e'),
+          ),
         );
       }
     } finally {
@@ -135,6 +166,15 @@ class _QuoteActionsScreenState extends ConsumerState<QuoteActionsScreen> {
       customerEmail = entered;
     }
 
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Confirm Email Dispatch',
+      message:
+          'Send Quotation #${widget.quotation['quoteNumber'] ?? ''} (${CurrencyFormatter.format(widget.quotation['grandTotal'])}) to $customerEmail?',
+      confirmLabel: 'Send Email',
+    );
+    if (!confirmed || !mounted) return;
+
     setState(() => _isSendingEmail = true);
     try {
       final dio = ref.read(dioProvider);
@@ -147,13 +187,19 @@ class _QuoteActionsScreenState extends ConsumerState<QuoteActionsScreen> {
       });
       if (mounted) {
         final ok = res.data is Map && res.data['success'] == true;
-        if (ok) setState(() => _emailSent = true);
+        final status = (res.data is Map ? res.data['status']?.toString() : null) ??
+            (ok ? 'accepted' : 'failed');
+        setState(() {
+          _emailSent = ok;
+          _emailStatus = status;
+        });
         final msg = res.data['message']?.toString() ??
-            (ok ? 'Quotation emailed!' : 'Failed to send email.');
+            (ok ? 'Quotation accepted for email delivery.' : 'Failed to send email.');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor:
-                ok ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+            backgroundColor: !ok
+                ? AppColors.danger
+                : (status == 'simulated' ? AppColors.warning : AppColors.info),
             content: Text(msg),
           ),
         );
@@ -521,9 +567,9 @@ class _QuoteActionsScreenState extends ConsumerState<QuoteActionsScreen> {
                         ),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () => context.go('/enquiries/vehicle-picker'),
-                        icon: const Icon(Icons.add, size: 17),
-                        label: const Text('New Enquiry'),
+                        onPressed: () => context.go('/enquiries'),
+                        icon: const Icon(Icons.visibility_outlined, size: 17),
+                        label: const Text('View Enquiry'),
                       ),
                     ],
                   ),
