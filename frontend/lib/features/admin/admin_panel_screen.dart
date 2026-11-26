@@ -1672,6 +1672,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         text: editingItem?['letterhead'] ?? 'Yash Honda – Red Wing');
     final brochureUrlCtrl =
         TextEditingController(text: editingItem?['brochureUrl'] ?? '');
+    PlatformFile? pickedBrochurePdf;
     final addressCtrl =
         TextEditingController(text: editingItem?['address'] ?? '');
     final rawCat = (editingItem?['category'] ?? 'MC').toString();
@@ -2180,18 +2181,110 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       ),
                       const SizedBox(height: 12),
                     ],
-                    const Text('Brochure PDF URL / Link (Optional)',
+                    const Text('Brochure (PDF Only · Optional)',
                         style: TextStyle(
                             fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: brochureUrlCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'e.g. https://.../activa_brochure.pdf',
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.picture_as_pdf_rounded,
+                            size: 20,
+                            color: (pickedBrochurePdf != null ||
+                                    brochureUrlCtrl.text.trim().isNotEmpty)
+                                ? const Color(0xFFDC2626)
+                                : const Color(0xFF94A3B8),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              pickedBrochurePdf != null
+                                  ? pickedBrochurePdf!.name
+                                  : (brochureUrlCtrl.text.trim().isNotEmpty
+                                      ? 'Brochure PDF attached'
+                                      : 'No PDF selected'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: (pickedBrochurePdf != null ||
+                                        brochureUrlCtrl.text.trim().isNotEmpty)
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: (pickedBrochurePdf != null ||
+                                        brochureUrlCtrl.text.trim().isNotEmpty)
+                                    ? const Color(0xFF0F172A)
+                                    : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                          if (pickedBrochurePdf != null ||
+                              brochureUrlCtrl.text.trim().isNotEmpty)
+                            IconButton(
+                              tooltip: 'Remove PDF',
+                              icon: const Icon(Icons.close,
+                                  size: 16, color: Color(0xFF64748B)),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                  minWidth: 28, minHeight: 28),
+                              onPressed: () => setDlgState(() {
+                                pickedBrochurePdf = null;
+                                brochureUrlCtrl.clear();
+                              }),
+                            ),
+                          const SizedBox(width: 4),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              side: const BorderSide(color: Color(0xFFCBD5E1)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(6)),
+                            ),
+                            onPressed: () async {
+                              final res = await FilePicker.platform.pickFiles(
+                                type: FileType.custom,
+                                allowedExtensions: ['pdf'],
+                                withData: true,
+                              );
+                              if (res != null && res.files.isNotEmpty) {
+                                final f = res.files.first;
+                                if (!f.name.toLowerCase().endsWith('.pdf')) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Only PDF (.pdf) files are allowed.')),
+                                    );
+                                  }
+                                  return;
+                                }
+                                setDlgState(() => pickedBrochurePdf = f);
+                              }
+                            },
+                            icon: const Icon(Icons.upload_file_rounded,
+                                size: 15, color: Color(0xFFDC2626)),
+                            label: Text(
+                              (pickedBrochurePdf != null ||
+                                      brochureUrlCtrl.text.trim().isNotEmpty)
+                                  ? 'Replace PDF'
+                                  : 'Upload PDF',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF0F172A)),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     if (editingItem != null) ...[
@@ -2417,7 +2510,9 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                     final bUrl = brochureUrlCtrl.text.trim().isNotEmpty
                         ? brochureUrlCtrl.text.trim()
                         : null;
+                    String? savedVehicleId;
                     if (editingItem != null) {
+                      savedVehicleId = editingItem['id']?.toString();
                       await dio.put('/vehicles/${editingItem['id']}', data: {
                         'name': nameCtrl.text.trim(),
                         'category': vehicleType,
@@ -2438,7 +2533,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                             .toList();
                         mgId = pickDefaultModelGroupId(vehicleType, mgs);
                       }
-                      await dio.post('/vehicles', data: {
+                      final createRes = await dio.post('/vehicles', data: {
                         'code': codeCtrl.text.trim().isEmpty
                             ? 'MOD-${DateTime.now().millisecondsSinceEpoch}'
                             : codeCtrl.text.trim(),
@@ -2451,6 +2546,27 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                         'brochureUrl': bUrl,
                         'colourIds': selectedColourIds.toList(),
                       });
+                      savedVehicleId = createRes.data?['id']?.toString();
+                    }
+                    if (pickedBrochurePdf != null &&
+                        savedVehicleId != null &&
+                        savedVehicleId.isNotEmpty) {
+                      final formData = FormData();
+                      if (pickedBrochurePdf!.bytes != null) {
+                        formData.files.add(MapEntry(
+                          'file',
+                          MultipartFile.fromBytes(pickedBrochurePdf!.bytes!,
+                              filename: pickedBrochurePdf!.name),
+                        ));
+                      } else if (pickedBrochurePdf!.path != null) {
+                        formData.files.add(MapEntry(
+                          'file',
+                          await MultipartFile.fromFile(pickedBrochurePdf!.path!,
+                              filename: pickedBrochurePdf!.name),
+                        ));
+                      }
+                      await dio.post('/vehicles/$savedVehicleId/brochure',
+                          data: formData);
                     }
                   } else if (_currentSection == 'model-groups') {
                     if (editingItem != null) {
