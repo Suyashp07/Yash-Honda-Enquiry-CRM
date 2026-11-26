@@ -3067,108 +3067,204 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             style: TextStyle(
                 fontSize: 12.5, color: Color(0xFF64748B), height: 1.3),
           ),
-          const SizedBox(height: 20),
-          _buildSidebarPriceRow(
-            icon: Icons.two_wheeler_outlined,
-            label: 'Vehicle',
-            subtitle: _selectedVehicle?['name']?.toString(),
-            valueText: _selectedVehicle == null
-                ? '—'
-                : CurrencyFormatter.format(_vehicleBasePrice),
-            valueColor: _selectedVehicle != null
-                ? const Color(0xFF0F172A)
-                : const Color(0xFF94A3B8),
+          const SizedBox(height: 18),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSidebarPriceRow(
+                    icon: Icons.two_wheeler_outlined,
+                    label: 'Vehicle',
+                    subtitle: _selectedVehicle == null
+                        ? null
+                        : '${_selectedVehicle!['name']} · ${_showOnRoadPrice ? 'On-Road' : 'Ex-Showroom'}',
+                    valueText: _selectedVehicle == null
+                        ? '—'
+                        : CurrencyFormatter.format(_vehicleBasePrice),
+                    valueColor: _selectedVehicle != null
+                        ? const Color(0xFF0F172A)
+                        : const Color(0xFF94A3B8),
+                  ),
+                  if (_selectedVehicle != null && _showOnRoadPrice) ...[
+                    Builder(builder: (context) {
+                      final ex = ((_selectedVehicle!['exShowroomPrice'] ?? 0)
+                              as num)
+                          .toDouble();
+                      final onR =
+                          ((_selectedVehicle!['onRoadPrice'] ?? 0) as num)
+                              .toDouble();
+                      final diff = onR - ex;
+                      if (ex <= 0 || diff <= 0) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 29, top: 6),
+                        child: Column(
+                          children: [
+                            _buildSidebarSubRow(
+                                'Ex-Showroom', CurrencyFormatter.format(ex)),
+                            const SizedBox(height: 3),
+                            _buildSidebarSubRow('RTO, Insurance & Misc',
+                                '+${CurrencyFormatter.format(diff)}'),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                  const SizedBox(height: 14),
+                  _buildSidebarPriceRow(
+                    icon: Icons.palette_outlined,
+                    label: 'Colour',
+                    subtitle: _selectedVehicle != null &&
+                            _selectedColourName.isNotEmpty
+                        ? _selectedColourName
+                        : null,
+                    colorDot:
+                        _selectedVehicle != null ? _selectedColourValue : null,
+                    valueText: _selectedVehicle == null ? '—' : 'Included',
+                    valueColor: _selectedVehicle != null
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFF94A3B8),
+                  ),
+                  const SizedBox(height: 14),
+                  Builder(builder: (context) {
+                    final selectedOptionals = _optionalAccessories
+                        .where((a) => _selectedOptionalAccessoryIds
+                            .contains(a['id'].toString()))
+                        .toList();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSidebarPriceRow(
+                          icon: Icons.settings_outlined,
+                          label: 'Accessories',
+                          subtitle: selectedOptionals.isEmpty &&
+                                  _standardAccessories.isNotEmpty &&
+                                  _currentStep >= 4
+                              ? 'Standard included'
+                              : null,
+                          valueText: _selectedVehicle == null
+                              ? '—'
+                              : (_selectedOptionalAccessoriesTotal > 0
+                                  ? '+${CurrencyFormatter.format(_selectedOptionalAccessoriesTotal)}'
+                                  : (_currentStep >= 4 ? '₹0' : '—')),
+                          valueColor: _selectedOptionalAccessoriesTotal > 0
+                              ? const Color(0xFFDC2626)
+                              : (_currentStep >= 4 && _selectedVehicle != null
+                                  ? const Color(0xFF475569)
+                                  : const Color(0xFF94A3B8)),
+                        ),
+                        if (selectedOptionals.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 29),
+                            child: Column(
+                              children: selectedOptionals.map((acc) {
+                                final accName =
+                                    acc['name']?.toString() ?? 'Accessory';
+                                final accPrice =
+                                    ((acc['price'] ?? 0) as num).toDouble();
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: _buildSidebarSubRow(
+                                    '• $accName',
+                                    '+${CurrencyFormatter.format(accPrice)}',
+                                    valueColor: const Color(0xFFDC2626),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  }),
+                  const SizedBox(height: 14),
+                  _buildSidebarPriceRow(
+                    icon: Icons.monetization_on_outlined,
+                    label: 'Finance',
+                    subtitle: _currentStep >= 5 || _paymentMode == 'Finance'
+                        ? (_paymentMode == 'Finance'
+                            ? (_selectedFinancierName ?? _selectedFinanceType)
+                            : 'Pay in Cash')
+                        : null,
+                    valueText: _currentStep >= 5 || _paymentMode == 'Finance'
+                        ? (_paymentMode == 'Finance' ? 'Finance' : 'Cash')
+                        : '—',
+                    valueColor: _currentStep >= 5 || _paymentMode == 'Finance'
+                        ? const Color(0xFF0F172A)
+                        : const Color(0xFF94A3B8),
+                  ),
+                  const SizedBox(height: 14),
+                  Builder(builder: (context) {
+                    final exVal = double.tryParse(
+                            _exchangeExpectedPriceController.text.trim()) ??
+                        0;
+                    return _buildSidebarPriceRow(
+                      icon: Icons.sync_alt_rounded,
+                      label: 'Exchange',
+                      subtitle: _wantExchange &&
+                              _exchangeModelController.text.trim().isNotEmpty
+                          ? _exchangeModelController.text.trim()
+                          : null,
+                      valueText: _wantExchange
+                          ? (exVal > 0
+                              ? '-${CurrencyFormatter.format(exVal)}'
+                              : 'Yes')
+                          : (_currentStep >= 6 ? 'No' : '—'),
+                      valueColor: _wantExchange
+                          ? const Color(0xFF16A34A)
+                          : (_currentStep >= 6
+                              ? const Color(0xFF475569)
+                              : const Color(0xFF94A3B8)),
+                    );
+                  }),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 14),
-          _buildSidebarPriceRow(
-            icon: Icons.palette_outlined,
-            label: 'Colour',
-            subtitle: _selectedVehicle != null && _selectedColourName.isNotEmpty
-                ? _selectedColourName
-                : null,
-            colorDot: _selectedVehicle != null ? _selectedColourValue : null,
-            valueText: _selectedVehicle == null ? '—' : 'Included',
-            valueColor: _selectedVehicle != null
-                ? const Color(0xFF16A34A)
-                : const Color(0xFF94A3B8),
-          ),
-          const SizedBox(height: 14),
-          _buildSidebarPriceRow(
-            icon: Icons.settings_outlined,
-            label: 'Accessories',
-            subtitle: accCount > 0 ? '$accCount selected' : null,
-            valueText: _selectedVehicle == null
-                ? '—'
-                : (_selectedOptionalAccessoriesTotal > 0
-                    ? '+${CurrencyFormatter.format(_selectedOptionalAccessoriesTotal)}'
-                    : (_currentStep >= 4 ? '₹0' : '—')),
-            valueColor: _selectedOptionalAccessoriesTotal > 0
-                ? const Color(0xFFDC2626)
-                : (_currentStep >= 4 && _selectedVehicle != null
-                    ? const Color(0xFF475569)
-                    : const Color(0xFF94A3B8)),
-          ),
-          const SizedBox(height: 14),
-          _buildSidebarPriceRow(
-            icon: Icons.monetization_on_outlined,
-            label: 'Finance',
-            subtitle: _currentStep >= 5 || _paymentMode == 'Finance'
-                ? (_paymentMode == 'Finance'
-                    ? (_selectedFinancierName ?? _selectedFinanceType)
-                    : 'Pay in Cash')
-                : null,
-            valueText: _currentStep >= 5 || _paymentMode == 'Finance'
-                ? (_paymentMode == 'Finance' ? 'Finance' : 'Cash')
-                : '—',
-            valueColor: _currentStep >= 5 || _paymentMode == 'Finance'
-                ? const Color(0xFF0F172A)
-                : const Color(0xFF94A3B8),
-          ),
-          const SizedBox(height: 14),
+          const Divider(height: 20, color: Color(0xFFE2E8F0)),
           Builder(builder: (context) {
-            final exVal = double.tryParse(
-                    _exchangeExpectedPriceController.text.trim()) ??
-                0;
-            return _buildSidebarPriceRow(
-              icon: Icons.sync_alt_rounded,
-              label: 'Exchange',
-              subtitle: _wantExchange &&
-                      _exchangeModelController.text.trim().isNotEmpty
-                  ? _exchangeModelController.text.trim()
-                  : null,
-              valueText: _wantExchange
-                  ? (exVal > 0
-                      ? '-${CurrencyFormatter.format(exVal)}'
-                      : 'Yes')
-                  : (_currentStep >= 6 ? 'No' : '—'),
-              valueColor: _wantExchange
-                  ? const Color(0xFF16A34A)
-                  : (_currentStep >= 6
-                      ? const Color(0xFF475569)
-                      : const Color(0xFF94A3B8)),
+            final exVal = _wantExchange
+                ? (double.tryParse(
+                        _exchangeExpectedPriceController.text.trim()) ??
+                    0)
+                : 0.0;
+            final netAfterExchange =
+                (_estimatedTotal - exVal).clamp(0, double.infinity);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_selectedVehicle != null && exVal > 0) ...[
+                  _buildSidebarSubRow(
+                    'Net Payable (after Exchange)',
+                    CurrencyFormatter.format(netAfterExchange),
+                    valueColor: const Color(0xFF16A34A),
+                  ),
+                  const SizedBox(height: 6),
+                ],
+                const Text(
+                  'Estimated Price',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF475569),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _selectedVehicle == null
+                      ? '₹--,---'
+                      : '${CurrencyFormatter.format(_estimatedTotal)}*',
+                  style: const TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFDC2626),
+                    letterSpacing: -0.6,
+                  ),
+                ),
+              ],
             );
           }),
-          const Spacer(),
-          const Text(
-            'Estimated Price',
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF475569),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _selectedVehicle == null
-                ? '₹--,---'
-                : '${CurrencyFormatter.format(_estimatedTotal)}*',
-            style: const TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFFDC2626),
-              letterSpacing: -0.6,
-            ),
-          ),
           if (!hideButton) ...[
             const SizedBox(height: 18),
             SizedBox(
@@ -3208,6 +3304,35 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildSidebarSubRow(String label, String valueText,
+      {Color valueColor = const Color(0xFF475569)}) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF475569),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          valueText,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: valueColor,
+          ),
+        ),
+      ],
     );
   }
 
