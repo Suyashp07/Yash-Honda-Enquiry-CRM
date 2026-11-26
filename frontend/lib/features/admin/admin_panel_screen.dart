@@ -332,11 +332,22 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Delete ${_getSectionTitle()}',
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Color(0xFF0F172A))),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text('Delete ${_getSectionTitle()}',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Color(0xFF0F172A))),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+              tooltip: 'Close',
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
         content: Text(
             'Are you sure you want to deactivate "${item['name'] ?? item['code'] ?? 'this item'}"?'),
         actions: [
@@ -894,12 +905,23 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          title: Text(
-            editingItem != null ? 'Edit Add-on' : 'Add Add-on',
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Color(0xFF0F172A)),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  editingItem != null ? 'Edit Add-on' : 'Add Add-on',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Color(0xFF0F172A)),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+                tooltip: 'Close',
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
           ),
           content: SizedBox(
             width: 480,
@@ -1412,13 +1434,24 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
             titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-            title: Text(
-              editingItem != null ? 'Edit Colour' : 'Add Standard Colour',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Color(0xFF0F172A),
-              ),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    editingItem != null ? 'Edit Colour' : 'Add Standard Colour',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
             ),
             content: SizedBox(
               width: 420,
@@ -1770,14 +1803,25 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-            title: Text(
-              editingItem != null
-                  ? 'Edit ${_getSectionTitle()}'
-                  : '${_getAddButtonText()} ${_getSectionTitle()}',
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Color(0xFF0F172A)),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    editingItem != null
+                        ? 'Edit ${_getSectionTitle()}'
+                        : '${_getAddButtonText()} ${_getSectionTitle()}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Color(0xFF0F172A)),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
             ),
             content: SizedBox(
               width: 440,
@@ -2764,12 +2808,23 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
               contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-              title: Text(
-                editingItem != null ? 'Edit User' : 'Add Staff User',
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: Color(0xFF0F172A)),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      editingItem != null ? 'Edit User' : 'Add Staff User',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: Color(0xFF0F172A)),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
               ),
               content: SizedBox(
                 width: 480,
@@ -3006,11 +3061,22 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Reset Password for ${user['name']}',
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: Color(0xFF0F172A))),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text('Reset Password for ${user['name']}',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Color(0xFF0F172A))),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+              tooltip: 'Close',
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -5634,8 +5700,19 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Time Window',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        title: Row(
+          children: [
+            const Expanded(
+              child: Text('Add Time Window',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+              tooltip: 'Close',
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -5684,8 +5761,19 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Edit Time Window',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        title: Row(
+          children: [
+            const Expanded(
+              child: Text('Edit Time Window',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+              tooltip: 'Close',
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
