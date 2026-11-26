@@ -269,7 +269,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
     required bool forceCompact,
   }) {
     final collapsed = forceCompact || _isSidebarCollapsed;
-    final sidebarWidth = collapsed ? 68.0 : 208.0;
+    final sidebarWidth = collapsed ? 64.0 : 208.0;
     final adminItems = _permittedAdminItems(user);
 
     return Scaffold(
@@ -287,31 +287,34 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Brand Mark: Full Honda Logo (Wing + HONDA) alongside "Yash Honda" + consistent toggle
+                // Top Brand Mark: Full Honda Logo (Wing + HONDA) alongside "Yash Honda" when expanded; toggle only when contracted
                 Container(
                   height: 64,
                   padding: EdgeInsets.symmetric(horizontal: collapsed ? 8 : 12),
                   child: Row(
+                    mainAxisAlignment: collapsed
+                        ? MainAxisAlignment.center
+                        : MainAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Tooltip(
-                          message:
-                              'Yash Honda Dealership CRM • Official Pune Network',
-                          child: InkWell(
-                            onTap: () => context.go(
-                              user.canAccessDashboard
-                                  ? '/dashboard'
-                                  : '/enquiries',
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                HondaWingLogo(
-                                  width: collapsed ? 26 : 38,
-                                  height: collapsed ? 18 : 22,
-                                  showWordmark: !collapsed,
-                                ),
-                                if (!collapsed) ...[
+                      if (!collapsed)
+                        Expanded(
+                          child: Tooltip(
+                            message:
+                                'Yash Honda Dealership CRM • Official Pune Network',
+                            child: InkWell(
+                              onTap: () => context.go(
+                                user.canAccessDashboard
+                                    ? '/dashboard'
+                                    : '/enquiries',
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const HondaWingLogo(
+                                    width: 38,
+                                    height: 22,
+                                    showWordmark: true,
+                                  ),
                                   const SizedBox(width: 8),
                                   Flexible(
                                     child: Column(
@@ -343,11 +346,10 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                                     ),
                                   ),
                                 ],
-                              ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
                       if (!forceCompact)
                         Tooltip(
                           message: collapsed
