@@ -947,12 +947,12 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Zoom Out (-) Button
+              // Zoom Out (-) Button (down to 35% to fit full day)
               Tooltip(
-                message: 'Zoom out timeline (-)',
+                message: 'Zoom out timeline (see full day)',
                 child: InkWell(
-                  onTap: _zoomLevel > 60
-                      ? () => setState(() => _zoomLevel = math.max(60, _zoomLevel - 15))
+                  onTap: _zoomLevel > 35
+                      ? () => setState(() => _zoomLevel = math.max(35, _zoomLevel - 15))
                       : null,
                   borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
                   child: Container(
@@ -960,9 +960,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     height: 32,
                     alignment: Alignment.center,
                     child: Icon(
-                      Icons.remove_rounded,
+                      Icons.zoom_out_rounded,
                       size: 17,
-                      color: _zoomLevel > 60
+                      color: _zoomLevel > 35
                           ? const Color(0xFF334155)
                           : const Color(0xFFCBD5E1),
                     ),
@@ -970,12 +970,52 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                 ),
               ),
               Container(width: 1, height: 16, color: const Color(0xFFE2E8F0)),
-              // Zoom In (+) Button
+              // Fit Day (45%) / Reset (100%) Center Pill
               Tooltip(
-                message: 'Zoom in timeline (+)',
+                message: _zoomLevel == 100
+                    ? 'Fit entire day to screen (45%)'
+                    : 'Reset zoom to 100%',
                 child: InkWell(
-                  onTap: _zoomLevel < 160
-                      ? () => setState(() => _zoomLevel = math.min(160, _zoomLevel + 15))
+                  onTap: () => setState(() {
+                    _zoomLevel = _zoomLevel == 100 ? 45 : 100;
+                  }),
+                  child: Container(
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.open_in_full_rounded,
+                          size: 13,
+                          color: _zoomLevel != 100
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFF64748B),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          '$_zoomLevel%',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: _zoomLevel != 100
+                                ? const Color(0xFFDC2626)
+                                : const Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Container(width: 1, height: 16, color: const Color(0xFFE2E8F0)),
+              // Zoom In (+) Button (up to 180% for detailed card view)
+              Tooltip(
+                message: 'Zoom in timeline (expanded cards)',
+                child: InkWell(
+                  onTap: _zoomLevel < 180
+                      ? () => setState(() => _zoomLevel = math.min(180, _zoomLevel + 15))
                       : null,
                   borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
                   child: Container(
@@ -983,9 +1023,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     height: 32,
                     alignment: Alignment.center,
                     child: Icon(
-                      Icons.add_rounded,
+                      Icons.zoom_in_rounded,
                       size: 17,
-                      color: _zoomLevel < 160
+                      color: _zoomLevel < 180
                           ? const Color(0xFF334155)
                           : const Color(0xFFCBD5E1),
                     ),
@@ -1267,7 +1307,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                   'Guest';
 
               return Container(
-                height: 72,
+                height: (72.0 * (_zoomLevel / 100.0)).clamp(46.0, 108.0),
                 decoration: const BoxDecoration(
                   border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
                 ),
@@ -1415,9 +1455,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     List<dynamic> sessions,
     String? nowSlotTarget,
   ) {
-    final double repColWidth = math.max(170.0, 200.0 * (_zoomLevel / 100.0));
+    final double repColWidth = math.max(95.0, 200.0 * (_zoomLevel / 100.0));
     const double timeColWidth = 110.0;
-    const double rowHeight = 68.0;
+    final double rowHeight = (68.0 * (_zoomLevel / 100.0)).clamp(44.0, 108.0);
 
     return Container(
       decoration: const BoxDecoration(
