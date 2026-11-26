@@ -883,57 +883,14 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
           const SizedBox(width: 24),
 
-          // Right: Profile Menu Avatar
-          PopupMenuButton<String>(
-            tooltip: 'Menu',
-            offset: const Offset(0, 44),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            onSelected: (val) {
-              if (val == 'classic') context.go('/tablet');
-              if (val == 'dashboard') context.go('/dashboard');
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: 'classic',
-                child: Row(
-                  children: [
-                    Icon(Icons.flash_on_outlined,
-                        size: 16, color: Color(0xFFDC2626)),
-                    SizedBox(width: 8),
-                    Text('Switch to Quick Form',
-                        style: TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ),
-              PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'dashboard',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout_rounded,
-                        size: 16, color: Color(0xFF64748B)),
-                    SizedBox(width: 8),
-                    Text('Exit to CRM Dashboard',
-                        style:
-                            TextStyle(fontSize: 13, color: Color(0xFF64748B))),
-                  ],
-                ),
-              ),
-            ],
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF0F172A), width: 1.4),
-              ),
-              child: const Icon(
-                Icons.person_outline_rounded,
-                color: Color(0xFF0F172A),
-                size: 22,
-              ),
+          // Right: Simple icon to go directly to the normal Quick Enquiry form
+          IconButton(
+            tooltip: 'Go to Normal Form',
+            onPressed: () => context.go('/tablet'),
+            icon: const Icon(
+              Icons.assignment_outlined,
+              color: Color(0xFF0F172A),
+              size: 22,
             ),
           ),
         ],
