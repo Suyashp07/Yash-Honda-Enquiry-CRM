@@ -1693,8 +1693,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     List<Map<String, dynamic>> allColours = [];
     bool coloursLoaded = false;
     List<Map<String, dynamic>> allModelGroups = [];
-    String? selectedModelGroupId = editingItem?['modelGroupId']?.toString() ??
-        editingItem?['modelGroup']?['id']?.toString();
+    final String? initialModelGroupId =
+        editingItem?['modelGroupId']?.toString() ??
+            editingItem?['modelGroup']?['id']?.toString();
+    String? selectedModelGroupId = initialModelGroupId;
     bool modelGroupsLoaded = false;
 
     String? pickDefaultModelGroupId(String cat, List<Map<String, dynamic>> mgs) {
@@ -2516,7 +2518,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       await dio.put('/vehicles/${editingItem['id']}', data: {
                         'name': nameCtrl.text.trim(),
                         'category': vehicleType,
-                        if (selectedModelGroupId != null)
+                        if (selectedModelGroupId != null &&
+                            selectedModelGroupId != initialModelGroupId)
                           'modelGroupId': selectedModelGroupId,
                         'exShowroomPrice': exShowroom,
                         'onRoadPrice': onRoad,
