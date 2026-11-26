@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/networking/api_client.dart';
 
 class AiCopilotMessage {
@@ -51,6 +53,7 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
 
   final List<AiCopilotMessage> _messages = [];
   bool _isAwaitingResponse = false;
+  CancelToken? _activeCancelToken;
   late String _activeBranchId;
 
   final List<String> _promptSuggestions = [
@@ -83,20 +86,21 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
       AiCopilotMessage(
         id: 'msg-0',
         role: 'assistant',
-        content: '### 👋 Welcome, Dealership Owner!\n\n'
-            'I am your **Yash Honda Executive AI Copilot**, connected live to all **6 Pune Showrooms** '
-            '(*Phursungi BigWing, Wadki, Saswad, Uruli Kanchan, BT Kawade, and Sasane Nagar*).\n\n'
-            'I track real-time walk-in traffic, floor rep attendance, live quotations, vehicle stock demand, and booking conversions. '
-            'How can I help you analyze business performance right now?',
+        content: '### Welcome to Yash Honda AI Assistant\n\n'
+            'Ask a question about your selected branch scope—such as today\'s lead volume, '
+            'sales executive availability, finance vs. cash split, or follow-up status.\n\n'
+            '*Responses are AI-assisted and grounded in live database metrics.*',
         timestamp: DateTime.now(),
-        metrics: {
-          'Total Leads': '30',
-          'Conversion': '23.3%',
-          'Active Reps': '20 (9 Busy)',
-          'Finance Share': '37%',
-        },
       ),
     );
+  }
+
+  void _cancelInFlightRequest() {
+    _activeCancelToken?.cancel('Cancelled by user');
+    _activeCancelToken = null;
+    if (mounted) {
+      setState(() => _isAwaitingResponse = false);
+    }
   }
 
   Future<void> _sendMessage(String text) async {
@@ -119,24 +123,34 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
 
     _scrollToBottom();
 
+    _activeCancelToken = CancelToken();
     try {
       final dio = ref.read(dioProvider);
 
-      // Prepare conversation history
-      final history = _messages
+      // Prepare bounded conversation history (last 10 messages)
+      final nonGreeting = _messages
           .where((m) => m.id != userMsg.id && m.id != 'msg-0')
+          .toList();
+      final bounded = nonGreeting.length > 10
+          ? nonGreeting.sublist(nonGreeting.length - 10)
+          : nonGreeting;
+      final history = bounded
           .map((m) => {'role': m.role, 'content': m.content})
           .toList();
 
-      final res = await dio.post('/ai-insights/chat', data: {
-        'query': query,
-        'branch': _activeBranchId,
-        'range': 'today',
-        'history': history,
-      });
+      final res = await dio.post(
+        '/ai-insights/chat',
+        data: {
+          'query': query,
+          'branch': _activeBranchId,
+          'range': 'today',
+          'history': history,
+        },
+        cancelToken: _activeCancelToken,
+      );
 
       final reply = res.data?['reply']?.toString() ??
-          'I have analyzed the current floor data for Yash Honda. All metrics are updated.';
+          'Analysis complete for the selected branch scope.';
       final metrics = res.data?['metrics'] is Map<String, dynamic>
           ? res.data['metrics'] as Map<String, dynamic>
           : null;
@@ -151,19 +165,22 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
           metrics: metrics,
         ));
         _isAwaitingResponse = false;
+        _activeCancelToken = null;
       });
     } catch (e) {
-      // Robust offline fallback response using local intelligence
       if (!mounted) return;
-      final fallbackReply = _generateLocalFallback(query);
+      final cancelled = e is DioException && CancelToken.isCancel(e);
       setState(() {
         _messages.add(AiCopilotMessage(
           id: 'ai-${DateTime.now().millisecondsSinceEpoch}',
           role: 'assistant',
-          content: fallbackReply,
+          content: cancelled
+              ? 'Request cancelled.'
+              : 'Could not reach the AI Assistant right now. Check your connection and try again.',
           timestamp: DateTime.now(),
         ));
         _isAwaitingResponse = false;
+        _activeCancelToken = null;
       });
     }
 
@@ -329,18 +346,18 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF16A34A).withValues(alpha: 0.2),
+                        color: AppColors.aiSoft,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF22C55E), width: 0.8),
+                        border: Border.all(color: AppColors.aiBorder, width: 0.8),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          CircleAvatar(radius: 3, backgroundColor: Color(0xFF22C55E)),
+                          CircleAvatar(radius: 3, backgroundColor: AppColors.aiAccent),
                           SizedBox(width: 4),
                           Text(
-                            'LIVE DATA',
-                            style: TextStyle(color: Color(0xFF86EFAC), fontSize: 9.5, fontWeight: FontWeight.w700),
+                            'AI-ASSISTED',
+                            style: TextStyle(color: AppColors.aiAccent, fontSize: 10, fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),
@@ -348,9 +365,9 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
                   ],
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'AI Dealership Business, Floor & Financial Intelligence • 6 Pune Showrooms',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5),
+                Text(
+                  'Grounded in live dealership data • Scope: ${_activeBranchId == 'all' ? 'All branches' : _activeBranchId}',
+                  style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 11.5),
                 ),
               ],
             ),

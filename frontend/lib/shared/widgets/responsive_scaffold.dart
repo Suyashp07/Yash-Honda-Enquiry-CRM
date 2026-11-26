@@ -1,21 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/breakpoints.dart';
 import '../../core/providers/branch_provider.dart';
 import '../../core/networking/api_client.dart';
+import '../../core/theme/app_icons.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_typography.dart';
 import '../../features/auth/auth_notifier.dart';
-import 'honda_wing_logo.dart';
 import '../models/user_model.dart';
 import 'ai_summary/ai_copilot_chat_dialog.dart';
+import 'context_badges.dart';
+import 'dialogs.dart';
+import 'honda_wing_logo.dart';
+import 'state_views.dart';
 
 class NavItem {
   final String title;
   final String short;
   final IconData icon;
   final String route;
-  final bool superAdminOnly;
-  final bool hideFromSalesExec;
+  final String section; // Work | Insight
   final String? tooltip;
 
   const NavItem({
@@ -23,8 +29,7 @@ class NavItem {
     required this.short,
     required this.icon,
     required this.route,
-    this.superAdminOnly = false,
-    this.hideFromSalesExec = false,
+    required this.section,
     this.tooltip,
   });
 }
@@ -33,13 +38,18 @@ class AdminSubItem {
   final String title;
   final String route;
   final IconData icon;
+  final String group; // Catalog | Network | Access | Company
+  final bool superAdminOnly;
   final String? tooltip;
 
-  const AdminSubItem(
-      {required this.title,
-      required this.route,
-      required this.icon,
-      this.tooltip});
+  const AdminSubItem({
+    required this.title,
+    required this.route,
+    required this.icon,
+    required this.group,
+    this.superAdminOnly = false,
+    this.tooltip,
+  });
 }
 
 class ResponsiveScaffold extends ConsumerStatefulWidget {
@@ -58,15 +68,17 @@ class ResponsiveScaffold extends ConsumerStatefulWidget {
 
 class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
   bool _isAdminExpanded = true;
+  bool _isSidebarCollapsed = false;
   List<Map<String, dynamic>> _branches = [];
+  int _overdueCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadBranches();
+    _loadShellData();
   }
 
-  Future<void> _loadBranches() async {
+  Future<void> _loadShellData() async {
     try {
       final dio = ref.read(dioProvider);
       final res = await dio.get('/branches');
@@ -75,55 +87,83 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
           _branches = List<Map<String, dynamic>>.from(res.data);
         });
       }
+      // Fetch overdue follow-up count for real notification badge
+      final fuRes =
+          await dio.get('/follow-ups', queryParameters: {'filter': 'overdue'});
+      if (mounted && fuRes.data is List) {
+        setState(() {
+          _overdueCount = (fuRes.data as List).length;
+        });
+      }
     } catch (_) {}
   }
 
   static const List<AdminSubItem> adminSubItems = [
     AdminSubItem(
-        title: 'Vehicle Masters',
-        route: '/admin/vehicles',
-        icon: Icons.two_wheeler_outlined,
-        tooltip: 'Manage Honda two-wheelers, variants, prices & brochures'),
+      title: 'Vehicle Masters',
+      route: '/admin/vehicles',
+      icon: AppIcons.vehicle,
+      group: 'Catalog',
+      tooltip: 'Manage Honda two-wheelers, variants, prices & brochures',
+    ),
     AdminSubItem(
-        title: 'Model Groups',
-        route: '/admin/model-groups',
-        icon: Icons.layers_outlined,
-        tooltip: 'Scooters, Commuters, Premium & BigWing categories'),
+      title: 'Model Groups',
+      route: '/admin/model-groups',
+      icon: Icons.layers_outlined,
+      group: 'Catalog',
+      tooltip: 'Scooters, Commuters, Premium & BigWing categories',
+    ),
     AdminSubItem(
-        title: 'Colours',
-        route: '/admin/colours',
-        icon: Icons.palette_outlined,
-        tooltip: 'Palette shades, paint codes & vehicle swatches'),
+      title: 'Colours',
+      route: '/admin/colours',
+      icon: Icons.palette_outlined,
+      group: 'Catalog',
+      tooltip: 'Palette shades, paint codes & vehicle swatches',
+    ),
     AdminSubItem(
-        title: 'Finance Providers',
-        route: '/admin/financiers',
-        icon: Icons.account_balance_outlined,
-        tooltip: 'Banking partners, interest rates & hypothecation fee'),
+      title: 'Finance Providers',
+      route: '/admin/financiers',
+      icon: Icons.account_balance_outlined,
+      group: 'Catalog',
+      tooltip: 'Banking partners, interest rates & hypothecation fee',
+    ),
     AdminSubItem(
-        title: 'Areas',
-        route: '/admin/areas',
-        icon: Icons.location_on_outlined,
-        tooltip: 'Pune delivery areas, pin codes & territorial boundaries'),
+      title: 'Areas',
+      route: '/admin/areas',
+      icon: AppIcons.branch,
+      group: 'Network',
+      tooltip: 'Delivery areas, pin codes & territorial boundaries',
+    ),
     AdminSubItem(
-        title: 'Lead Sources',
-        route: '/admin/lead-sources',
-        icon: Icons.campaign_outlined,
-        tooltip: 'Walk-ins, telephonic, BikeWale, ads & digital leads'),
+      title: 'Lead Sources',
+      route: '/admin/lead-sources',
+      icon: Icons.campaign_outlined,
+      group: 'Network',
+      tooltip: 'Walk-ins, telephonic, BikeWale, ads & digital leads',
+    ),
     AdminSubItem(
-        title: 'Branches',
-        route: '/admin/branches',
-        icon: Icons.storefront_outlined,
-        tooltip: 'Yash Honda showroom network (BigWing & RedWing)'),
+      title: 'Branches',
+      route: '/admin/branches',
+      icon: Icons.storefront_outlined,
+      group: 'Network',
+      tooltip: 'Yash Honda showroom network (BigWing & RedWing)',
+    ),
     AdminSubItem(
-        title: 'Users',
-        route: '/admin/users',
-        icon: Icons.people_outline,
-        tooltip: 'Staff logins, branch allocations & role-based permissions'),
+      title: 'Users',
+      route: '/admin/users',
+      icon: Icons.people_outline,
+      group: 'Access',
+      superAdminOnly: true,
+      tooltip: 'Staff logins, branch allocations & role-based permissions',
+    ),
     AdminSubItem(
-        title: 'Company Profile',
-        route: '/admin/company-profile',
-        icon: Icons.business_outlined,
-        tooltip: 'Letterhead, bank details, GSTIN & quotation branding'),
+      title: 'Company Profile',
+      route: '/admin/company-profile',
+      icon: Icons.business_outlined,
+      group: 'Company',
+      superAdminOnly: true,
+      tooltip: 'Letterhead, bank details, GSTIN & quotation branding',
+    ),
   ];
 
   static const List<NavItem> navItems = [
@@ -132,7 +172,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
       short: 'Dashboard',
       icon: Icons.grid_view_rounded,
       route: '/dashboard',
-      hideFromSalesExec: true,
+      section: 'Work',
       tooltip: 'Floor Dashboard: Live showroom timeline & rep attendance',
     ),
     NavItem(
@@ -140,15 +180,15 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
       short: 'Summary',
       icon: Icons.bar_chart_rounded,
       route: '/summary',
-      hideFromSalesExec: true,
-      tooltip:
-          'Dealership Summary: Location-wise As-On-Date & MTD Leads, Bookings & Conversion',
+      section: 'Insight',
+      tooltip: 'Dealership Summary: Branch comparison & executive overview',
     ),
     NavItem(
       title: 'Enquiries',
       short: 'Enquiries',
       icon: Icons.assignment_outlined,
       route: '/enquiries',
+      section: 'Work',
       tooltip: 'Enquiries: Walk-in & phone leads, quotes & customer pipeline',
     ),
     NavItem(
@@ -156,6 +196,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
       short: 'Follow-ups',
       icon: Icons.calendar_today_outlined,
       route: '/follow-ups',
+      section: 'Work',
       tooltip: 'Follow-ups: Scheduled callbacks, test rides & prospect history',
     ),
     NavItem(
@@ -163,10 +204,37 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
       short: 'Reports',
       icon: Icons.insert_chart_outlined_rounded,
       route: '/reports',
-      hideFromSalesExec: true,
+      section: 'Insight',
       tooltip: 'Reports: Sales analytics, conversions & financial metrics',
     ),
   ];
+
+  List<NavItem> _permittedNavItems(UserModel user) {
+    return navItems.where((item) {
+      if (item.route == '/dashboard' || item.route == '/summary') {
+        return user.canAccessDashboard;
+      }
+      if (item.route == '/reports') {
+        return user.canAccessReports;
+      }
+      return true; // Enquiries & Follow-ups available to all authenticated roles
+    }).toList();
+  }
+
+  List<AdminSubItem> _permittedAdminItems(UserModel user) {
+    if (!user.canAccessAdminPanel) return [];
+    return adminSubItems.where((sub) {
+      if (sub.superAdminOnly && !user.isSuperAdmin) return false;
+      return true;
+    }).toList();
+  }
+
+  String _selectedBranchName(String branchId) {
+    if (branchId == 'all') return 'All branches';
+    final match =
+        _branches.where((b) => b['id'].toString() == branchId).firstOrNull;
+    return match?['name']?.toString() ?? 'Selected branch';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,86 +243,130 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
     if (!authState.isAuthenticated || user == null) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         body: widget.body,
       );
     }
 
-    final filteredItems = navItems.where((item) {
-      if (item.superAdminOnly && !user.isSuperAdmin) return false;
-      if (item.route == '/reports' && !user.canAccessReports) return false;
-      if (item.hideFromSalesExec && user.isSalesExec) return false;
-      return true;
-    }).toList();
+    final filteredItems = _permittedNavItems(user);
 
     return ResponsiveLayout(
-      phone: _buildMobileLayout(context, ref, filteredItems),
-      tablet: _buildDesktopLayout(context, ref, filteredItems),
-      desktop: _buildDesktopLayout(context, ref, filteredItems),
+      phone: _buildMobileLayout(context, ref, user, filteredItems),
+      tablet: _buildDesktopLayout(context, ref, user, filteredItems,
+          forceCompact: true),
+      compactDesktop: _buildDesktopLayout(context, ref, user, filteredItems,
+          forceCompact: true),
+      desktop: _buildDesktopLayout(context, ref, user, filteredItems,
+          forceCompact: false),
     );
   }
 
   Widget _buildDesktopLayout(
-      BuildContext context, WidgetRef ref, List<NavItem> items) {
-    final user = ref.watch(authStateProvider).user;
+    BuildContext context,
+    WidgetRef ref,
+    UserModel user,
+    List<NavItem> items, {
+    required bool forceCompact,
+  }) {
+    final collapsed = forceCompact || _isSidebarCollapsed;
+    final sidebarWidth = collapsed ? 72.0 : 230.0;
+    final adminItems = _permittedAdminItems(user);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       body: Row(
         children: [
-          // Expanded 230px Navigation Sidebar matching Prototype Screenshots
-          Container(
-            width: 230,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: sidebarWidth,
             decoration: const BoxDecoration(
               color: Colors.white,
-              border: Border(
-                right: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-              ),
+              border:
+                  Border(right: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Brand Mark: Red H box + "Yash Honda" + Role subtitle matching prototype
+                // Top Brand Mark: Wing logo + "Yash Honda" + Role subtitle
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-                  child: Tooltip(
-                    message:
-                        'Yash Honda Dealership CRM • Official Pune Network',
-                    child: InkWell(
-                      onTap: () => context.go(user?.canAccessDashboard == true
-                          ? '/dashboard'
-                          : '/enquiries'),
-                      child: Row(
-                        children: [
-                          const HondaWingLogo(width: 40, height: 28),
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Yash Honda',
-                                style: TextStyle(
-                                  color: Color(0xFF0F172A),
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                              Text(
-                                user?.displayName ?? 'Super Admin',
-                                style: const TextStyle(
-                                  color: Color(0xFF64748B),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                  padding: EdgeInsets.fromLTRB(
+                    collapsed ? 14 : 16,
+                    20,
+                    collapsed ? 14 : 12,
+                    16,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Tooltip(
+                          message:
+                              'Yash Honda Dealership CRM • Official Pune Network',
+                          child: InkWell(
+                            onTap: () => context.go(
+                              user.canAccessDashboard
+                                  ? '/dashboard'
+                                  : '/enquiries',
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const HondaWingLogo(width: 40, height: 28),
+                                if (!collapsed) ...[
+                                  const SizedBox(width: 10),
+                                  Flexible(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Yash Honda',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: Color(0xFF0F172A),
+                                            fontSize: 14.5,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: -0.3,
+                                          ),
+                                        ),
+                                        Text(
+                                          user.displayName,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Color(0xFF64748B),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                      if (!collapsed && !forceCompact)
+                        IconButton(
+                          icon: const Icon(Icons.menu_open,
+                              size: 18, color: Color(0xFF64748B)),
+                          tooltip: 'Collapse navigation',
+                          onPressed: () =>
+                              setState(() => _isSidebarCollapsed = true),
+                        ),
+                    ],
                   ),
                 ),
+                if (collapsed && !forceCompact)
+                  Center(
+                    child: IconButton(
+                      icon: const Icon(Icons.menu,
+                          size: 20, color: Color(0xFF64748B)),
+                      tooltip: 'Expand navigation',
+                      onPressed: () =>
+                          setState(() => _isSidebarCollapsed = false),
+                    ),
+                  ),
                 const SizedBox(height: 6),
 
                 // Main Navigation Links
@@ -262,122 +374,74 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                   child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     children: [
-                      ...items.map((item) {
-                        final isSelected = widget.currentRoute == item.route ||
-                            (item.route != '/dashboard' &&
-                                widget.currentRoute.startsWith(item.route));
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 2),
-                          child: Tooltip(
-                            message: item.tooltip ?? item.short,
+                      ...items
+                          .map((item) => _buildSidebarNavTile(item, collapsed)),
+                      const SizedBox(height: 10),
+                      if (adminItems.isNotEmpty) ...[
+                        if (!collapsed)
+                          Tooltip(
+                            message: _isAdminExpanded
+                                ? 'Click to collapse Admin Panel configuration sub-menus'
+                                : 'Click to expand Admin Panel master records & configurations',
                             child: InkWell(
-                              onTap: () => context.go(item.route),
+                              onTap: () => setState(
+                                  () => _isAdminExpanded = !_isAdminExpanded),
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
                                 height: 38,
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 12),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? const Color(0xFFFEE2E2)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
                                 child: Row(
                                   children: [
-                                    Icon(
-                                      item.icon,
+                                    const Icon(
+                                      Icons.settings_outlined,
                                       size: 18,
-                                      color: isSelected
-                                          ? const Color(0xFFDC2626)
-                                          : const Color(0xFF64748B),
+                                      color: Color(0xFF64748B),
                                     ),
                                     const SizedBox(width: 12),
-                                    Text(
-                                      item.short,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w700
-                                            : FontWeight.w500,
-                                        color: isSelected
-                                            ? const Color(0xFFDC2626)
-                                            : const Color(0xFF334155),
+                                    const Expanded(
+                                      child: Text(
+                                        'Admin Panel',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF334155),
+                                        ),
                                       ),
+                                    ),
+                                    Icon(
+                                      _isAdminExpanded
+                                          ? Icons.arrow_drop_up_rounded
+                                          : Icons.arrow_drop_down_rounded,
+                                      size: 20,
+                                      color: const Color(0xFF64748B),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      }),
-
-                      const SizedBox(height: 10),
-
-                      // Collapsible Admin Panel Accordion (Super Admin & Branch Manager ONLY)
-                      if (user?.canAccessAdminPanel == true) ...[
-                        Tooltip(
-                          message: _isAdminExpanded
-                              ? 'Click to collapse Admin Panel configuration sub-menus'
-                              : 'Click to expand Admin Panel master records & configurations',
-                          child: InkWell(
-                            onTap: () => setState(
-                                () => _isAdminExpanded = !_isAdminExpanded),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              height: 38,
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 12),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.settings_outlined,
-                                    size: 18,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Expanded(
-                                    child: Text(
-                                      'Admin Panel',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF334155),
-                                      ),
-                                    ),
-                                  ),
-                                  Icon(
-                                    _isAdminExpanded
-                                        ? Icons.arrow_drop_up_rounded
-                                        : Icons.arrow_drop_down_rounded,
-                                    size: 20,
-                                    color: const Color(0xFF64748B),
-                                  ),
-                                ],
+                          )
+                        else
+                          Tooltip(
+                            message: 'Admin Panel',
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.settings_outlined,
+                                color: widget.currentRoute.startsWith('/admin')
+                                    ? const Color(0xFFDC2626)
+                                    : const Color(0xFF64748B),
                               ),
+                              onPressed: () =>
+                                  context.go(adminItems.first.route),
                             ),
                           ),
-                        ),
-                        if (_isAdminExpanded) ...[
+                        if (!collapsed && _isAdminExpanded)
                           Padding(
                             padding: const EdgeInsets.only(left: 10),
                             child: Column(
-                              children: adminSubItems.where((subItem) {
-                                if (user?.isBranchManager == true &&
-                                    (subItem.route == '/admin/users' ||
-                                        subItem.route ==
-                                            '/admin/company-profile')) {
-                                  return false;
-                                }
-                                return true;
-                              }).map((subItem) {
-                                final isSubSelected = widget.currentRoute ==
-                                        subItem.route ||
-                                    (widget.currentRoute.startsWith('/admin') &&
-                                        widget.currentRoute == subItem.route);
-
+                              children: adminItems.map((subItem) {
+                                final isSubSelected =
+                                    widget.currentRoute == subItem.route;
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 2),
                                   child: Tooltip(
@@ -425,6 +489,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                                                       ? const Color(0xFFDC2626)
                                                       : const Color(0xFF475569),
                                                 ),
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
                                           ],
@@ -436,7 +501,6 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                               }).toList(),
                             ),
                           ),
-                        ],
                       ],
                     ],
                   ),
@@ -444,55 +508,56 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
                 const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
-                // Red Profile icon placed above Sign out
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 17,
-                        backgroundColor: const Color(0xFFDC2626), // RED in color
-                        child: Text(
-                          user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'S',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
+                if (!collapsed)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 17,
+                          backgroundColor: const Color(0xFFDC2626),
+                          child: Text(
+                            user.name.isNotEmpty
+                                ? user.name[0].toUpperCase()
+                                : 'S',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user?.name ?? 'Suyash Pandey',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF0F172A),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF0F172A),
+                                ),
                               ),
-                            ),
-                            Text(
-                              user?.displayName ?? 'Super Admin',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF64748B),
+                              Text(
+                                user.displayName,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF64748B),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
                 const SizedBox(height: 4),
 
-                // Bottom Exit / Sign Out Button
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                   child: Tooltip(
@@ -503,20 +568,26 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                       borderRadius: BorderRadius.circular(6),
                       child: Container(
                         height: 36,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: const Row(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: collapsed ? 0 : 10),
+                        child: Row(
+                          mainAxisAlignment: collapsed
+                              ? MainAxisAlignment.center
+                              : MainAxisAlignment.start,
                           children: [
-                            Icon(Icons.arrow_back_rounded,
+                            const Icon(Icons.arrow_back_rounded,
                                 size: 16, color: Color(0xFF64748B)),
-                            SizedBox(width: 8),
-                            Text(
-                              'Sign out',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF64748B),
-                                fontWeight: FontWeight.w500,
+                            if (!collapsed) ...[
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Sign out',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF64748B),
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
@@ -526,15 +597,10 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
               ],
             ),
           ),
-
-          // Main Screen Area with Top Header Bar + Content
           Expanded(
             child: Column(
               children: [
-                // Top Header Bar matching Prototype
                 _buildTopHeaderBar(context, ref, user),
-
-                // Main Page Content
                 Expanded(child: widget.body),
               ],
             ),
@@ -544,346 +610,547 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
     );
   }
 
+  Widget _buildSidebarNavTile(NavItem item, bool collapsed) {
+    final isSelected = widget.currentRoute == item.route ||
+        (item.route != '/dashboard' &&
+            widget.currentRoute.startsWith(item.route));
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Tooltip(
+        message: item.tooltip ?? item.short,
+        child: InkWell(
+          onTap: () => context.go(item.route),
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            height: 38,
+            padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 12),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFFFEE2E2) : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: collapsed
+                  ? MainAxisAlignment.center
+                  : MainAxisAlignment.start,
+              children: [
+                Icon(
+                  item.icon,
+                  size: 18,
+                  color: isSelected
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFF64748B),
+                ),
+                if (!collapsed) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      item.short,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFF334155),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   String _getPageTitle(String route) {
     if (route.startsWith('/dashboard')) return 'Live floor';
-    if (route.startsWith('/summary')) return 'Dealership Summary';
+    if (route.startsWith('/summary')) return 'Dealership summary';
     if (route.startsWith('/enquiries')) return 'Enquiries';
     if (route.startsWith('/follow-ups')) return 'Follow-ups';
     if (route.startsWith('/reports')) return 'Reports';
-    if (route.startsWith('/admin')) return 'Admin Panel';
+    if (route.startsWith('/admin')) return 'Administration';
     return 'Yash Honda';
   }
 
   Widget _buildTopHeaderBar(
-      BuildContext context, WidgetRef ref, UserModel? user) {
-    final isDashboard = widget.currentRoute == '/dashboard';
+      BuildContext context, WidgetRef ref, UserModel user) {
+    final lastUpdated = ref.watch(lastDataUpdatedProvider);
+    final hasError = ref.watch(dataFreshnessErrorProvider);
+    final showFreshness = !widget.currentRoute.startsWith('/admin') &&
+        (lastUpdated != null || hasError);
 
     return Container(
       height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutterDesktop),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-        ),
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
       child: Row(
         children: [
-          // Left: Page Title directly opposite right action buttons
-          if (isDashboard)
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Live floor',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
-                    letterSpacing: -0.4,
-                  ),
-                ),
-                SizedBox(height: 1),
-                Text(
-                  'Updated just now',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
-            )
-          else if (widget.currentRoute.startsWith('/summary'))
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Dealership Summary',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
-                    letterSpacing: -0.4,
-                  ),
-                ),
-                SizedBox(height: 1),
-                Text(
-                  'Location-wise As-On-Date & Month-To-Date (MTD) Leads, Bookings & Conversion',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF64748B),
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
-            )
-          else
-            Text(
-              _getPageTitle(widget.currentRoute),
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF0F172A),
-                letterSpacing: -0.3,
-              ),
+          Semantics(
+            header: true,
+            child: Text(_getPageTitle(widget.currentRoute),
+                style: AppTypography.title),
+          ),
+          if (showFreshness) ...[
+            const SizedBox(width: AppSpacing.s12),
+            FreshnessBadge(
+              lastUpdatedAt: lastUpdated,
+              hasError: hasError,
+              onRefresh: _loadShellData,
             ),
-
+          ],
           const Spacer(),
-
-          // Right side controls matching prototype:
-          // [All branches (Pune) v] [Robot] [Bell with red dot] [+ New enquiry]
-
-          // 1. Branch Selector Dropdown
-          Consumer(
-            builder: (context, ref, child) {
-              final activeBranchId = ref.watch(selectedBranchIdProvider);
-              final isSuperAdmin =
-                  user?.isSuperAdmin == true || user?.isOwner == true;
-              final userBranchIds =
-                  user?.branches.map((b) => b.id).toSet() ?? {};
-
-              final visibleBranches = isSuperAdmin || userBranchIds.isEmpty
-                  ? _branches
-                  : _branches
-                      .where((b) => userBranchIds.contains(b['id'].toString()))
-                      .toList();
-
-              String validValue;
-              if (isSuperAdmin) {
-                validValue = (visibleBranches
-                            .any((b) => b['id'].toString() == activeBranchId) ||
-                        activeBranchId == 'all')
-                    ? activeBranchId
-                    : 'all';
-              } else {
-                if (visibleBranches
-                    .any((b) => b['id'].toString() == activeBranchId)) {
-                  validValue = activeBranchId;
-                } else if (visibleBranches.isNotEmpty) {
-                  validValue = visibleBranches.first['id'].toString();
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (ref.read(selectedBranchIdProvider) != validValue) {
-                      ref.read(selectedBranchIdProvider.notifier).state =
-                          validValue;
-                    }
-                  });
-                } else {
-                  validValue = 'all';
-                }
-              }
-
-              return Container(
-                height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: validValue,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                        size: 18, color: Color(0xFF64748B)),
-                    style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1E293B)),
-                    items: [
-                      if (isSuperAdmin)
-                        const DropdownMenuItem(
-                            value: 'all', child: Text('All branches (Pune)')),
-                      ...visibleBranches.map((b) {
-                        final wing = b['wing'] ??
-                            (b['name'].toString().contains('BigWing') ||
-                                    b['code'].toString().startsWith('BW')
-                                ? 'BigWing'
-                                : 'RedWing');
-                        final name = b['name']?.toString() ?? 'Branch';
-                        return DropdownMenuItem(
-                          value: b['id'].toString(),
-                          child: Text('$name ($wing)'),
-                        );
-                      }),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        ref.read(selectedBranchIdProvider.notifier).state = val;
-                      }
-                    },
-                  ),
-                ),
-              );
-            },
+          _buildBranchDropdown(ref, user),
+          const SizedBox(width: AppSpacing.s8),
+          IconButton(
+            tooltip: 'AI Dealership Assistant',
+            icon: const Icon(AppIcons.ai, color: AppColors.aiAccent),
+            onPressed: () => _showAiInsightsDialog(context, ref),
           ),
-          const SizedBox(width: 8),
-
-          // 2. Robot / AI Insights Icon Button (bare icon, NO block)
-          Tooltip(
-            message:
-                'AI Dealership Executive Insights - Real-time analysis powered by Gemini AI',
-            child: InkWell(
-              onTap: () => _showAiInsightsDialog(context, ref),
-              borderRadius: BorderRadius.circular(6),
-              child: const Padding(
-                padding: EdgeInsets.all(7),
-                child: Icon(Icons.smart_toy_outlined,
-                    size: 20, color: Color(0xFF64748B)),
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-
-          // 3. Notification Bell with red dot (bare icon, NO block)
-          Tooltip(
-            message: 'Urgent follow-ups & notifications',
-            child: Padding(
-              padding: const EdgeInsets.all(7),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  const Icon(Icons.notifications_none_rounded,
-                      size: 21, color: Color(0xFF64748B)),
+          IconButton(
+            tooltip: _overdueCount > 0
+                ? 'Notifications ($_overdueCount overdue follow-ups)'
+                : 'Notifications',
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(AppIcons.notifications, color: AppColors.body),
+                if (_overdueCount > 0)
                   Positioned(
-                    top: 1,
-                    right: 1,
+                    top: -2,
+                    right: -2,
                     child: Container(
-                      width: 6.5,
-                      height: 6.5,
+                      width: 8,
+                      height: 8,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFDC2626),
+                        color: AppColors.brand,
                         shape: BoxShape.circle,
                       ),
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
+            onPressed: () => _showNotificationsDialog(context),
           ),
-          const SizedBox(width: 10),
-
-          // 4. "+ New enquiry" Red Button (NO 'N' badge)
-          Tooltip(
-            message:
-                'Create a new customer walk-in or telephonic enquiry',
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () => context.go('/tablet'),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add, size: 16),
-                  SizedBox(width: 6),
-                  Text(
-                    'New enquiry',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          const SizedBox(width: AppSpacing.s8),
+          ElevatedButton.icon(
+            onPressed: () => context.go('/tablet'),
+            icon: const Icon(AppIcons.add, size: 18),
+            label: const Text('New enquiry'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBranchDropdown(WidgetRef ref, UserModel user) {
+    final activeBranchId = ref.watch(selectedBranchIdProvider);
+    final isSuperAdmin = user.isSuperAdmin || user.isOwner;
+    final userBranchIds = user.branches.map((b) => b.id).toSet();
+
+    final visibleBranches = isSuperAdmin || userBranchIds.isEmpty
+        ? _branches
+        : _branches
+            .where((b) => userBranchIds.contains(b['id'].toString()))
+            .toList();
+
+    String validValue;
+    if (isSuperAdmin) {
+      validValue =
+          (visibleBranches.any((b) => b['id'].toString() == activeBranchId) ||
+                  activeBranchId == 'all')
+              ? activeBranchId
+              : 'all';
+    } else {
+      if (visibleBranches.any((b) => b['id'].toString() == activeBranchId)) {
+        validValue = activeBranchId;
+      } else if (visibleBranches.isNotEmpty) {
+        validValue = visibleBranches.first['id'].toString();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (ref.read(selectedBranchIdProvider) != validValue) {
+            ref.read(selectedBranchIdProvider.notifier).state = validValue;
+          }
+        });
+      } else {
+        validValue = 'all';
+      }
+    }
+
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusControl),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: validValue,
+          icon: const Icon(Icons.keyboard_arrow_down,
+              size: 18, color: AppColors.secondary),
+          style: AppTypography.label.copyWith(color: AppColors.ink),
+          items: [
+            if (isSuperAdmin)
+              const DropdownMenuItem(value: 'all', child: Text('All branches')),
+            ...visibleBranches.map((b) {
+              final wing = b['wing'] ??
+                  (b['name'].toString().contains('BigWing') ||
+                          b['code'].toString().startsWith('BW')
+                      ? 'BigWing'
+                      : 'RedWing');
+              final name = b['name']?.toString() ?? 'Branch';
+              return DropdownMenuItem(
+                value: b['id'].toString(),
+                child: Text('$name ($wing)'),
+              );
+            }),
+          ],
+          onChanged: (val) {
+            if (val != null) {
+              ref.read(selectedBranchIdProvider.notifier).state = val;
+            }
+          },
+        ),
       ),
     );
   }
 
   Widget _buildMobileLayout(
-      BuildContext context, WidgetRef ref, List<NavItem> items) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAF9F6),
-      appBar: AppBar(
-        titleSpacing: 16,
-        leadingWidth: 46,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: Center(
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0xFFCC0000),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              alignment: Alignment.center,
-              child: const Text('YH',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 13)),
-            ),
-          ),
+    BuildContext context,
+    WidgetRef ref,
+    UserModel user,
+    List<NavItem> permittedItems,
+  ) {
+    final activeBranchId = ref.watch(selectedBranchIdProvider);
+
+    // Role-aware primary mobile tabs (max 3 + "More")
+    final List<NavItem> primaryTabs = [];
+    if (user.canAccessDashboard) {
+      primaryTabs
+          .add(permittedItems.firstWhere((i) => i.route == '/dashboard'));
+    }
+    primaryTabs.add(permittedItems.firstWhere((i) => i.route == '/enquiries'));
+    primaryTabs.add(permittedItems.firstWhere((i) => i.route == '/follow-ups'));
+
+    final destinations = [
+      ...primaryTabs.map(
+        (item) => NavigationDestination(
+          icon: Icon(item.icon),
+          label: item.short,
         ),
-        title: const Text('Yash Honda',
-            style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFFCC0000))),
+      ),
+      const NavigationDestination(
+        icon: Icon(AppIcons.more),
+        label: 'More',
+      ),
+    ];
+
+    int selectedIndex = primaryTabs
+        .length; // Default to 'More' if route is Summary/Reports/Admin
+    for (int i = 0; i < primaryTabs.length; i++) {
+      if (widget.currentRoute == primaryTabs[i].route ||
+          (primaryTabs[i].route != '/dashboard' &&
+              widget.currentRoute.startsWith(primaryTabs[i].route))) {
+        selectedIndex = i;
+        break;
+      }
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        titleSpacing: AppSpacing.s16,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_getPageTitle(widget.currentRoute),
+                style: AppTypography.section),
+            Text(
+              _selectedBranchName(activeBranchId),
+              style: AppTypography.caption,
+            ),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle, color: Color(0xFFCC0000)),
-            tooltip: 'New Enquiry',
-            onPressed: () => context.go('/tablet'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, size: 20),
-            onPressed: () => ref.read(authStateProvider.notifier).logout(),
+            tooltip: 'Notifications',
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(AppIcons.notifications),
+                if (_overdueCount > 0)
+                  Positioned(
+                    top: -2,
+                    right: -2,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppColors.brand,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            onPressed: () => _showNotificationsDialog(context),
           ),
         ],
       ),
       body: widget.body,
-      bottomNavigationBar: items.length >= 2
-          ? BottomNavigationBar(
-              currentIndex: _getBottomNavIndex(items),
-              type: BottomNavigationBarType.fixed,
-              selectedItemColor: const Color(0xFFCC0000),
-              unselectedItemColor: const Color(0xFF64748B),
-              selectedFontSize: 11,
-              unselectedFontSize: 10,
-              backgroundColor: Colors.white,
-              onTap: (index) {
-                if (index < items.length) {
-                  context.go(items[index].route);
-                }
-              },
-              items: items.take(5).map((item) {
-                return BottomNavigationBarItem(
-                  icon: Icon(item.icon),
-                  label: item.short,
-                );
-              }).toList(),
-            )
-          : null,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.go('/tablet'),
+        backgroundColor: AppColors.brand,
+        foregroundColor: Colors.white,
+        icon: const Icon(AppIcons.add),
+        label: const Text('New enquiry'),
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: selectedIndex,
+        onDestinationSelected: (idx) {
+          if (idx < primaryTabs.length) {
+            context.go(primaryTabs[idx].route);
+          } else {
+            _showMobileMoreSheet(context, ref, user);
+          }
+        },
+        destinations: destinations,
+      ),
     );
   }
 
-  int _getBottomNavIndex(List<NavItem> items) {
-    for (int i = 0; i < items.length && i < 5; i++) {
-      if (widget.currentRoute == items[i].route ||
-          (items[i].route != '/dashboard' &&
-              widget.currentRoute.startsWith(items[i].route))) {
-        return i;
-      }
-    }
-    return 0;
+  void _showMobileMoreSheet(
+      BuildContext context, WidgetRef ref, UserModel user) {
+    final adminItems = _permittedAdminItems(user);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusSheet)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          maxChildSize: 0.9,
+          minChildSize: 0.4,
+          expand: false,
+          builder: (_, scrollCtrl) => ListView(
+            controller: scrollCtrl,
+            padding: const EdgeInsets.all(AppSpacing.s16),
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: AppColors.brand,
+                    child: Text(
+                      user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user.name, style: AppTypography.bodyStrong),
+                        Text(user.displayName, style: AppTypography.caption),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(AppIcons.close),
+                    tooltip: 'Close menu',
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              _buildBranchDropdown(ref, user),
+              const SizedBox(height: AppSpacing.s16),
+              const Divider(height: 1),
+              if (user.canAccessDashboard)
+                ListTile(
+                  leading: const Icon(AppIcons.summary),
+                  title: const Text('Dealership summary'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.go('/summary');
+                  },
+                ),
+              if (user.canAccessReports)
+                ListTile(
+                  leading: const Icon(AppIcons.reports),
+                  title: const Text('Reports'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.go('/reports');
+                  },
+                ),
+              ListTile(
+                leading: const Icon(AppIcons.ai, color: AppColors.aiAccent),
+                title: const Text('AI Dealership Assistant'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showAiInsightsDialog(context, ref);
+                },
+              ),
+              if (adminItems.isNotEmpty) ...[
+                const Divider(height: 16),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Text('ADMINISTRATION', style: AppTypography.overline),
+                ),
+                ...adminItems.map(
+                  (sub) => ListTile(
+                    leading: Icon(sub.icon),
+                    title: Text(sub.title),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      context.go(sub.route);
+                    },
+                  ),
+                ),
+              ],
+              const Divider(height: 16),
+              ListTile(
+                leading: const Icon(AppIcons.logout, color: AppColors.danger),
+                title: Text(
+                  'Sign out',
+                  style: AppTypography.bodyStrong
+                      .copyWith(color: AppColors.danger),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ref.read(authStateProvider.notifier).logout();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showNotificationsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _NotificationsDialog(
+        onOpenFollowUps: () {
+          Navigator.pop(ctx);
+          context.go('/follow-ups');
+        },
+      ),
+    );
   }
 
   void _showAiInsightsDialog(BuildContext context, WidgetRef ref) {
     final activeBranchId = ref.read(selectedBranchIdProvider);
     AiCopilotChatDialog.show(context, initialBranchId: activeBranchId);
+  }
+}
+
+class _NotificationsDialog extends ConsumerStatefulWidget {
+  final VoidCallback onOpenFollowUps;
+
+  const _NotificationsDialog({required this.onOpenFollowUps});
+
+  @override
+  ConsumerState<_NotificationsDialog> createState() =>
+      _NotificationsDialogState();
+}
+
+class _NotificationsDialogState extends ConsumerState<_NotificationsDialog> {
+  bool _loading = true;
+  String? _error;
+  List<dynamic> _overdue = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final dio = ref.read(dioProvider);
+      final res =
+          await dio.get('/follow-ups', queryParameters: {'filter': 'overdue'});
+      if (mounted) {
+        setState(() {
+          _overdue = res.data is List ? res.data as List : [];
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error =
+              'Could not load notifications. Check your connection and try again.';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DialogScaffold(
+      title: 'Notifications',
+      subtitle: 'Overdue follow-ups & pending callbacks',
+      actions: [
+        TextButton(
+          onPressed: widget.onOpenFollowUps,
+          child: const Text('Open Follow-ups'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+      ],
+      child: _loading
+          ? const LoadingState(rows: 3)
+          : _error != null
+              ? ErrorState(message: _error!, onRetry: _load)
+              : _overdue.isEmpty
+                  ? const EmptyState(
+                      icon: AppIcons.notifications,
+                      title: 'All caught up',
+                      message:
+                          'No overdue follow-ups require attention right now.',
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: _overdue.take(8).map((fu) {
+                        final customer =
+                            fu['enquiry']?['customer']?['name'] ?? 'Customer';
+                        final remarks =
+                            fu['remarks'] ?? 'Scheduled callback overdue';
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(AppIcons.warning,
+                              color: AppColors.danger),
+                          title: Text(customer.toString(),
+                              style: AppTypography.bodyStrong),
+                          subtitle: Text(remarks.toString(),
+                              style: AppTypography.caption),
+                          onTap: widget.onOpenFollowUps,
+                        );
+                      }).toList(),
+                    ),
+    );
   }
 }

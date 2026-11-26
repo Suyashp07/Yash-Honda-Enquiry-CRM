@@ -368,8 +368,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     }
   }
 
-  List<Map<String, dynamic>> get _allSourceVehicles =>
-      _backendVehicles.isNotEmpty ? _backendVehicles : _fallbackCatalog;
+  List<Map<String, dynamic>> get _allSourceVehicles => _backendVehicles;
 
   List<Map<String, dynamic>> get _categoryPool {
     if (_selectedCategory == null) return [];
@@ -397,10 +396,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
     return pool.where((v) => v['ccDisplacement'] == numOnly).toList();
   }
 
-  List<Map<String, dynamic>> get _effectiveAccessories =>
-      _backendAccessories.isNotEmpty
-          ? _backendAccessories
-          : _fallbackAccessories;
+  List<Map<String, dynamic>> get _effectiveAccessories => _backendAccessories;
 
   static const List<Map<String, dynamic>> _fallbackAccessories = [
     {

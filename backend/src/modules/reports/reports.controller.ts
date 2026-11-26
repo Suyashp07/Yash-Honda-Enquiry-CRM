@@ -15,7 +15,7 @@ export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get('pending')
-  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER)
+  @Roles(Role.OWNER, Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.ACCOUNTS)
   @ApiOperation({ summary: 'Report: Active pending enquiries awaiting action' })
   @ApiQuery({ name: 'branchId', required: false })
   getPendingLeads(@CurrentUser() user: any, @Query('branchId') branchId?: string) {
@@ -23,7 +23,7 @@ export class ReportsController {
   }
 
   @Get('lost')
-  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER)
+  @Roles(Role.OWNER, Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.ACCOUNTS)
   @ApiOperation({ summary: 'Report: Closed/Lost leads with history reasons' })
   @ApiQuery({ name: 'branchId', required: false })
   getLostLeads(@CurrentUser() user: any, @Query('branchId') branchId?: string) {
@@ -31,7 +31,7 @@ export class ReportsController {
   }
 
   @Get('finance')
-  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER)
+  @Roles(Role.OWNER, Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.ACCOUNTS)
   @ApiOperation({ summary: 'Report: Finance leads and designated financier partners' })
   @ApiQuery({ name: 'branchId', required: false })
   getFinanceLeads(@CurrentUser() user: any, @Query('branchId') branchId?: string) {
@@ -39,7 +39,7 @@ export class ReportsController {
   }
 
   @Get('exchange')
-  @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER)
+  @Roles(Role.OWNER, Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.ACCOUNTS)
   @ApiOperation({ summary: 'Report: Old two-wheeler exchange leads' })
   @ApiQuery({ name: 'branchId', required: false })
   getExchangeLeads(@CurrentUser() user: any, @Query('branchId') branchId?: string) {

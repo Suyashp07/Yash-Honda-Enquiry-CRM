@@ -69,8 +69,8 @@ export class AiInsightsService {
     }
 
     if (!summaryText) {
-      const branchLabel = branchCode === 'all' ? 'All 6 Pune branches' : `Branch ${branchCode}`;
-      summaryText = `${branchLabel} recorded ${kpis.totalLeads} total leads for this period with a conversion rate of ${kpis.conversionRate}%. Finance-backed purchases represent ${kpis.financePercentage}% of sales (${kpis.financeCount} deals), while cash deals accounted for ${kpis.cashCount}. Today, ${floor.walkInsToday} walk-in customers and ${floor.telephonicToday} telephonic leads were actively serviced by ${floor.activeRepsCount} showroom sales executives.`;
+      const branchLabel = branchCode === 'all' ? 'All active branches' : `Branch ${branchCode}`;
+      summaryText = `${branchLabel} recorded ${kpis.totalLeads} total leads for this period with a conversion rate of ${kpis.conversionRate}%. Finance-backed purchases represent ${kpis.financePercentage}% of deals (${kpis.financeCount}), while cash deals accounted for ${kpis.cashCount}. Today, ${floor.walkInsToday} walk-in customers and ${floor.telephonicToday} telephonic leads were logged with ${floor.activeRepsCount} active sales executives.`;
     }
 
     const saved = await this.prisma.aiSummaryCache.upsert({
@@ -124,8 +124,8 @@ export class AiInsightsService {
         telephonicToday: floor.telephonicToday,
         bookedCount: kpis.bookedCount,
         conversionRate: `${kpis.conversionRate}%`,
-        activeInProgress: floor.outcomes?.inProgress || busyReps.length,
-        quotedCount: floor.outcomes?.quoted || 14,
+        activeInProgress: floor.outcomes?.inProgress ?? busyReps.length,
+        quotedCount: floor.outcomes?.quoted ?? 0,
         cashCount: kpis.cashCount,
         financeCount: kpis.financeCount,
         financePercentage: `${kpis.financePercentage}%`,
@@ -158,6 +158,10 @@ export class AiInsightsService {
             reply: response,
             metrics: dealershipContext.kpis,
             suggestedFollowUps: this.generateFollowUps(query),
+            isAiAssisted: true,
+            branchScope: branch,
+            range,
+            generatedAt: new Date().toISOString(),
           };
         }
       } catch (e) {
@@ -173,6 +177,10 @@ export class AiInsightsService {
             reply: response,
             metrics: dealershipContext.kpis,
             suggestedFollowUps: this.generateFollowUps(query),
+            isAiAssisted: true,
+            branchScope: branch,
+            range,
+            generatedAt: new Date().toISOString(),
           };
         }
       } catch (e) {
@@ -180,111 +188,95 @@ export class AiInsightsService {
       }
     }
 
-    // High-fidelity domain-specific NLP reasoning engine (offline / fallback guaranteed)
+    // Grounded local response using only live database metrics
     const reply = this.generateExecutiveResponse(query, dealershipContext);
     return {
       reply,
       metrics: dealershipContext.kpis,
       suggestedFollowUps: this.generateFollowUps(query),
+      isAiAssisted: true,
+      branchScope: branch,
+      range,
+      generatedAt: new Date().toISOString(),
     };
   }
 
   private generateExecutiveResponse(query: string, ctx: any): string {
     const q = query.toLowerCase();
-    const { kpis, repsStatus, activeSessions } = ctx;
+    const { kpis, repsStatus, branches } = ctx;
 
     // 1. Overall Company / Performance Summary
     if (q.includes('summary') || q.includes('performance') || q.includes('how are we doing') || q.includes('overview') || q.includes('today')) {
-      return `### 📊 Yash Honda Executive Daily Briefing
-Across our 6 Pune dealerships (**Phursungi BigWing, Wadki, Saswad, Uruli Kanchan, BT Kawade, and Sasane Nagar**), here is our current business pulse:
+      return `### Dealership Daily Briefing (AI-Assisted)
+Based on live database metrics for the selected scope:
 
-* **Total Leads Recorded Today**: **${kpis.totalLeads}** customer interactions
-* **Showroom Walk-ins**: **${kpis.walkInsToday}** (${Math.round((kpis.walkInsToday / Math.max(1, kpis.totalLeads)) * 100)}% of total traffic)
-* **Inbound Telephonic Inquiries**: **${kpis.telephonicToday}** calls
+* **Total Leads**: **${kpis.totalLeads}** customer interactions
+* **Showroom Walk-ins**: **${kpis.walkInsToday}** (${Math.round((kpis.walkInsToday / Math.max(1, kpis.totalLeads)) * 100)}% of traffic)
+* **Telephonic Inquiries**: **${kpis.telephonicToday}** calls
 * **Bookings Secured**: **${kpis.bookedCount}** units booked
-* **Lead-to-Booking Conversion**: **${kpis.conversionRate}** (Healthy target benchmark is 20-25%)
-* **Showroom Floor Activity**: **${repsStatus.busyCount}** sales executives are actively engaged with live customers right now, while **${repsStatus.idleCount}** reps are available on the floor.
-
-💡 **Key Takeaway**: Showroom walk-in volume is strong today. Focus on converting the **${repsStatus.busyCount + 5}** open quotations into same-day booking advances before showroom closing.`;
+* **Lead-to-Booking Conversion**: **${kpis.conversionRate}**
+* **Floor Activity**: **${repsStatus.busyCount}** sales executives currently busy; **${repsStatus.idleCount}** available.
+* **Open Quotations**: **${kpis.quotedCount}** recorded in current floor outcomes.`;
     }
 
     // 2. Branch Performance / Comparison
-    if (q.includes('branch') || q.includes('location') || q.includes('phursungi') || q.includes('wadki') || q.includes('saswad') || q.includes('kawade')) {
-      return `### 🏢 Branch-wise Operational Highlights
-Yash Honda operates 6 strategic branch locations in Pune:
+    if (q.includes('branch') || q.includes('location')) {
+      return `### Active Branch Scope
+Configured branches in database: **${branches || 'None found'}**.
 
-1. **Phursungi (BWP/BigWing)**: Leading in premium commuter and mid-capacity motorcycle interest (CB350, CB300F). Accounted for highest booking ticket sizes.
-2. **BT Kawade (RWBTK/RedWing)**: Consistent volume driver for **Activa 110 & 125** commuter scooters, strong conversion rate of ~25%.
-3. **Saswad (RWSAS/RedWing)**: Top performer in rural commuter motorcycle conversions (Shine 100, SP 125) with over 66% booking conversion on weekend traffic.
-4. **Wadki, Uruli Kanchan, Sasane Nagar**: High walk-in share; tele-callers are following up on festival inquiry backlogs.
-
-📌 **Recommendation**: Allocate additional inventory of **SP 125 Disc** and **Activa 110 Dlx** to BT Kawade and Saswad to prevent stockout delays.`;
+For branch-by-branch lead, booking, and conversion metrics, open **Dealership Summary -> Branch comparison**.`;
     }
 
     // 3. Sales Reps / Floor Attendance / Staffing
     if (q.includes('rep') || q.includes('staff') || q.includes('executive') || q.includes('idle') || q.includes('busy') || q.includes('attendance')) {
-      const busyList = repsStatus.busyNames.length > 0 ? repsStatus.busyNames.join(', ') : 'None currently engaged';
-      const idleSample = repsStatus.idleNames.slice(0, 5).join(', ');
+      const busyLines = repsStatus.busyNames.length > 0
+        ? repsStatus.busyNames.map((n: string) => `  * **${n}**`).join('\n')
+        : '  * None currently engaged';
+      const idleLines = repsStatus.idleNames.length > 0
+        ? repsStatus.idleNames.slice(0, 8).map((n: string) => `  * **${n}**`).join('\n')
+        : '  * None currently idle';
 
-      return `### 👥 Showroom Floor & Staffing Intelligence
-Our floor monitoring registers **${repsStatus.totalReps} total sales executives** logged in:
+      return `### Showroom Floor & Staffing
+**${repsStatus.totalReps} sales executives** in current scope:
 
-* **Currently Busy (${repsStatus.busyCount} Reps)**:
-  ${repsStatus.busyNames.map((n: string) => `  * 🔴 **${n}**`).join('\n')}
-* **Available / Idle (${repsStatus.idleCount} Reps)**:
-  ${repsStatus.idleNames.slice(0, 6).map((n: string) => `  * 🟢 **${n}**`).join('\n')}
-
-⚡ **Action Item**: We have **${repsStatus.idleCount} idle executives** on the floor. Telephonic follow-ups should be assigned to them immediately to engage pending warm leads from yesterday.`;
+* **Currently Busy (${repsStatus.busyCount})**:
+${busyLines}
+* **Available / Idle (${repsStatus.idleCount})**:
+${idleLines}`;
     }
 
     // 4. Models / Top Selling Vehicles
-    if (q.includes('model') || q.includes('bike') || q.includes('scooter') || q.includes('activa') || q.includes('shine') || q.includes('sp 125') || q.includes('vehicle')) {
-      return `### 🛵 Model Demand & Booking Distribution
-Customer inquiry patterns today show clear demand preferences:
-
-1. **Honda Activa 110 (DLX & Premium)**: **#1 Volume Leader** (42% of inquiries). Primary demand colors: *Pearl Night White* and *Matte Axis Grey*.
-2. **Honda SP 125 (Disc & Drum)**: **Top Commuter Motorcycle** (28% of inquiries). Strong customer uptake with youth demographic and college riders.
-3. **Honda Shine 100**: Consistent interest in rural branches (Saswad, Wadki) due to fuel efficiency and entry-level affordability.
-4. **Honda BigWing (CB350 / CB300F)**: Driving higher average revenue per vehicle (~₹2.30L on-road) at the Phursungi showroom.
-
-📦 **Stock Alert**: Activa 110 DLX in White has under 4 units buffer at BT Kawade; suggest re-stocking transfer from central depot.`;
+    if (q.includes('model') || q.includes('bike') || q.includes('scooter') || q.includes('vehicle')) {
+      return `### Model Demand
+Model-level breakdowns are available in **Dealership Summary**. Current aggregate totals: **${kpis.totalLeads} leads** and **${kpis.bookedCount} bookings** (${kpis.conversionRate} conversion).`;
     }
 
     // 5. Finance vs Cash Breakdown / Revenue
     if (q.includes('finance') || q.includes('cash') || q.includes('bank') || q.includes('loan') || q.includes('emi') || q.includes('money') || q.includes('revenue')) {
-      return `### 💰 Commercial & Finance Insights
-Payment structure breakdown for current booked and quoted deals:
-
+      const finPct = parseInt(kpis.financePercentage || '0', 10) || 0;
+      return `### Commercial & Finance Breakdown
 * **Finance Share**: **${kpis.financePercentage}** (${kpis.financeCount} deals)
-* **Cash Share**: **${100 - parseInt(kpis.financePercentage || '37')}%** (${kpis.cashCount} deals)
-* **Exchange Inquiries**: **${kpis.exchangeCount}** vehicles evaluated for exchange upgrade
-* **Preferred Finance Partners**: **HDFC Bank**, **ICICI Bank**, and **Tata Capital** account for 78% of loan disbursements.
-
-💡 **Executive Tip**: Financing drives higher accessory adoption (+₹3,200 average per vehicle). Encourage sales reps to offer zero-downpayment EMI options to walk-in prospects who hesitate on on-road price.`;
+* **Cash Share**: **${Math.max(0, 100 - finPct)}%** (${kpis.cashCount} deals)
+* **Exchange Inquiries**: **${kpis.exchangeCount}**`;
     }
 
-    // 6. Follow-ups / Alerts / Neglected Leads
+    // 6. Follow-ups / Alerts
     if (q.includes('follow') || q.includes('alert') || q.includes('pending') || q.includes('callback') || q.includes('lost')) {
-      return `### ⚠️ Follow-up & Conversion Alerts
-Floor intelligence indicates:
+      return `### Follow-up & Quotation Summary
+* **Quoted Outcomes**: **${kpis.quotedCount}**
+* **Active In-Progress**: **${kpis.activeInProgress}**
 
-* **Open Quotations Requiring Follow-up**: **${kpis.quotedCount || 14} customers** received official quotes today without placing an immediate booking.
-* **Overdue Follow-ups**: There are **6 scheduled callbacks** past their due time across Wadki and Sasane Nagar.
-* **Warm Inquiries**: 3 high-intent prospects for **SP 125 Disc** requested finance approval calls.
-
-🎯 **Recommended Action**: Have the Branch Managers trigger WhatsApp automated quotation summaries to all 14 quoted prospects before 7:00 PM today.`;
+Open **Follow-ups** or **Reports -> Pending Leads** to review overdue callbacks and unbooked quotations.`;
     }
 
-    // Generic Executive Assistant Response
-    return `### 🤖 Yash Honda Business Intelligence
-Regarding **"${query}"**:
+    // Generic Grounded Response
+    return `### Yash Honda Assistant (AI-Assisted)
+Summary for **"${query}"** from live data:
 
-* **Today's Lead Volume**: **${kpis.totalLeads} total leads** (${kpis.walkInsToday} walk-ins, ${kpis.telephonicToday} calls).
-* **Dealership Bookings**: **${kpis.bookedCount} units booked** with a **${kpis.conversionRate} conversion rate**.
-* **Floor Utilization**: **${repsStatus.busyCount} of ${repsStatus.totalReps} sales executives** are actively consulting customers across Pune.
-* **Commercial Split**: **${kpis.financePercentage}** financed deals vs cash.
-
-Feel free to ask me about specific branch performance, sales rep attendance, top-selling Honda models, or finance breakdown!`;
+* **Lead Volume**: **${kpis.totalLeads} total leads** (${kpis.walkInsToday} walk-ins, ${kpis.telephonicToday} calls)
+* **Bookings**: **${kpis.bookedCount} units booked** (**${kpis.conversionRate}** conversion)
+* **Floor Utilization**: **${repsStatus.busyCount} of ${repsStatus.totalReps} sales executives** currently busy
+* **Commercial Split**: **${kpis.financePercentage}** financed deals (${kpis.financeCount} finance / ${kpis.cashCount} cash)`;
   }
 
   private generateFollowUps(query: string): string[] {

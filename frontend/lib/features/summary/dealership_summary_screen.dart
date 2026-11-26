@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/networking/api_client.dart';
+import '../../core/providers/branch_provider.dart';
+import '../../core/utils/file_download.dart';
 import '../auth/auth_notifier.dart';
 
 class DealershipSummaryScreen extends ConsumerStatefulWidget {
@@ -29,6 +31,7 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
   @override
   void initState() {
     super.initState();
+    _selectedBranch = ref.read(selectedBranchIdProvider);
     _loadSummary();
   }
 
@@ -38,6 +41,7 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
     try {
       final dio = ref.read(dioProvider);
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      _selectedBranch = ref.read(selectedBranchIdProvider);
 
       final res = await dio.get('/analytics/summary/dealership', queryParameters: {
         'date': dateStr,
@@ -46,12 +50,15 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
       });
 
       if (!mounted) return;
+      ref.read(lastDataUpdatedProvider.notifier).state = DateTime.now();
+      ref.read(dataFreshnessErrorProvider.notifier).state = false;
       setState(() {
         _summaryData = res.data?['data'];
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
+      ref.read(dataFreshnessErrorProvider.notifier).state = true;
       setState(() => _isLoading = false);
       String msg = 'Failed to load Dealership Summary';
       if (e is DioException) {
@@ -67,21 +74,72 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
     }
   }
 
-  void _stepDate(int deltaDays) {
+  void _stepDate(int delta) {
     setState(() {
-      _selectedDate = _selectedDate.add(Duration(days: deltaDays));
+      if (_selectedPeriod == 'week') {
+        _selectedDate = _selectedDate.add(Duration(days: delta * 7));
+      } else if (_selectedPeriod == 'mtd') {
+        _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + delta, _selectedDate.day);
+      } else if (_selectedPeriod == 'ytd') {
+        _selectedDate = DateTime(_selectedDate.year + delta, _selectedDate.month, _selectedDate.day);
+      } else {
+        _selectedDate = _selectedDate.add(Duration(days: delta));
+      }
     });
     _loadSummary();
   }
 
-  void _handlePrint() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Dealership Summary Report formatted for printing.')),
-    );
+  Future<void> _handlePrint() async {
+    if (_summaryData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No summary data loaded to export.')),
+      );
+      return;
+    }
+    try {
+      final branches = (_summaryData?['branches'] as List?) ?? [];
+      final buffer = StringBuffer();
+      buffer.writeln('Branch,Code,Leads,Walk-ins,Telephonic,Booked,Conversion %');
+      for (final b in branches) {
+        final name = (b['name'] ?? '').toString().replaceAll(',', ' ');
+        final code = (b['code'] ?? '').toString();
+        final total = b['total'] ?? b['totalLeads'] ?? 0;
+        final walkIns = b['walkIns'] ?? 0;
+        final calls = b['callsRecd'] ?? b['telephonic'] ?? 0;
+        final booked = b['booked'] ?? b['bookings'] ?? 0;
+        final conv = b['conversionRate'] ?? 0;
+        buffer.writeln('$name,$code,$total,$walkIns,$calls,$booked,$conv%');
+      }
+      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      await downloadTextFile(
+        buffer.toString(),
+        'dealership_summary_${_selectedPeriod}_$dateStr.csv',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: AppColors.success,
+            content: Text('Dealership summary CSV exported.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String>(selectedBranchIdProvider, (prev, next) {
+      if (prev != next) {
+        _selectedBranch = next;
+        _loadSummary();
+      }
+    });
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SingleChildScrollView(
@@ -161,8 +219,8 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildViewTab('matrix', 'Matrix View', Icons.table_chart_outlined, tooltip: 'Performance matrix comparing branches, walk-ins, bookings & conversion rates'),
-                _buildViewTab('summary2', 'Summary', Icons.grid_view_outlined, tooltip: 'Executive KPI cards and model contribution analytics'),
+                _buildViewTab('matrix', 'Branch comparison', Icons.table_chart_outlined, tooltip: 'Performance matrix comparing branches, walk-ins, bookings & conversion rates'),
+                _buildViewTab('summary2', 'Executive overview', Icons.grid_view_outlined, tooltip: 'Executive KPI cards and model contribution analytics'),
               ],
             ),
           ),

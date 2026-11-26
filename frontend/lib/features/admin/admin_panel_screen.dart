@@ -124,6 +124,18 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           _applyHypo = data['applyHypothecationDefault'] ?? true;
           _logoUrl = data['logoUrl']?.toString();
           _upiQrUrl = data['upiQrUrl']?.toString();
+          _officeHoursEnabled = data['officeHoursEnabled'] == true;
+          if (data['officeWindows'] is List) {
+            _officeWindows
+              ..clear()
+              ..addAll(
+                (data['officeWindows'] as List).map((w) => {
+                      'startTime': (w['startTime'] ?? '9:00 AM').toString(),
+                      'endTime': (w['endTime'] ?? '1:00 PM').toString(),
+                      'enabled': w['enabled'] == true,
+                    }),
+              );
+          }
           _isLoading = false;
         });
         return;
@@ -1183,8 +1195,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                                         }
                                       });
                                     },
-                                    icon: const Icon(
-                                        Icons.upload_file_outlined,
+                                    icon: const Icon(Icons.upload_file_outlined,
                                         size: 15),
                                     label: Text(
                                       (pendingImage != null ||
@@ -1206,7 +1217,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                                         setDlgState(() {
                                           pendingImage = null;
                                           currentImageUrl = null;
-                                          imageFeedback = 'Photo will be cleared on Save.';
+                                          imageFeedback =
+                                              'Photo will be cleared on Save.';
                                           imageIsError = false;
                                         });
                                       },
@@ -1394,245 +1406,250 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           final resolvedHex =
               normalizeToHex(codeInputCtrl.text, colorFormat) ?? '#111827';
           return AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          title: Text(
-            editingItem != null ? 'Edit Colour' : 'Add Standard Colour',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: Color(0xFF0F172A),
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            title: Text(
+              editingItem != null ? 'Edit Colour' : 'Add Standard Colour',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Color(0xFF0F172A),
+              ),
             ),
-          ),
-          content: SizedBox(
-            width: 420,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Colour Name
-                const Text(
-                  'Colour Name',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: Color(0xFF1E293B)),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. Rebel Red Metallic',
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFDC2626)),
-                    ),
+            content: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Colour Name
+                  const Text(
+                    'Colour Name',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: Color(0xFF1E293B)),
                   ),
-                  style:
-                      const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
-                ),
-                const SizedBox(height: 16),
-
-                // Format Dropdown (HEX | RGB)
-                const Text(
-                  'Colour Code Format',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: Color(0xFF1E293B)),
-                ),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  initialValue: colorFormat,
-                  items: const [
-                    DropdownMenuItem(value: 'HEX', child: Text('HEX (e.g. #DC2626)')),
-                    DropdownMenuItem(value: 'RGB', child: Text('RGB (e.g. 220, 38, 38)')),
-                  ],
-                  onChanged: (val) {
-                    if (val == null || val == colorFormat) return;
-                    setDlgState(() {
-                      if (val == 'RGB') {
-                        final hex = normalizeToHex(codeInputCtrl.text, 'HEX');
-                        if (hex != null) {
-                          final c = _parseColor(hex);
-                          codeInputCtrl.text =
-                              '${(c.r * 255).round()}, ${(c.g * 255).round()}, ${(c.b * 255).round()}';
-                        } else {
-                          codeInputCtrl.text = '17, 24, 39';
-                        }
-                      } else {
-                        final hex = normalizeToHex(codeInputCtrl.text, 'RGB');
-                        codeInputCtrl.text = hex ?? '#111827';
-                      }
-                      colorFormat = val;
-                    });
-                  },
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFDC2626)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Colour Code + Live Swatch
-                Text(
-                  colorFormat == 'HEX' ? 'HEX Colour Code' : 'RGB Colour Code',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: Color(0xFF1E293B)),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: codeInputCtrl,
-                  onChanged: (_) => setDlgState(() {}),
-                  decoration: InputDecoration(
-                    hintText:
-                        colorFormat == 'HEX' ? '#DC2626' : '220, 38, 38',
-                    isDense: true,
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Container(
-                        width: 28,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: _parseColor(resolvedHex),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                              color: const Color(0xFFCBD5E1), width: 0.8),
-                        ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Rebel Red Metallic',
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFDC2626)),
                       ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFDC2626)),
+                    style:
+                        const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Format Dropdown (HEX | RGB)
+                  const Text(
+                    'Colour Code Format',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: Color(0xFF1E293B)),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: colorFormat,
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'HEX', child: Text('HEX (e.g. #DC2626)')),
+                      DropdownMenuItem(
+                          value: 'RGB', child: Text('RGB (e.g. 220, 38, 38)')),
+                    ],
+                    onChanged: (val) {
+                      if (val == null || val == colorFormat) return;
+                      setDlgState(() {
+                        if (val == 'RGB') {
+                          final hex = normalizeToHex(codeInputCtrl.text, 'HEX');
+                          if (hex != null) {
+                            final c = _parseColor(hex);
+                            codeInputCtrl.text =
+                                '${(c.r * 255).round()}, ${(c.g * 255).round()}, ${(c.b * 255).round()}';
+                          } else {
+                            codeInputCtrl.text = '17, 24, 39';
+                          }
+                        } else {
+                          final hex = normalizeToHex(codeInputCtrl.text, 'RGB');
+                          codeInputCtrl.text = hex ?? '#111827';
+                        }
+                        colorFormat = val;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFDC2626)),
+                      ),
                     ),
                   ),
-                  style:
-                      const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
-                ),
-              ],
-            ),
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-          actions: [
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                side: const BorderSide(color: Color(0xFFE2E8F0)),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                    color: Color(0xFF1E293B),
-                    fontWeight: FontWeight.w500,
-                    fontSize: 13),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () async {
-                final cName = nameCtrl.text.trim();
-                final hexVal =
-                    normalizeToHex(codeInputCtrl.text, colorFormat);
-                if (cName.isEmpty || hexVal == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(cName.isEmpty
-                          ? 'Please enter a valid Colour Name.'
-                          : colorFormat == 'HEX'
-                              ? 'Please enter a valid 6-digit HEX code (e.g. #DC2626).'
-                              : 'Please enter valid RGB values between 0 and 255 (e.g. 220, 38, 38).'),
+                  const SizedBox(height: 16),
+
+                  // Colour Code + Live Swatch
+                  Text(
+                    colorFormat == 'HEX'
+                        ? 'HEX Colour Code'
+                        : 'RGB Colour Code',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: Color(0xFF1E293B)),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: codeInputCtrl,
+                    onChanged: (_) => setDlgState(() {}),
+                    decoration: InputDecoration(
+                      hintText:
+                          colorFormat == 'HEX' ? '#DC2626' : '220, 38, 38',
+                      isDense: true,
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Container(
+                          width: 28,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: _parseColor(resolvedHex),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                                color: const Color(0xFFCBD5E1), width: 0.8),
+                          ),
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFDC2626)),
+                      ),
                     ),
-                  );
-                  return;
-                }
-                final dio = ref.read(dioProvider);
-                try {
-                  if (editingItem != null) {
-                    await dio
-                        .put('/vehicles/colours/${editingItem['id']}', data: {
-                      'name': cName,
-                      'hex': hexVal,
-                    });
-                  } else {
-                    await dio.post('/vehicles/colours', data: {
-                      'name': cName,
-                      'hex': hexVal,
-                    });
-                  }
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  _loadSectionData();
-                  if (mounted) {
+                    style:
+                        const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
+            ),
+            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+            actions: [
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                      color: Color(0xFF1E293B),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 13),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () async {
+                  final cName = nameCtrl.text.trim();
+                  final hexVal =
+                      normalizeToHex(codeInputCtrl.text, colorFormat);
+                  if (cName.isEmpty || hexVal == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                          content: Text(
-                              'Colour ${editingItem != null ? "updated" : "added"} successfully')),
+                        content: Text(cName.isEmpty
+                            ? 'Please enter a valid Colour Name.'
+                            : colorFormat == 'HEX'
+                                ? 'Please enter a valid 6-digit HEX code (e.g. #DC2626).'
+                                : 'Please enter valid RGB values between 0 and 255 (e.g. 220, 38, 38).'),
+                      ),
                     );
+                    return;
                   }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to save colour: $e')),
-                    );
+                  final dio = ref.read(dioProvider);
+                  try {
+                    if (editingItem != null) {
+                      await dio
+                          .put('/vehicles/colours/${editingItem['id']}', data: {
+                        'name': cName,
+                        'hex': hexVal,
+                      });
+                    } else {
+                      await dio.post('/vehicles/colours', data: {
+                        'name': cName,
+                        'hex': hexVal,
+                      });
+                    }
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    _loadSectionData();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                                'Colour ${editingItem != null ? "updated" : "added"} successfully')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to save colour: $e')),
+                      );
+                    }
                   }
-                }
-              },
-              child: const Text('Save',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-            ),
-          ],
-        );
+                },
+                child: const Text('Save',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              ),
+            ],
+          );
         },
       ),
     );
@@ -1699,12 +1716,12 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     String? selectedModelGroupId = initialModelGroupId;
     bool modelGroupsLoaded = false;
 
-    String? pickDefaultModelGroupId(String cat, List<Map<String, dynamic>> mgs) {
+    String? pickDefaultModelGroupId(
+        String cat, List<Map<String, dynamic>> mgs) {
       if (mgs.isEmpty) return null;
       final wantBig = cat == 'BigBike';
       final match = mgs.firstWhere(
-        (m) =>
-            m['name'].toString().toLowerCase().contains('big') == wantBig,
+        (m) => m['name'].toString().toLowerCase().contains('big') == wantBig,
         orElse: () => mgs.first,
       );
       return match['id']?.toString();
@@ -1738,7 +1755,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 setDlgState(() {
                   allModelGroups = mgs;
                   if (selectedModelGroupId == null ||
-                      !mgs.any((m) => m['id']?.toString() == selectedModelGroupId)) {
+                      !mgs.any(
+                          (m) => m['id']?.toString() == selectedModelGroupId)) {
                     selectedModelGroupId =
                         pickDefaultModelGroupId(vehicleType, mgs);
                   }
@@ -1747,944 +1765,968 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             }).catchError((_) {});
           }
           return AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-          title: Text(
-            editingItem != null
-                ? 'Edit ${_getSectionTitle()}'
-                : '${_getAddButtonText()} ${_getSectionTitle()}',
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Color(0xFF0F172A)),
-          ),
-          content: SizedBox(
-            width: 440,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (_currentSection != 'colours' &&
-                      _currentSection != 'financiers' &&
-                      _currentSection != 'areas' &&
-                      _currentSection != 'lead-sources') ...[
-                    const Text('Code',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: codeCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'e.g. BWM, ACT6G, RWWKD',
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  const Text('Name',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-                  const SizedBox(height: 4),
-                  TextField(
-                    controller: nameCtrl,
-                    decoration: InputDecoration(
-                      hintText:
-                          'Enter ${_getSectionTitle().toLowerCase()} name',
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                      border: const OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_currentSection == 'vehicles') ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Vehicle Category / Division',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 12)),
-                              const SizedBox(height: 4),
-                              DropdownButtonFormField<String>(
-                                value: ['MC', 'Scooter', 'BigBike']
-                                        .contains(vehicleType)
-                                    ? vehicleType
-                                    : 'MC',
-                                items: const [
-                                  DropdownMenuItem(
-                                      value: 'MC',
-                                      child: Text('Motorcycles (MC)')),
-                                  DropdownMenuItem(
-                                      value: 'Scooter', child: Text('Scooter')),
-                                  DropdownMenuItem(
-                                      value: 'BigBike',
-                                      child: Text('Big Bike (BigWing)')),
-                                ],
-                                onChanged: (val) => setDlgState(() {
-                                  vehicleType = val ?? 'MC';
-                                  if (allModelGroups.isNotEmpty) {
-                                    selectedModelGroupId =
-                                        pickDefaultModelGroupId(
-                                            vehicleType, allModelGroups);
-                                  }
-                                }),
-                                decoration: const InputDecoration(
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Engine CC',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 12)),
-                              const SizedBox(height: 4),
-                              TextField(
-                                controller: ccCtrl,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  hintText: 'e.g. 125',
-                                  suffixText: 'CC',
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    const Text('Honda Wing (Showroom Division)',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    DropdownButtonFormField<String>(
-                      value: allModelGroups.any(
-                              (m) => m['id']?.toString() == selectedModelGroupId)
-                          ? selectedModelGroupId
-                          : null,
-                      hint: const Text('Loading Honda Wings...'),
-                      items: allModelGroups.map((mg) {
-                        final mgName = mg['name']?.toString() ?? 'Wing';
-                        final isBig = mgName.toLowerCase().contains('big');
-                        return DropdownMenuItem<String>(
-                          value: mg['id']?.toString(),
-                          child: Text(isBig
-                              ? '$mgName (Premium & Big Bikes · ${mg['quotePrefix'] ?? 'BWQ'})'
-                              : '$mgName (Commuter & Scooters · ${mg['quotePrefix'] ?? 'RWQ'})'),
-                        );
-                      }).toList(),
-                      onChanged: (val) =>
-                          setDlgState(() => selectedModelGroupId = val),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Ex-Showroom (₹)',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 12)),
-                              const SizedBox(height: 4),
-                              TextField(
-                                controller: exShowroomCtrl,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  hintText: 'e.g. 82450',
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('On-road Price (₹ Pune)',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 12)),
-                              const SizedBox(height: 4),
-                              TextField(
-                                controller: priceCtrl,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  hintText: 'e.g. 100380',
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (allColours.isNotEmpty) ...[
-                      const Text('Available Factory Colours',
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+            title: Text(
+              editingItem != null
+                  ? 'Edit ${_getSectionTitle()}'
+                  : '${_getAddButtonText()} ${_getSectionTitle()}',
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Color(0xFF0F172A)),
+            ),
+            content: SizedBox(
+              width: 440,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_currentSection != 'colours' &&
+                        _currentSection != 'financiers' &&
+                        _currentSection != 'areas' &&
+                        _currentSection != 'lead-sources') ...[
+                      const Text('Code',
                           style: TextStyle(
                               fontWeight: FontWeight.w600, fontSize: 12)),
-                      const SizedBox(height: 6),
-                      InkWell(
-                        onTap: () async {
-                          String searchTxt = '';
-                          final tempSelected = Set<String>.from(selectedColourIds);
-                          final confirmed = await showDialog<bool>(
-                            context: context,
-                            builder: (dCtx) => StatefulBuilder(
-                              builder: (c, setDrawerState) {
-                                final filteredCols = allColours.where((col) {
-                                  if (searchTxt.isEmpty) return true;
-                                  return (col['name'] ?? '')
-                                      .toString()
-                                      .toLowerCase()
-                                      .contains(searchTxt.toLowerCase());
-                                }).toList();
-                                return AlertDialog(
-                                  backgroundColor: Colors.white,
-                                  surfaceTintColor: Colors.transparent,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14)),
-                                  titlePadding:
-                                      const EdgeInsets.fromLTRB(20, 18, 20, 8),
-                                  title: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Select Factory Colours',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 16)),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          TextButton(
-                                            onPressed: () => setDrawerState(() {
-                                              tempSelected.addAll(allColours.map(
-                                                  (e) => e['id'].toString()));
-                                            }),
-                                            child: const Text('All',
-                                                style: TextStyle(fontSize: 12)),
-                                          ),
-                                          TextButton(
-                                            onPressed: () => setDrawerState(
-                                                () => tempSelected.clear()),
-                                            child: const Text('Clear',
-                                                style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Color(0xFF64748B))),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                  content: SizedBox(
-                                    width: 360,
-                                    height: 340,
-                                    child: Column(
-                                      children: [
-                                        TextField(
-                                          decoration: InputDecoration(
-                                            hintText: 'Search colours...',
-                                            prefixIcon: const Icon(
-                                                Icons.search,
-                                                size: 18),
-                                            isDense: true,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 8),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                          ),
-                                          onChanged: (v) => setDrawerState(
-                                              () => searchTxt = v),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Expanded(
-                                          child: ListView.builder(
-                                            itemCount: filteredCols.length,
-                                            itemBuilder: (_, idx) {
-                                              final col = filteredCols[idx];
-                                              final cid = col['id'].toString();
-                                              final isChecked =
-                                                  tempSelected.contains(cid);
-                                              final hexStr =
-                                                  col['hex']?.toString() ??
-                                                      '#111827';
-                                              return CheckboxListTile(
-                                                dense: true,
-                                                controlAffinity:
-                                                    ListTileControlAffinity
-                                                        .leading,
-                                                activeColor:
-                                                    const Color(0xFFDC2626),
-                                                value: isChecked,
-                                                onChanged: (val) =>
-                                                    setDrawerState(() {
-                                                  if (val == true) {
-                                                    tempSelected.add(cid);
-                                                  } else {
-                                                    tempSelected.remove(cid);
-                                                  }
-                                                }),
-                                                secondary: Container(
-                                                  width: 18,
-                                                  height: 18,
-                                                  decoration: BoxDecoration(
-                                                    color: _parseColor(hexStr),
-                                                    shape: BoxShape.circle,
-                                                    border: Border.all(
-                                                        color: const Color(
-                                                            0xFFCBD5E1)),
-                                                  ),
-                                                ),
-                                                title: Text(
-                                                  col['name']?.toString() ?? '',
-                                                  style: const TextStyle(
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.w600),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(dCtx, false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFFDC2626),
-                                        foregroundColor: Colors.white,
-                                      ),
-                                      onPressed: () =>
-                                          Navigator.pop(dCtx, true),
-                                      child: Text(
-                                          'Done (${tempSelected.length})'),
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                          );
-                          if (confirmed == true) {
-                            setDlgState(() {
-                              selectedColourIds
-                                ..clear()
-                                ..addAll(tempSelected);
-                            });
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: codeCtrl,
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. BWM, ACT6G, RWWKD',
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
                               horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFF94A3B8)),
-                          ),
-                          child: Row(
-                            children: [
-                              if (selectedColourIds.isNotEmpty) ...[
-                                ...allColours
-                                    .where((c) => selectedColourIds
-                                        .contains(c['id'].toString()))
-                                    .take(5)
-                                    .map((c) => Container(
-                                          width: 14,
-                                          height: 14,
-                                          margin:
-                                              const EdgeInsets.only(right: 4),
-                                          decoration: BoxDecoration(
-                                            color: _parseColor(
-                                                c['hex']?.toString() ??
-                                                    '#111827'),
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                                color: const Color(0xFFCBD5E1)),
-                                          ),
-                                        )),
-                                const SizedBox(width: 6),
-                              ],
-                              Expanded(
-                                child: Text(
-                                  selectedColourIds.isEmpty
-                                      ? 'Select factory colours...'
-                                      : '${selectedColourIds.length} colour${selectedColourIds.length == 1 ? '' : 's'} selected',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: selectedColourIds.isEmpty
-                                        ? const Color(0xFF64748B)
-                                        : const Color(0xFF0F172A),
-                                    fontWeight: selectedColourIds.isEmpty
-                                        ? FontWeight.w400
-                                        : FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              const Icon(Icons.keyboard_arrow_down_rounded,
-                                  size: 20, color: Color(0xFF64748B)),
-                            ],
-                          ),
+                          border: OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 12),
                     ],
-                    const Text('Brochure (PDF Only · Optional)',
+                    const Text('Name',
                         style: TextStyle(
                             fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(height: 6),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: InputDecoration(
+                        hintText:
+                            'Enter ${_getSectionTitle().toLowerCase()} name',
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        border: const OutlineInputBorder(),
                       ),
-                      child: Row(
+                    ),
+                    const SizedBox(height: 12),
+                    if (_currentSection == 'vehicles') ...[
+                      Row(
                         children: [
-                          Icon(
-                            Icons.picture_as_pdf_rounded,
-                            size: 20,
-                            color: (pickedBrochurePdf != null ||
-                                    brochureUrlCtrl.text.trim().isNotEmpty)
-                                ? const Color(0xFFDC2626)
-                                : const Color(0xFF94A3B8),
-                          ),
-                          const SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              pickedBrochurePdf != null
-                                  ? pickedBrochurePdf!.name
-                                  : (brochureUrlCtrl.text.trim().isNotEmpty
-                                      ? 'Brochure PDF attached'
-                                      : 'No PDF selected'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: (pickedBrochurePdf != null ||
-                                        brochureUrlCtrl.text.trim().isNotEmpty)
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                                color: (pickedBrochurePdf != null ||
-                                        brochureUrlCtrl.text.trim().isNotEmpty)
-                                    ? const Color(0xFF0F172A)
-                                    : const Color(0xFF64748B),
-                              ),
+                            flex: 3,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Vehicle Category / Division',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12)),
+                                const SizedBox(height: 4),
+                                DropdownButtonFormField<String>(
+                                  value: ['MC', 'Scooter', 'BigBike']
+                                          .contains(vehicleType)
+                                      ? vehicleType
+                                      : 'MC',
+                                  items: const [
+                                    DropdownMenuItem(
+                                        value: 'MC',
+                                        child: Text('Motorcycles (MC)')),
+                                    DropdownMenuItem(
+                                        value: 'Scooter',
+                                        child: Text('Scooter')),
+                                    DropdownMenuItem(
+                                        value: 'BigBike',
+                                        child: Text('Big Bike (BigWing)')),
+                                  ],
+                                  onChanged: (val) => setDlgState(() {
+                                    vehicleType = val ?? 'MC';
+                                    if (allModelGroups.isNotEmpty) {
+                                      selectedModelGroupId =
+                                          pickDefaultModelGroupId(
+                                              vehicleType, allModelGroups);
+                                    }
+                                  }),
+                                  decoration: const InputDecoration(
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          if (pickedBrochurePdf != null ||
-                              brochureUrlCtrl.text.trim().isNotEmpty)
-                            IconButton(
-                              tooltip: 'Remove PDF',
-                              icon: const Icon(Icons.close,
-                                  size: 16, color: Color(0xFF64748B)),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                  minWidth: 28, minHeight: 28),
-                              onPressed: () => setDlgState(() {
-                                pickedBrochurePdf = null;
-                                brochureUrlCtrl.clear();
-                              }),
-                            ),
-                          const SizedBox(width: 4),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              side: const BorderSide(color: Color(0xFFCBD5E1)),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(6)),
-                            ),
-                            onPressed: () async {
-                              final res = await FilePicker.platform.pickFiles(
-                                type: FileType.custom,
-                                allowedExtensions: ['pdf'],
-                                withData: true,
-                              );
-                              if (res != null && res.files.isNotEmpty) {
-                                final f = res.files.first;
-                                if (!f.name.toLowerCase().endsWith('.pdf')) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Only PDF (.pdf) files are allowed.')),
-                                    );
-                                  }
-                                  return;
-                                }
-                                setDlgState(() => pickedBrochurePdf = f);
-                              }
-                            },
-                            icon: const Icon(Icons.upload_file_rounded,
-                                size: 15, color: Color(0xFFDC2626)),
-                            label: Text(
-                              (pickedBrochurePdf != null ||
-                                      brochureUrlCtrl.text.trim().isNotEmpty)
-                                  ? 'Replace PDF'
-                                  : 'Upload PDF',
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF0F172A)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Engine CC',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12)),
+                                const SizedBox(height: 4),
+                                TextField(
+                                  controller: ccCtrl,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    hintText: 'e.g. 125',
+                                    suffixText: 'CC',
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    if (editingItem != null) ...[
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFFDC2626)),
-                            foregroundColor: const Color(0xFFDC2626),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
+                      const SizedBox(height: 12),
+                      const Text('Honda Wing (Showroom Division)',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      DropdownButtonFormField<String>(
+                        value: allModelGroups.any((m) =>
+                                m['id']?.toString() == selectedModelGroupId)
+                            ? selectedModelGroupId
+                            : null,
+                        hint: const Text('Loading Honda Wings...'),
+                        items: allModelGroups.map((mg) {
+                          final mgName = mg['name']?.toString() ?? 'Wing';
+                          final isBig = mgName.toLowerCase().contains('big');
+                          return DropdownMenuItem<String>(
+                            value: mg['id']?.toString(),
+                            child: Text(isBig
+                                ? '$mgName (Premium & Big Bikes · ${mg['quotePrefix'] ?? 'BWQ'})'
+                                : '$mgName (Commuter & Scooters · ${mg['quotePrefix'] ?? 'RWQ'})'),
+                          );
+                        }).toList(),
+                        onChanged: (val) =>
+                            setDlgState(() => selectedModelGroupId = val),
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Ex-Showroom (₹)',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12)),
+                                const SizedBox(height: 4),
+                                TextField(
+                                  controller: exShowroomCtrl,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    hintText: 'e.g. 82450',
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            showVehicleMediaManagerDialog(
-                              context: context,
-                              dio: ref.read(dioProvider),
-                              vehicle: editingItem,
-                              onUpdated: _loadSectionData,
-                            );
-                          },
-                          icon: const Icon(Icons.photo_library_outlined,
-                              size: 16),
-                          label: const Text(
-                            'Manage Listing, Studio & Colour Photos →',
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('On-road Price (₹ Pune)',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12)),
+                                const SizedBox(height: 4),
+                                TextField(
+                                  controller: priceCtrl,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    hintText: 'e.g. 100380',
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (allColours.isNotEmpty) ...[
+                        const Text('Available Factory Colours',
                             style: TextStyle(
-                                fontSize: 12.5, fontWeight: FontWeight.w700),
+                                fontWeight: FontWeight.w600, fontSize: 12)),
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: () async {
+                            String searchTxt = '';
+                            final tempSelected =
+                                Set<String>.from(selectedColourIds);
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (dCtx) => StatefulBuilder(
+                                builder: (c, setDrawerState) {
+                                  final filteredCols = allColours.where((col) {
+                                    if (searchTxt.isEmpty) return true;
+                                    return (col['name'] ?? '')
+                                        .toString()
+                                        .toLowerCase()
+                                        .contains(searchTxt.toLowerCase());
+                                  }).toList();
+                                  return AlertDialog(
+                                    backgroundColor: Colors.white,
+                                    surfaceTintColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(14)),
+                                    titlePadding: const EdgeInsets.fromLTRB(
+                                        20, 18, 20, 8),
+                                    title: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text('Select Factory Colours',
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 16)),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  setDrawerState(() {
+                                                tempSelected.addAll(
+                                                    allColours.map((e) =>
+                                                        e['id'].toString()));
+                                              }),
+                                              child: const Text('All',
+                                                  style:
+                                                      TextStyle(fontSize: 12)),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => setDrawerState(
+                                                  () => tempSelected.clear()),
+                                              child: const Text('Clear',
+                                                  style: TextStyle(
+                                                      fontSize: 12,
+                                                      color:
+                                                          Color(0xFF64748B))),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    content: SizedBox(
+                                      width: 360,
+                                      height: 340,
+                                      child: Column(
+                                        children: [
+                                          TextField(
+                                            decoration: InputDecoration(
+                                              hintText: 'Search colours...',
+                                              prefixIcon: const Icon(
+                                                  Icons.search,
+                                                  size: 18),
+                                              isDense: true,
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 8),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                            onChanged: (v) => setDrawerState(
+                                                () => searchTxt = v),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Expanded(
+                                            child: ListView.builder(
+                                              itemCount: filteredCols.length,
+                                              itemBuilder: (_, idx) {
+                                                final col = filteredCols[idx];
+                                                final cid =
+                                                    col['id'].toString();
+                                                final isChecked =
+                                                    tempSelected.contains(cid);
+                                                final hexStr =
+                                                    col['hex']?.toString() ??
+                                                        '#111827';
+                                                return CheckboxListTile(
+                                                  dense: true,
+                                                  controlAffinity:
+                                                      ListTileControlAffinity
+                                                          .leading,
+                                                  activeColor:
+                                                      const Color(0xFFDC2626),
+                                                  value: isChecked,
+                                                  onChanged: (val) =>
+                                                      setDrawerState(() {
+                                                    if (val == true) {
+                                                      tempSelected.add(cid);
+                                                    } else {
+                                                      tempSelected.remove(cid);
+                                                    }
+                                                  }),
+                                                  secondary: Container(
+                                                    width: 18,
+                                                    height: 18,
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          _parseColor(hexStr),
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(
+                                                          color: const Color(
+                                                              0xFFCBD5E1)),
+                                                    ),
+                                                  ),
+                                                  title: Text(
+                                                    col['name']?.toString() ??
+                                                        '',
+                                                    style: const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w600),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(dCtx, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                              const Color(0xFFDC2626),
+                                          foregroundColor: Colors.white,
+                                        ),
+                                        onPressed: () =>
+                                            Navigator.pop(dCtx, true),
+                                        child: Text(
+                                            'Done (${tempSelected.length})'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            );
+                            if (confirmed == true) {
+                              setDlgState(() {
+                                selectedColourIds
+                                  ..clear()
+                                  ..addAll(tempSelected);
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(6),
+                              border:
+                                  Border.all(color: const Color(0xFF94A3B8)),
+                            ),
+                            child: Row(
+                              children: [
+                                if (selectedColourIds.isNotEmpty) ...[
+                                  ...allColours
+                                      .where((c) => selectedColourIds
+                                          .contains(c['id'].toString()))
+                                      .take(5)
+                                      .map((c) => Container(
+                                            width: 14,
+                                            height: 14,
+                                            margin:
+                                                const EdgeInsets.only(right: 4),
+                                            decoration: BoxDecoration(
+                                              color: _parseColor(
+                                                  c['hex']?.toString() ??
+                                                      '#111827'),
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                  color:
+                                                      const Color(0xFFCBD5E1)),
+                                            ),
+                                          )),
+                                  const SizedBox(width: 6),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    selectedColourIds.isEmpty
+                                        ? 'Select factory colours...'
+                                        : '${selectedColourIds.length} colour${selectedColourIds.length == 1 ? '' : 's'} selected',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: selectedColourIds.isEmpty
+                                          ? const Color(0xFF64748B)
+                                          : const Color(0xFF0F172A),
+                                      fontWeight: selectedColourIds.isEmpty
+                                          ? FontWeight.w400
+                                          : FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const Icon(Icons.keyboard_arrow_down_rounded,
+                                    size: 20, color: Color(0xFF64748B)),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ],
-                  if (_currentSection == 'model-groups') ...[
-                    const Text('Quotation Letterhead',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: letterheadCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'e.g. Yash Honda – Big Wing',
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text('Vehicle Type',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    DropdownButtonFormField<String>(
-                      value: vehicleType == 'Motorcycle' || vehicleType == 'MC'
-                          ? 'MC'
-                          : vehicleType == 'BigBike'
-                              ? 'BigBike'
-                              : 'Scooter',
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'MC', child: Text('Motorcycles (MC)')),
-                        DropdownMenuItem(
-                            value: 'Scooter', child: Text('Scooters')),
-                        DropdownMenuItem(
-                            value: 'BigBike', child: Text('Big Bikes (BigWing)')),
+                        const SizedBox(height: 12),
                       ],
-                      onChanged: (val) =>
-                          setDlgState(() => vehicleType = val ?? 'MC'),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ],
-                  if (_currentSection == 'colours') ...[
-                    const Text('Color Hex Code',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _parseColor(hexCtrl.text),
-                            border: Border.all(color: const Color(0xFFCBD5E1)),
-                          ),
+                      const Text('Brochure (PDF Only · Optional)',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 12)),
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: hexCtrl,
-                            onChanged: (_) => setDlgState(() {}),
-                            decoration: const InputDecoration(
-                              hintText: 'e.g. #1E3A8A or #CC0000',
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
-                              border: OutlineInputBorder(),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.picture_as_pdf_rounded,
+                              size: 20,
+                              color: (pickedBrochurePdf != null ||
+                                      brochureUrlCtrl.text.trim().isNotEmpty)
+                                  ? const Color(0xFFDC2626)
+                                  : const Color(0xFF94A3B8),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                pickedBrochurePdf != null
+                                    ? pickedBrochurePdf!.name
+                                    : (brochureUrlCtrl.text.trim().isNotEmpty
+                                        ? 'Brochure PDF attached'
+                                        : 'No PDF selected'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: (pickedBrochurePdf != null ||
+                                          brochureUrlCtrl.text
+                                              .trim()
+                                              .isNotEmpty)
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  color: (pickedBrochurePdf != null ||
+                                          brochureUrlCtrl.text
+                                              .trim()
+                                              .isNotEmpty)
+                                      ? const Color(0xFF0F172A)
+                                      : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                            if (pickedBrochurePdf != null ||
+                                brochureUrlCtrl.text.trim().isNotEmpty)
+                              IconButton(
+                                tooltip: 'Remove PDF',
+                                icon: const Icon(Icons.close,
+                                    size: 16, color: Color(0xFF64748B)),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                    minWidth: 28, minHeight: 28),
+                                onPressed: () => setDlgState(() {
+                                  pickedBrochurePdf = null;
+                                  brochureUrlCtrl.clear();
+                                }),
+                              ),
+                            const SizedBox(width: 4),
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                side:
+                                    const BorderSide(color: Color(0xFFCBD5E1)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(6)),
+                              ),
+                              onPressed: () async {
+                                final res = await FilePicker.platform.pickFiles(
+                                  type: FileType.custom,
+                                  allowedExtensions: ['pdf'],
+                                  withData: true,
+                                );
+                                if (res != null && res.files.isNotEmpty) {
+                                  final f = res.files.first;
+                                  if (!f.name.toLowerCase().endsWith('.pdf')) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'Only PDF (.pdf) files are allowed.')),
+                                      );
+                                    }
+                                    return;
+                                  }
+                                  setDlgState(() => pickedBrochurePdf = f);
+                                }
+                              },
+                              icon: const Icon(Icons.upload_file_rounded,
+                                  size: 15, color: Color(0xFFDC2626)),
+                              label: Text(
+                                (pickedBrochurePdf != null ||
+                                        brochureUrlCtrl.text.trim().isNotEmpty)
+                                    ? 'Replace PDF'
+                                    : 'Upload PDF',
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF0F172A)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (editingItem != null) ...[
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFFDC2626)),
+                              foregroundColor: const Color(0xFFDC2626),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              showVehicleMediaManagerDialog(
+                                context: context,
+                                dio: ref.read(dioProvider),
+                                vehicle: editingItem,
+                                onUpdated: _loadSectionData,
+                              );
+                            },
+                            icon: const Icon(Icons.photo_library_outlined,
+                                size: 16),
+                            label: const Text(
+                              'Manage Listing, Studio & Colour Photos →',
+                              style: TextStyle(
+                                  fontSize: 12.5, fontWeight: FontWeight.w700),
                             ),
                           ),
                         ),
                       ],
-                    ),
-                  ],
-                  if (_currentSection == 'accessories') ...[
-                    const Text('Default Price (₹)',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: priceCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        hintText: 'e.g. 2500',
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: isPriceEditable,
-                          activeColor: const Color(0xFFCC0000),
-                          onChanged: (val) =>
-                              setDlgState(() => isPriceEditable = val ?? false),
+                    ],
+                    if (_currentSection == 'model-groups') ...[
+                      const Text('Quotation Letterhead',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: letterheadCtrl,
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. Yash Honda – Big Wing',
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(),
                         ),
-                        const Text('Editable at Point of Sale by Rep',
-                            style: TextStyle(fontSize: 13)),
-                      ],
-                    ),
-                  ],
-                  if (_currentSection == 'branches') ...[
-                    const Text('Dealership Wing',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    DropdownButtonFormField<String>(
-                      value: ['BigWing', 'RedWing'].contains(branchWing)
-                          ? branchWing
-                          : 'RedWing',
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'BigWing',
-                            child: Text('BigWing (Premium / Phursungi)')),
-                        DropdownMenuItem(
-                            value: 'RedWing',
-                            child: Text('RedWing (Commuter / Network)')),
-                      ],
-                      onChanged: (val) =>
-                          setDlgState(() => branchWing = val ?? 'RedWing'),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text('Showroom Address',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: addressCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'e.g. Pune - Saswad Road, Phursungi, Pune',
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(),
+                      const SizedBox(height: 12),
+                      const Text('Vehicle Type',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      DropdownButtonFormField<String>(
+                        value:
+                            vehicleType == 'Motorcycle' || vehicleType == 'MC'
+                                ? 'MC'
+                                : vehicleType == 'BigBike'
+                                    ? 'BigBike'
+                                    : 'Scooter',
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'MC', child: Text('Motorcycles (MC)')),
+                          DropdownMenuItem(
+                              value: 'Scooter', child: Text('Scooters')),
+                          DropdownMenuItem(
+                              value: 'BigBike',
+                              child: Text('Big Bikes (BigWing)')),
+                        ],
+                        onChanged: (val) =>
+                            setDlgState(() => vehicleType = val ?? 'MC'),
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(),
+                        ),
                       ),
-                    ),
+                    ],
+                    if (_currentSection == 'colours') ...[
+                      const Text('Color Hex Code',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _parseColor(hexCtrl.text),
+                              border:
+                                  Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: hexCtrl,
+                              onChanged: (_) => setDlgState(() {}),
+                              decoration: const InputDecoration(
+                                hintText: 'e.g. #1E3A8A or #CC0000',
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (_currentSection == 'accessories') ...[
+                      const Text('Default Price (₹)',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: priceCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. 2500',
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: isPriceEditable,
+                            activeColor: const Color(0xFFCC0000),
+                            onChanged: (val) => setDlgState(
+                                () => isPriceEditable = val ?? false),
+                          ),
+                          const Text('Editable at Point of Sale by Rep',
+                              style: TextStyle(fontSize: 13)),
+                        ],
+                      ),
+                    ],
+                    if (_currentSection == 'branches') ...[
+                      const Text('Dealership Wing',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      DropdownButtonFormField<String>(
+                        value: ['BigWing', 'RedWing'].contains(branchWing)
+                            ? branchWing
+                            : 'RedWing',
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'BigWing',
+                              child: Text('BigWing (Premium / Phursungi)')),
+                          DropdownMenuItem(
+                              value: 'RedWing',
+                              child: Text('RedWing (Commuter / Network)')),
+                        ],
+                        onChanged: (val) =>
+                            setDlgState(() => branchWing = val ?? 'RedWing'),
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text('Showroom Address',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: addressCtrl,
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. Pune - Saswad Road, Phursungi, Pune',
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-          actions: [
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                side: const BorderSide(color: Color(0xFFE2E8F0)),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+            actions: [
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel',
+                    style: TextStyle(
+                        color: Color(0xFF1E293B),
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13)),
               ),
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel',
-                  style: TextStyle(
-                      color: Color(0xFF1E293B),
-                      fontWeight: FontWeight.w500,
-                      fontSize: 13)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () async {
-                final dio = ref.read(dioProvider);
-                try {
-                  if (_currentSection == 'vehicles') {
-                    final onRoad = num.tryParse(priceCtrl.text) ?? 85000;
-                    final exShowroom = num.tryParse(exShowroomCtrl.text) ??
-                        (onRoad * 0.85).round();
-                    final ccVal = int.tryParse(ccCtrl.text.trim());
-                    final bUrl = brochureUrlCtrl.text.trim().isNotEmpty
-                        ? brochureUrlCtrl.text.trim()
-                        : null;
-                    String? savedVehicleId;
-                    if (editingItem != null) {
-                      savedVehicleId = editingItem['id']?.toString();
-                      await dio.put('/vehicles/${editingItem['id']}', data: {
-                        'name': nameCtrl.text.trim(),
-                        'category': vehicleType,
-                        if (selectedModelGroupId != null &&
-                            selectedModelGroupId != initialModelGroupId)
-                          'modelGroupId': selectedModelGroupId,
-                        'exShowroomPrice': exShowroom,
-                        'onRoadPrice': onRoad,
-                        if (ccVal != null) 'ccDisplacement': ccVal,
-                        'brochureUrl': bUrl,
-                        'colourIds': selectedColourIds.toList(),
-                      });
-                    } else {
-                      String? mgId = selectedModelGroupId;
-                      if (mgId == null) {
-                        final mgRes = await dio.get('/vehicles/model-groups');
-                        final mgs = (mgRes.data as List)
-                            .map((e) => Map<String, dynamic>.from(e as Map))
-                            .toList();
-                        mgId = pickDefaultModelGroupId(vehicleType, mgs);
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () async {
+                  final dio = ref.read(dioProvider);
+                  try {
+                    if (_currentSection == 'vehicles') {
+                      final onRoad = num.tryParse(priceCtrl.text) ?? 85000;
+                      final exShowroom = num.tryParse(exShowroomCtrl.text) ??
+                          (onRoad * 0.85).round();
+                      final ccVal = int.tryParse(ccCtrl.text.trim());
+                      final bUrl = brochureUrlCtrl.text.trim().isNotEmpty
+                          ? brochureUrlCtrl.text.trim()
+                          : null;
+                      String? savedVehicleId;
+                      if (editingItem != null) {
+                        savedVehicleId = editingItem['id']?.toString();
+                        await dio.put('/vehicles/${editingItem['id']}', data: {
+                          'name': nameCtrl.text.trim(),
+                          'category': vehicleType,
+                          if (selectedModelGroupId != null &&
+                              selectedModelGroupId != initialModelGroupId)
+                            'modelGroupId': selectedModelGroupId,
+                          'exShowroomPrice': exShowroom,
+                          'onRoadPrice': onRoad,
+                          if (ccVal != null) 'ccDisplacement': ccVal,
+                          'brochureUrl': bUrl,
+                          'colourIds': selectedColourIds.toList(),
+                        });
+                      } else {
+                        String? mgId = selectedModelGroupId;
+                        if (mgId == null) {
+                          final mgRes = await dio.get('/vehicles/model-groups');
+                          final mgs = (mgRes.data as List)
+                              .map((e) => Map<String, dynamic>.from(e as Map))
+                              .toList();
+                          mgId = pickDefaultModelGroupId(vehicleType, mgs);
+                        }
+                        final createRes = await dio.post('/vehicles', data: {
+                          'code': codeCtrl.text.trim().isEmpty
+                              ? 'MOD-${DateTime.now().millisecondsSinceEpoch}'
+                              : codeCtrl.text.trim(),
+                          'name': nameCtrl.text.trim(),
+                          'category': vehicleType,
+                          'modelGroupId': mgId,
+                          'exShowroomPrice': exShowroom,
+                          'onRoadPrice': onRoad,
+                          if (ccVal != null) 'ccDisplacement': ccVal,
+                          'brochureUrl': bUrl,
+                          'colourIds': selectedColourIds.toList(),
+                        });
+                        savedVehicleId = createRes.data?['id']?.toString();
                       }
-                      final createRes = await dio.post('/vehicles', data: {
-                        'code': codeCtrl.text.trim().isEmpty
-                            ? 'MOD-${DateTime.now().millisecondsSinceEpoch}'
-                            : codeCtrl.text.trim(),
-                        'name': nameCtrl.text.trim(),
-                        'category': vehicleType,
-                        'modelGroupId': mgId,
-                        'exShowroomPrice': exShowroom,
-                        'onRoadPrice': onRoad,
-                        if (ccVal != null) 'ccDisplacement': ccVal,
-                        'brochureUrl': bUrl,
-                        'colourIds': selectedColourIds.toList(),
-                      });
-                      savedVehicleId = createRes.data?['id']?.toString();
-                    }
-                    if (pickedBrochurePdf != null &&
-                        savedVehicleId != null &&
-                        savedVehicleId.isNotEmpty) {
-                      final formData = FormData();
-                      if (pickedBrochurePdf!.bytes != null) {
-                        formData.files.add(MapEntry(
-                          'file',
-                          MultipartFile.fromBytes(pickedBrochurePdf!.bytes!,
-                              filename: pickedBrochurePdf!.name),
-                        ));
-                      } else if (pickedBrochurePdf!.path != null) {
-                        formData.files.add(MapEntry(
-                          'file',
-                          await MultipartFile.fromFile(pickedBrochurePdf!.path!,
-                              filename: pickedBrochurePdf!.name),
-                        ));
+                      if (pickedBrochurePdf != null &&
+                          savedVehicleId != null &&
+                          savedVehicleId.isNotEmpty) {
+                        final formData = FormData();
+                        if (pickedBrochurePdf!.bytes != null) {
+                          formData.files.add(MapEntry(
+                            'file',
+                            MultipartFile.fromBytes(pickedBrochurePdf!.bytes!,
+                                filename: pickedBrochurePdf!.name),
+                          ));
+                        } else if (pickedBrochurePdf!.path != null) {
+                          formData.files.add(MapEntry(
+                            'file',
+                            await MultipartFile.fromFile(
+                                pickedBrochurePdf!.path!,
+                                filename: pickedBrochurePdf!.name),
+                          ));
+                        }
+                        await dio.post('/vehicles/$savedVehicleId/brochure',
+                            data: formData);
                       }
-                      await dio.post('/vehicles/$savedVehicleId/brochure',
-                          data: formData);
+                    } else if (_currentSection == 'model-groups') {
+                      if (editingItem != null) {
+                        await dio.put(
+                            '/vehicles/model-groups/${editingItem['id']}',
+                            data: {
+                              'name': nameCtrl.text.trim(),
+                              'quotePrefix': codeCtrl.text.trim(),
+                            });
+                      } else {
+                        await dio.post('/vehicles/model-groups', data: {
+                          'name': nameCtrl.text.trim(),
+                          'quotePrefix': codeCtrl.text.trim(),
+                        });
+                      }
+                    } else if (_currentSection == 'colours') {
+                      if (editingItem != null) {
+                        await dio.put('/vehicles/colours/${editingItem['id']}',
+                            data: {
+                              'name': nameCtrl.text.trim(),
+                              'hex': hexCtrl.text.trim(),
+                            });
+                      } else {
+                        await dio.post('/vehicles/colours', data: {
+                          'name': nameCtrl.text.trim(),
+                          'hex': hexCtrl.text.trim(),
+                        });
+                      }
+                    } else if (_currentSection == 'accessories') {
+                      final p = num.tryParse(priceCtrl.text) ?? 500;
+                      if (editingItem != null) {
+                        await dio
+                            .put('/accessories/${editingItem['id']}', data: {
+                          'name': nameCtrl.text.trim(),
+                          'defaultPrice': p,
+                          'isPriceEditable': isPriceEditable,
+                        });
+                      } else {
+                        await dio.post('/accessories', data: {
+                          'name': nameCtrl.text.trim(),
+                          'defaultPrice': p,
+                          'isPriceEditable': isPriceEditable,
+                        });
+                      }
+                    } else if (_currentSection == 'financiers') {
+                      if (editingItem != null) {
+                        await dio
+                            .put('/financiers/${editingItem['id']}', data: {
+                          'name': nameCtrl.text.trim(),
+                        });
+                      } else {
+                        await dio.post('/financiers', data: {
+                          'name': nameCtrl.text.trim(),
+                        });
+                      }
+                    } else if (_currentSection == 'areas') {
+                      if (editingItem != null) {
+                        await dio.put('/areas/${editingItem['id']}', data: {
+                          'name': nameCtrl.text.trim(),
+                        });
+                      } else {
+                        await dio.post('/areas', data: {
+                          'name': nameCtrl.text.trim(),
+                        });
+                      }
+                    } else if (_currentSection == 'lead-sources') {
+                      if (editingItem != null) {
+                        await dio
+                            .put('/lead-sources/${editingItem['id']}', data: {
+                          'name': nameCtrl.text.trim(),
+                        });
+                      } else {
+                        await dio.post('/lead-sources', data: {
+                          'name': nameCtrl.text.trim(),
+                        });
+                      }
+                    } else if (_currentSection == 'branches') {
+                      if (editingItem != null) {
+                        await dio.put('/branches/${editingItem['id']}', data: {
+                          'name': nameCtrl.text.trim(),
+                          'code': codeCtrl.text.trim(),
+                          'wing': branchWing,
+                          'address': addressCtrl.text.trim().isNotEmpty
+                              ? addressCtrl.text.trim()
+                              : 'Pune, MH',
+                        });
+                      } else {
+                        await dio.post('/branches', data: {
+                          'code': codeCtrl.text.trim(),
+                          'name': nameCtrl.text.trim(),
+                          'wing': branchWing,
+                          'address': addressCtrl.text.trim().isNotEmpty
+                              ? addressCtrl.text.trim()
+                              : 'Pune, MH',
+                        });
+                      }
                     }
-                  } else if (_currentSection == 'model-groups') {
-                    if (editingItem != null) {
-                      await dio.put(
-                          '/vehicles/model-groups/${editingItem['id']}',
-                          data: {
-                            'name': nameCtrl.text.trim(),
-                            'quotePrefix': codeCtrl.text.trim(),
-                          });
-                    } else {
-                      await dio.post('/vehicles/model-groups', data: {
-                        'name': nameCtrl.text.trim(),
-                        'quotePrefix': codeCtrl.text.trim(),
-                      });
-                    }
-                  } else if (_currentSection == 'colours') {
-                    if (editingItem != null) {
-                      await dio
-                          .put('/vehicles/colours/${editingItem['id']}', data: {
-                        'name': nameCtrl.text.trim(),
-                        'hex': hexCtrl.text.trim(),
-                      });
-                    } else {
-                      await dio.post('/vehicles/colours', data: {
-                        'name': nameCtrl.text.trim(),
-                        'hex': hexCtrl.text.trim(),
-                      });
-                    }
-                  } else if (_currentSection == 'accessories') {
-                    final p = num.tryParse(priceCtrl.text) ?? 500;
-                    if (editingItem != null) {
-                      await dio.put('/accessories/${editingItem['id']}', data: {
-                        'name': nameCtrl.text.trim(),
-                        'defaultPrice': p,
-                        'isPriceEditable': isPriceEditable,
-                      });
-                    } else {
-                      await dio.post('/accessories', data: {
-                        'name': nameCtrl.text.trim(),
-                        'defaultPrice': p,
-                        'isPriceEditable': isPriceEditable,
-                      });
-                    }
-                  } else if (_currentSection == 'financiers') {
-                    if (editingItem != null) {
-                      await dio.put('/financiers/${editingItem['id']}', data: {
-                        'name': nameCtrl.text.trim(),
-                      });
-                    } else {
-                      await dio.post('/financiers', data: {
-                        'name': nameCtrl.text.trim(),
-                      });
-                    }
-                  } else if (_currentSection == 'areas') {
-                    if (editingItem != null) {
-                      await dio.put('/areas/${editingItem['id']}', data: {
-                        'name': nameCtrl.text.trim(),
-                      });
-                    } else {
-                      await dio.post('/areas', data: {
-                        'name': nameCtrl.text.trim(),
-                      });
-                    }
-                  } else if (_currentSection == 'lead-sources') {
-                    if (editingItem != null) {
-                      await dio
-                          .put('/lead-sources/${editingItem['id']}', data: {
-                        'name': nameCtrl.text.trim(),
-                      });
-                    } else {
-                      await dio.post('/lead-sources', data: {
-                        'name': nameCtrl.text.trim(),
-                      });
-                    }
-                  } else if (_currentSection == 'branches') {
-                    if (editingItem != null) {
-                      await dio.put('/branches/${editingItem['id']}', data: {
-                        'name': nameCtrl.text.trim(),
-                        'code': codeCtrl.text.trim(),
-                        'wing': branchWing,
-                        'address': addressCtrl.text.trim().isNotEmpty
-                            ? addressCtrl.text.trim()
-                            : 'Pune, MH',
-                      });
-                    } else {
-                      await dio.post('/branches', data: {
-                        'code': codeCtrl.text.trim(),
-                        'name': nameCtrl.text.trim(),
-                        'wing': branchWing,
-                        'address': addressCtrl.text.trim().isNotEmpty
-                            ? addressCtrl.text.trim()
-                            : 'Pune, MH',
-                      });
-                    }
-                  }
 
-                  if (mounted) {
-                    Navigator.pop(ctx);
-                    _loadSectionData();
+                    if (mounted) {
+                      Navigator.pop(ctx);
+                      _loadSectionData();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                                '${_getSectionTitle()} saved successfully')),
+                      );
+                    }
+                  } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content:
-                              Text('${_getSectionTitle()} saved successfully')),
+                      SnackBar(content: Text('Error saving: $e')),
                     );
                   }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error saving: $e')),
-                  );
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
         },
       ),
     );
@@ -3070,6 +3112,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         'applyHypothecationDefault': _applyHypo,
         'logoUrl': _logoUrl,
         'upiQrUrl': _upiQrUrl,
+        'officeHoursEnabled': _officeHoursEnabled,
+        'officeWindows': _officeWindows,
       });
 
       if (!silent && mounted) {
@@ -3109,7 +3153,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     if (clean.startsWith('data:image')) {
       try {
         final commaIdx = clean.indexOf(',');
-        final base64Data = commaIdx != -1 ? clean.substring(commaIdx + 1) : clean;
+        final base64Data =
+            commaIdx != -1 ? clean.substring(commaIdx + 1) : clean;
         final bytes = base64Decode(base64Data);
         return Image.memory(
           bytes,
@@ -3183,7 +3228,9 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         uploadedUrl = localDataUri;
       }
 
-      final finalUrl = (uploadedUrl != null && uploadedUrl.isNotEmpty) ? uploadedUrl : localDataUri;
+      final finalUrl = (uploadedUrl != null && uploadedUrl.isNotEmpty)
+          ? uploadedUrl
+          : localDataUri;
 
       if (!mounted) return;
       setState(() {
@@ -3699,7 +3746,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           Expanded(flex: 2, child: Text('Code', style: headerStyle)),
           Expanded(flex: 4, child: Text('Add-on', style: headerStyle)),
           Expanded(flex: 2, child: Text('Base price', style: headerStyle)),
-          Expanded(flex: 2, child: Text('Configurator Type', style: headerStyle)),
+          Expanded(
+              flex: 2, child: Text('Configurator Type', style: headerStyle)),
           SizedBox(width: 80, child: Text('Active', style: headerStyle)),
           const SizedBox(
               width: 100, child: Text('', textAlign: TextAlign.right)),
@@ -3771,7 +3819,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
               activeTrackColor: const Color(0xFF16A34A),
               inactiveThumbColor: Colors.white,
               inactiveTrackColor: const Color(0xFFCBD5E1),
-              onChanged: isSuperAdmin ? (val) => _toggleStatus(item, val) : null,
+              onChanged:
+                  isSuperAdmin ? (val) => _toggleStatus(item, val) : null,
             ),
           ),
         ),
@@ -4001,8 +4050,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           ),
           Expanded(
               flex: 2,
-              child: Align(
-                  alignment: Alignment.centerLeft, child: mediaWidget)),
+              child:
+                  Align(alignment: Alignment.centerLeft, child: mediaWidget)),
           Expanded(
               flex: 2,
               child: Align(
@@ -5022,14 +5071,17 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFDC2626),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6)),
                   elevation: 0,
                 ),
                 onPressed: () => _saveCompanyProfile(),
                 icon: const Icon(Icons.check_circle_outline, size: 16),
                 label: const Text('Save Changes',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
               ),
             ],
           ),
@@ -5466,8 +5518,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                                   strokeWidth: 2, color: Color(0xFFDC2626)))
                           : const Icon(Icons.arrow_upward_rounded,
                               size: 14, color: Color(0xFF1E293B)),
-                      label: Text(
-                          _isUploadingLogo ? 'Uploading...' : 'Replace',
+                      label: Text(_isUploadingLogo ? 'Uploading...' : 'Replace',
                           style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,

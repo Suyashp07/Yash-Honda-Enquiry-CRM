@@ -13,19 +13,27 @@ import '../../core/utils/date_formatter.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/file_download.dart';
 import '../../core/utils/mask_util.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/breakpoints.dart';
 import '../../core/providers/branch_provider.dart';
+import '../../core/theme/app_icons.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_typography.dart';
+import '../../shared/widgets/app_components.dart';
 import '../auth/auth_notifier.dart';
 
 class EnquiriesListScreen extends ConsumerStatefulWidget {
   const EnquiriesListScreen({super.key});
 
   @override
-  ConsumerState<EnquiriesListScreen> createState() => _EnquiriesListScreenState();
+  ConsumerState<EnquiriesListScreen> createState() =>
+      _EnquiriesListScreenState();
 }
 
 class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
   List<dynamic> _enquiries = [];
   bool _isLoading = true;
+  String? _errorMessage;
   String _activeTab = 'All';
   String _searchQuery = '';
   final Set<String> _selectedIds = {};
@@ -38,7 +46,13 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
 
   final TextEditingController _searchCtrl = TextEditingController();
 
-  final List<String> _tabs = ['All', 'Open', 'Booked', 'Closed', 'Other Dealer'];
+  final List<String> _tabs = [
+    'All',
+    'Open',
+    'Booked',
+    'Closed',
+    'Lost to competitor'
+  ];
 
   @override
   void initState() {
@@ -53,7 +67,10 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
   }
 
   Future<void> _loadEnquiries({bool showFeedback = false}) async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final dio = ref.read(dioProvider);
       final activeBranch = ref.read(selectedBranchIdProvider);
@@ -65,6 +82,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
 
       if (!mounted) return;
       final list = (res.data as List?) ?? [];
+      ref.read(lastDataUpdatedProvider.notifier).state = DateTime.now();
+      ref.read(dataFreshnessErrorProvider.notifier).state = false;
       setState(() {
         _enquiries = list;
         _isLoading = false;
@@ -72,14 +91,18 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       if (showFeedback) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF16A34A),
+            backgroundColor: AppColors.success,
             content: Text('Loaded ${list.length} enquiries.'),
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
+      ref.read(dataFreshnessErrorProvider.notifier).state = true;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Could not load enquiries. Check your connection and try again.';
+      });
       if (e is DioException && e.response?.statusCode == 401) {
         ref.read(authStateProvider.notifier).logout();
         context.go('/login');
@@ -99,14 +122,15 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       for (final f in followUps) {
         if (f['completedAt'] == null) {
           final sched = DateTime.tryParse(f['scheduledAt']?.toString() ?? '');
-          if (sched != null && sched.isBefore(now.add(const Duration(days: 1)))) {
+          if (sched != null &&
+              sched.isBefore(now.add(const Duration(days: 1)))) {
             count++;
             break;
           }
         }
       }
     }
-    return count > 0 ? count : 2; // Default to at least 2 as shown in prototype
+    return count;
   }
 
   List<dynamic> get _filteredEnquiries {
@@ -122,7 +146,10 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       // Search match
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
-        final matches = name.contains(q) || mobile.contains(q) || quoteNo.contains(q) || model.contains(q);
+        final matches = name.contains(q) ||
+            mobile.contains(q) ||
+            quoteNo.contains(q) ||
+            model.contains(q);
         if (!matches) return false;
       }
 
@@ -133,8 +160,12 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         if (status != 'CUSTOMER_BOUGHT' && status != 'RESOLVED') return false;
       } else if (_activeTab == 'Closed') {
         if (status != 'CLOSED') return false;
-      } else if (_activeTab == 'Other Dealer') {
-        if (status != 'OTHER_DEALER' && !(e['remarks']?.toString().toLowerCase().contains('other dealer') ?? false)) {
+      } else if (_activeTab == 'Lost to competitor' || _activeTab == 'Other Dealer') {
+        if (status != 'OTHER_DEALER' &&
+            !(e['remarks']?.toString().toLowerCase().contains('other dealer') ??
+                false) &&
+            !(e['remarks']?.toString().toLowerCase().contains('competitor') ??
+                false)) {
           return false;
         }
       }
@@ -209,11 +240,13 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     }
 
     final bytes = Uint8List.fromList(utf8.encode(buf.toString()));
-    downloadFileBytes(bytes, 'yash_honda_enquiries.csv', 'text/csv;charset=utf-8');
+    downloadFileBytes(
+        bytes, 'yash_honda_enquiries.csv', 'text/csv;charset=utf-8');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: const Color(0xFF16A34A),
-        content: Text('Exported ${rows.length} enquiries to yash_honda_enquiries.csv'),
+        content: Text(
+            'Exported ${rows.length} enquiries to yash_honda_enquiries.csv'),
       ),
     );
   }
@@ -313,8 +346,10 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     }
 
     String tmpType = types.contains(_filterType) ? _filterType : 'All';
-    String tmpMode = modes.contains(_filterPurchaseMode) ? _filterPurchaseMode : 'All';
-    String tmpBranch = branches.contains(_filterBranchName) ? _filterBranchName : 'All';
+    String tmpMode =
+        modes.contains(_filterPurchaseMode) ? _filterPurchaseMode : 'All';
+    String tmpBranch =
+        branches.contains(_filterBranchName) ? _filterBranchName : 'All';
 
     await showDialog(
       context: context,
@@ -322,7 +357,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         builder: (context, setDlgState) => AlertDialog(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           title: const Text('Filter Enquiries',
               style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
           content: SizedBox(
@@ -453,12 +489,18 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Enquiry', style: TextStyle(fontWeight: FontWeight.w700)),
-        content: Text('Are you sure you want to delete enquiry for $customerName? This cannot be undone.'),
+        title: const Text('Delete Enquiry',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(
+            'Are you sure you want to delete enquiry for $customerName? This cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete'),
           ),
@@ -491,10 +533,12 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
   Future<void> _initiateCall(String enquiryId, String customerName) async {
     try {
       final dio = ref.read(dioProvider);
-      final res = await dio.post('/telephony/call', data: {'enquiryId': enquiryId});
+      final res =
+          await dio.post('/telephony/call', data: {'enquiryId': enquiryId});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Calling $customerName: ${res.data['message']}')),
+          SnackBar(
+              content: Text('Calling $customerName: ${res.data['message']}')),
         );
       }
     } catch (e) {
@@ -515,7 +559,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDlgState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           title: Text(
             'Schedule Follow-up: ${enquiry['customer']?['name'] ?? 'Customer'}',
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
@@ -526,7 +571,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
             children: [
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_today, size: 20, color: Color(0xFFDC2626)),
+                leading: const Icon(Icons.calendar_today,
+                    size: 20, color: Color(0xFFDC2626)),
                 title: Text('Date: ${DateFormatter.formatDate(pickedDate)}'),
                 trailing: TextButton(
                   onPressed: () async {
@@ -543,7 +589,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.access_time, size: 20, color: Color(0xFFDC2626)),
+                leading: const Icon(Icons.access_time,
+                    size: 20, color: Color(0xFFDC2626)),
                 title: Text('Time: ${pickedTime.format(context)}'),
                 trailing: TextButton(
                   onPressed: () async {
@@ -570,9 +617,13 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel')),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  foregroundColor: Colors.white),
               onPressed: () async {
                 final messenger = ScaffoldMessenger.of(context);
                 final scheduledDateTime = DateTime(
@@ -587,12 +638,15 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                   await dio.post('/follow-ups', data: {
                     'enquiryId': enquiry['id'],
                     'scheduledAt': scheduledDateTime.toIso8601String(),
-                    'remarks': remarksCtrl.text.trim().isEmpty ? 'Follow-up call' : remarksCtrl.text.trim(),
+                    'remarks': remarksCtrl.text.trim().isEmpty
+                        ? 'Follow-up call'
+                        : remarksCtrl.text.trim(),
                   });
                   if (ctx.mounted) Navigator.pop(ctx);
                   _loadEnquiries();
                   messenger.showSnackBar(
-                    const SnackBar(content: Text('Follow-up scheduled successfully!')),
+                    const SnackBar(
+                        content: Text('Follow-up scheduled successfully!')),
                   );
                 } catch (e) {
                   messenger.showSnackBar(
@@ -608,7 +662,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     );
   }
 
-  void _showQuotationModal(Map<String, dynamic> enquiry, Map<String, dynamic> quote) {
+  void _showQuotationModal(
+      Map<String, dynamic> enquiry, Map<String, dynamic> quote) {
     final quoteNumber = quote['quoteNumber'] ?? 'QUOTE';
     final vehicle = quote['vehicle'] ?? {};
     final vName = vehicle['name'] ?? 'Honda Vehicle';
@@ -628,9 +683,13 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Quotation #$quoteNumber', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-                Text('${customer['name'] ?? ''} • ${MaskUtil.maskMobile(customer['mobile']?.toString())}',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                Text('Quotation #$quoteNumber',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 17)),
+                Text(
+                    '${customer['name'] ?? ''} • ${MaskUtil.maskMobile(customer['mobile']?.toString())}',
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF64748B))),
               ],
             ),
             IconButton(
@@ -658,29 +717,44 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(vName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                          Text(vName,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 15)),
                           const SizedBox(height: 2),
-                          Text('Colour: $colour', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                          Text('Colour: $colour',
+                              style: const TextStyle(
+                                  fontSize: 12, color: Color(0xFF64748B))),
                         ],
                       ),
                       Text(grandTotal,
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFFDC2626))),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                              color: Color(0xFFDC2626))),
                     ],
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text('Price Breakdown', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                const Text('Price Breakdown',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                 const SizedBox(height: 8),
                 if (quote['exShowroom'] != null)
-                  _buildPriceRow('Ex-Showroom Price', CurrencyFormatter.format(quote['exShowroom'])),
+                  _buildPriceRow('Ex-Showroom Price',
+                      CurrencyFormatter.format(quote['exShowroom'])),
                 if (quote['roadTax'] != null)
-                  _buildPriceRow('RTO / Road Tax', CurrencyFormatter.format(quote['roadTax'])),
+                  _buildPriceRow('RTO / Road Tax',
+                      CurrencyFormatter.format(quote['roadTax'])),
                 if (quote['insurance'] != null)
-                  _buildPriceRow('Comprehensive Insurance', CurrencyFormatter.format(quote['insurance'])),
-                ...items.map((it) => _buildPriceRow(it['label'] ?? 'Charge', CurrencyFormatter.format(it['amount']))),
+                  _buildPriceRow('Comprehensive Insurance',
+                      CurrencyFormatter.format(quote['insurance'])),
+                ...items.map((it) => _buildPriceRow(it['label'] ?? 'Charge',
+                    CurrencyFormatter.format(it['amount']))),
                 if (accessories.isNotEmpty) ...[
                   const Divider(height: 16),
-                  const Text('Accessories Included', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  const Text('Accessories Included',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                   const SizedBox(height: 6),
                   ...accessories.map((acc) => _buildPriceRow(
                         acc['accessory']?['name'] ?? acc['name'] ?? 'Accessory',
@@ -688,7 +762,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                       )),
                 ],
                 const Divider(height: 20),
-                _buildPriceRow('Grand Total Quotation', grandTotal, isBold: true, color: const Color(0xFFDC2626)),
+                _buildPriceRow('Grand Total Quotation', grandTotal,
+                    isBold: true, color: const Color(0xFFDC2626)),
               ],
             ),
           ),
@@ -696,9 +771,11 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         actions: [
           OutlinedButton.icon(
             onPressed: () async {
-              final idOrNum = quoteNumber.isNotEmpty ? quoteNumber : (quote['id'] ?? '');
+              final idOrNum =
+                  quoteNumber.isNotEmpty ? quoteNumber : (quote['id'] ?? '');
               if (idOrNum.toString().isNotEmpty) {
-                final uri = Uri.parse('${ApiConstants.baseUrl}/quotations/$idOrNum/print');
+                final uri = Uri.parse(
+                    '${ApiConstants.baseUrl}/quotations/$idOrNum/print');
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
               }
             },
@@ -707,18 +784,25 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
           ),
           OutlinedButton.icon(
             onPressed: () async {
-              final mobile = (customer['mobile'] ?? '').toString().replaceAll(RegExp(r'[^0-9]'), '');
+              final mobile = (customer['mobile'] ?? '')
+                  .toString()
+                  .replaceAll(RegExp(r'[^0-9]'), '');
               final text = Uri.encodeComponent(
                 'Namaste ${customer['name'] ?? ''}, here is your quotation for $vName ($colour):\n'
                 'Quote No: $quoteNumber\nGrand Total: $grandTotal\nYash Honda Pune.',
               );
-              await launchUrl(Uri.parse('https://wa.me/91$mobile?text=$text'), mode: LaunchMode.externalApplication);
+              await launchUrl(Uri.parse('https://wa.me/91$mobile?text=$text'),
+                  mode: LaunchMode.externalApplication);
             },
-            icon: const Icon(Icons.chat_outlined, size: 16, color: Color(0xFF16A34A)),
-            label: const Text('WhatsApp', style: TextStyle(color: Color(0xFF16A34A))),
+            icon: const Icon(Icons.chat_outlined,
+                size: 16, color: Color(0xFF16A34A)),
+            label: const Text('WhatsApp',
+                style: TextStyle(color: Color(0xFF16A34A))),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Close'),
           ),
@@ -727,14 +811,23 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     );
   }
 
-  Widget _buildPriceRow(String label, String amount, {bool isBold = false, Color? color}) {
+  Widget _buildPriceRow(String label, String amount,
+      {bool isBold = false, Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 12, fontWeight: isBold ? FontWeight.w700 : FontWeight.normal, color: const Color(0xFF475569))),
-          Text(amount, style: TextStyle(fontSize: 12, fontWeight: isBold ? FontWeight.w800 : FontWeight.w600, color: color ?? const Color(0xFF0F172A))),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isBold ? FontWeight.w700 : FontWeight.normal,
+                  color: const Color(0xFF475569))),
+          Text(amount,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+                  color: color ?? const Color(0xFF0F172A))),
         ],
       ),
     );
@@ -760,11 +853,16 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
           final rawEmail = customer['email']?.toString() ?? '-';
           final hasMobile = rawMobile != '-' && rawMobile.isNotEmpty;
           final hasEmail = rawEmail != '-' && rawEmail.isNotEmpty;
-          final mobileDisplay = (dialogMobileRevealed || !hasMobile) ? rawMobile : MaskUtil.maskMobile(rawMobile);
-          final emailDisplay = (dialogEmailRevealed || !hasEmail) ? rawEmail : MaskUtil.maskEmail(rawEmail);
+          final mobileDisplay = (dialogMobileRevealed || !hasMobile)
+              ? rawMobile
+              : MaskUtil.maskMobile(rawMobile);
+          final emailDisplay = (dialogEmailRevealed || !hasEmail)
+              ? rawEmail
+              : MaskUtil.maskEmail(rawEmail);
 
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             contentPadding: const EdgeInsets.all(24),
             title: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -774,12 +872,16 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                   children: [
                     Text(
                       customer['name'] ?? 'Enquiry Details',
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF0F172A)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                          color: Color(0xFF0F172A)),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${enquiry['branch']?['name'] ?? 'Yash Honda'} • ${DateFormatter.formatDate(enquiry['createdAt'])}',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFF64748B)),
                     ),
                   ],
                 ),
@@ -795,7 +897,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                     const Divider(height: 20),
 
                     // Customer info card with tap-to-reveal sensitive data
-                    _buildSectionHeader('Customer Information', Icons.person_outline),
+                    _buildSectionHeader(
+                        'Customer Information', Icons.person_outline),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -814,12 +917,18 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Mobile', style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                                const Text('Mobile',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF64748B),
+                                        fontWeight: FontWeight.w500)),
                                 const SizedBox(height: 2),
                                 InkWell(
                                   onTap: () {
                                     if (hasMobile) {
-                                      setDialogState(() => dialogMobileRevealed = !dialogMobileRevealed);
+                                      setDialogState(() =>
+                                          dialogMobileRevealed =
+                                              !dialogMobileRevealed);
                                       setState(() {
                                         if (dialogMobileRevealed) {
                                           _revealedMobiles.add(enqId);
@@ -838,9 +947,14 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                           mobileDisplay,
                                           style: TextStyle(
                                             fontSize: 12,
-                                            fontWeight: dialogMobileRevealed ? FontWeight.w600 : FontWeight.w500,
-                                            color: dialogMobileRevealed ? const Color(0xFF0F172A) : const Color(0xFF475569),
-                                            letterSpacing: dialogMobileRevealed ? 0 : 0.6,
+                                            fontWeight: dialogMobileRevealed
+                                                ? FontWeight.w600
+                                                : FontWeight.w500,
+                                            color: dialogMobileRevealed
+                                                ? const Color(0xFF0F172A)
+                                                : const Color(0xFF475569),
+                                            letterSpacing:
+                                                dialogMobileRevealed ? 0 : 0.6,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -849,9 +963,13 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                       if (hasMobile) ...[
                                         const SizedBox(width: 4),
                                         Icon(
-                                          dialogMobileRevealed ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                          dialogMobileRevealed
+                                              ? Icons.visibility_outlined
+                                              : Icons.visibility_off_outlined,
                                           size: 13,
-                                          color: dialogMobileRevealed ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                                          color: dialogMobileRevealed
+                                              ? const Color(0xFFDC2626)
+                                              : const Color(0xFF94A3B8),
                                         ),
                                       ],
                                     ],
@@ -866,12 +984,17 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Email', style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                                const Text('Email',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF64748B),
+                                        fontWeight: FontWeight.w500)),
                                 const SizedBox(height: 2),
                                 InkWell(
                                   onTap: () {
                                     if (hasEmail) {
-                                      setDialogState(() => dialogEmailRevealed = !dialogEmailRevealed);
+                                      setDialogState(() => dialogEmailRevealed =
+                                          !dialogEmailRevealed);
                                       setState(() {
                                         if (dialogEmailRevealed) {
                                           _revealedEmails.add(enqId);
@@ -890,8 +1013,12 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                           emailDisplay,
                                           style: TextStyle(
                                             fontSize: 12,
-                                            fontWeight: dialogEmailRevealed ? FontWeight.w600 : FontWeight.w400,
-                                            color: dialogEmailRevealed ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                                            fontWeight: dialogEmailRevealed
+                                                ? FontWeight.w600
+                                                : FontWeight.w400,
+                                            color: dialogEmailRevealed
+                                                ? const Color(0xFF0F172A)
+                                                : const Color(0xFF64748B),
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -900,9 +1027,13 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                       if (hasEmail) ...[
                                         const SizedBox(width: 4),
                                         Icon(
-                                          dialogEmailRevealed ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                          dialogEmailRevealed
+                                              ? Icons.visibility_outlined
+                                              : Icons.visibility_off_outlined,
                                           size: 13,
-                                          color: dialogEmailRevealed ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                                          color: dialogEmailRevealed
+                                              ? const Color(0xFFDC2626)
+                                              : const Color(0xFF94A3B8),
                                         ),
                                       ],
                                     ],
@@ -916,11 +1047,18 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Area', style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                                const Text('Area',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF64748B),
+                                        fontWeight: FontWeight.w500)),
                                 const SizedBox(height: 2),
                                 Text(
                                   customer['area']?['name'] ?? '-',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF0F172A)),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -932,11 +1070,18 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Address', style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                                const Text('Address',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF64748B),
+                                        fontWeight: FontWeight.w500)),
                                 const SizedBox(height: 2),
                                 Text(
                                   customer['address'] ?? '-',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF0F172A)),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -948,118 +1093,171 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                // Vehicle & Quote
-                _buildSectionHeader('Vehicle & Quotation', Icons.two_wheeler_outlined),
-                const SizedBox(height: 8),
-                _buildInfoGrid([
-                  {'label': 'Model', 'val': vehicle['name'] ?? '-'},
-                  {'label': 'Colour', 'val': quote['colourName'] ?? '-'},
-                  {'label': 'Official Quote No', 'val': quoteNumber},
-                  {'label': 'Grand Total', 'val': CurrencyFormatter.format(quote['grandTotal'])},
-                ]),
-                const SizedBox(height: 16),
+                    // Vehicle & Quote
+                    _buildSectionHeader(
+                        'Vehicle & Quotation', Icons.two_wheeler_outlined),
+                    const SizedBox(height: 8),
+                    _buildInfoGrid([
+                      {'label': 'Model', 'val': vehicle['name'] ?? '-'},
+                      {'label': 'Colour', 'val': quote['colourName'] ?? '-'},
+                      {'label': 'Official Quote No', 'val': quoteNumber},
+                      {
+                        'label': 'Grand Total',
+                        'val': CurrencyFormatter.format(quote['grandTotal'])
+                      },
+                    ]),
+                    const SizedBox(height: 16),
 
-                // Purchase & Finance
-                _buildSectionHeader('Purchase & Finance Details', Icons.credit_card_outlined),
-                const SizedBox(height: 8),
-                _buildInfoGrid([
-                  {'label': 'Purchase Mode', 'val': enquiry['purchaseMode'] ?? '-'},
-                  {'label': 'Financier', 'val': enquiry['financier']?['name'] ?? '-'},
-                  {'label': 'Buying Timeline', 'val': enquiry['buyingWhen'] ?? '-'},
-                  {'label': 'Exchange', 'val': enquiry['exchange'] ?? 'No'},
-                ]),
-                const SizedBox(height: 16),
+                    // Purchase & Finance
+                    _buildSectionHeader('Purchase & Finance Details',
+                        Icons.credit_card_outlined),
+                    const SizedBox(height: 8),
+                    _buildInfoGrid([
+                      {
+                        'label': 'Purchase Mode',
+                        'val': enquiry['purchaseMode'] ?? '-'
+                      },
+                      {
+                        'label': 'Financier',
+                        'val': enquiry['financier']?['name'] ?? '-'
+                      },
+                      {
+                        'label': 'Buying Timeline',
+                        'val': enquiry['buyingWhen'] ?? '-'
+                      },
+                      {'label': 'Exchange', 'val': enquiry['exchange'] ?? 'No'},
+                    ]),
+                    const SizedBox(height: 16),
 
-                // Sales & Attribution
-                _buildSectionHeader('Attribution & Sales Rep', Icons.assignment_ind_outlined),
-                const SizedBox(height: 8),
-                _buildInfoGrid([
-                  {'label': 'Sales Executive', 'val': enquiry['assignedTo']?['name'] ?? enquiry['createdBy']?['name'] ?? '-'},
-                  {'label': 'Lead Source', 'val': enquiry['leadSource']?['name'] ?? enquiry['enquiryType'] ?? '-'},
-                  {'label': 'Enquiry Type', 'val': enquiry['enquiryType'] ?? '-'},
-                  {'label': 'Consent', 'val': 'Yes'},
-                ]),
+                    // Sales & Attribution
+                    _buildSectionHeader('Attribution & Sales Rep',
+                        Icons.assignment_ind_outlined),
+                    const SizedBox(height: 8),
+                    _buildInfoGrid([
+                      {
+                        'label': 'Sales Executive',
+                        'val': enquiry['assignedTo']?['name'] ??
+                            enquiry['createdBy']?['name'] ??
+                            '-'
+                      },
+                      {
+                        'label': 'Lead Source',
+                        'val': enquiry['leadSource']?['name'] ??
+                            enquiry['enquiryType'] ??
+                            '-'
+                      },
+                      {
+                        'label': 'Enquiry Type',
+                        'val': enquiry['enquiryType'] ?? '-'
+                      },
+                      {'label': 'Consent', 'val': 'Yes'},
+                    ]),
 
-                if (enquiry['remarks'] != null && enquiry['remarks'].toString().isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  _buildSectionHeader('Remarks', Icons.notes_outlined),
-                  const SizedBox(height: 6),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Text(enquiry['remarks'].toString(), style: const TextStyle(fontSize: 12, color: Color(0xFF334155))),
-                  ),
-                ],
-
-                const SizedBox(height: 16),
-                _buildSectionHeader('Follow-ups (${followUps.length})', Icons.access_time_outlined),
-                const SizedBox(height: 6),
-                if (followUps.isEmpty)
-                  const Text('No follow-up logged yet.', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontStyle: FontStyle.italic))
-                else
-                  ...followUps.take(3).map((f) => Container(
-                        margin: const EdgeInsets.only(bottom: 6),
-                        padding: const EdgeInsets.all(8),
+                    if (enquiry['remarks'] != null &&
+                        enquiry['remarks'].toString().isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _buildSectionHeader('Remarks', Icons.notes_outlined),
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
+                          color: const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.event_note, size: 14, color: Color(0xFF64748B)),
-                            const SizedBox(width: 8),
-                            Text(DateFormatter.formatDateTime(f['scheduledAt']), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                            const SizedBox(width: 10),
-                            Expanded(child: Text(f['remarks'] ?? 'Scheduled call', style: const TextStyle(fontSize: 11))),
-                          ],
-                        ),
-                      )),
-              ],
+                        child: Text(enquiry['remarks'].toString(),
+                            style: const TextStyle(
+                                fontSize: 12, color: Color(0xFF334155))),
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+                    _buildSectionHeader('Follow-ups (${followUps.length})',
+                        Icons.access_time_outlined),
+                    const SizedBox(height: 6),
+                    if (followUps.isEmpty)
+                      const Text('No follow-up logged yet.',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF94A3B8),
+                              fontStyle: FontStyle.italic))
+                    else
+                      ...followUps.take(3).map((f) => Container(
+                            margin: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.event_note,
+                                    size: 14, color: Color(0xFF64748B)),
+                                const SizedBox(width: 8),
+                                Text(
+                                    DateFormatter.formatDateTime(
+                                        f['scheduledAt']),
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                    child: Text(
+                                        f['remarks'] ?? 'Scheduled call',
+                                        style: const TextStyle(fontSize: 11))),
+                              ],
+                            ),
+                          )),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-        actions: [
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _showScheduleFollowUp(enquiry);
-            },
-            icon: const Icon(Icons.history, size: 16),
-            label: const Text('Add Follow-up'),
-          ),
-          if (quote['id'] != null)
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB), foregroundColor: Colors.white),
-              onPressed: () {
-                Navigator.pop(ctx);
-                _showQuotationModal(enquiry, quote);
-              },
-              icon: const Icon(Icons.receipt_long, size: 16),
-              label: const Text('View Quotation'),
-            ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
-          ),
-        ],
-      );
-    },
-  ),
-);
-}
+            actions: [
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _showScheduleFollowUp(enquiry);
+                },
+                icon: const Icon(Icons.history, size: 16),
+                label: const Text('Add Follow-up'),
+              ),
+              if (quote['id'] != null)
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _showQuotationModal(enquiry, quote);
+                  },
+                  icon: const Icon(Icons.receipt_long, size: 16),
+                  label: const Text('View Quotation'),
+                ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    foregroundColor: Colors.white),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Close'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   Widget _buildSectionHeader(String title, IconData icon) {
     return Row(
       children: [
         Icon(icon, size: 15, color: const Color(0xFFDC2626)),
         const SizedBox(width: 6),
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A))),
+        Text(title,
+            style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: Color(0xFF0F172A))),
       ],
     );
   }
@@ -1081,10 +1279,17 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(it['label']!, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                Text(it['label']!,
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
                 Text(it['val']!,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0F172A)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
               ],
@@ -1133,9 +1338,14 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 6, height: 6, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+          Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
           const SizedBox(width: 5),
-          Text(status, style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w700)),
+          Text(status,
+              style: TextStyle(
+                  color: fg, fontSize: 11, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -1154,14 +1364,18 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
               ? const Color(0xFFECFDF5)
               : (curStatus == 'Closed'
                   ? const Color(0xFFFEF2F2)
-                  : (curStatus == 'Other Dealer' ? const Color(0xFFF1F5F9) : const Color(0xFFEFF6FF))),
+                  : (curStatus == 'Other Dealer'
+                      ? const Color(0xFFF1F5F9)
+                      : const Color(0xFFEFF6FF))),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: curStatus == 'Booked'
                 ? const Color(0xFFA7F3D0)
                 : (curStatus == 'Closed'
                     ? const Color(0xFFFECACA)
-                    : (curStatus == 'Other Dealer' ? const Color(0xFFE2E8F0) : const Color(0xFFBFDBFE))),
+                    : (curStatus == 'Other Dealer'
+                        ? const Color(0xFFE2E8F0)
+                        : const Color(0xFFBFDBFE))),
           ),
         ),
         child: Row(
@@ -1176,7 +1390,9 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                     ? const Color(0xFF059669)
                     : (curStatus == 'Closed'
                         ? const Color(0xFFDC2626)
-                        : (curStatus == 'Other Dealer' ? const Color(0xFF64748B) : const Color(0xFF2563EB))),
+                        : (curStatus == 'Other Dealer'
+                            ? const Color(0xFF64748B)
+                            : const Color(0xFF2563EB))),
               ),
             ),
             const SizedBox(width: 4),
@@ -1189,7 +1405,9 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                     ? const Color(0xFF059669)
                     : (curStatus == 'Closed'
                         ? const Color(0xFFDC2626)
-                        : (curStatus == 'Other Dealer' ? const Color(0xFF64748B) : const Color(0xFF2563EB))),
+                        : (curStatus == 'Other Dealer'
+                            ? const Color(0xFF64748B)
+                            : const Color(0xFF2563EB))),
               ),
             ),
             const SizedBox(width: 2),
@@ -1200,7 +1418,9 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                   ? const Color(0xFF059669)
                   : (curStatus == 'Closed'
                       ? const Color(0xFFDC2626)
-                      : (curStatus == 'Other Dealer' ? const Color(0xFF64748B) : const Color(0xFF2563EB))),
+                      : (curStatus == 'Other Dealer'
+                          ? const Color(0xFF64748B)
+                          : const Color(0xFF2563EB))),
             ),
           ],
         ),
@@ -1220,9 +1440,14 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       height: 32,
       child: Row(
         children: [
-          Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 8),
-          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600, color: color)),
         ],
       ),
     );
@@ -1235,7 +1460,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       decoration: BoxDecoration(
         color: isOwned ? const Color(0xFFECFDF5) : const Color(0xFFFEF3C7),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isOwned ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A)),
+        border: Border.all(
+            color: isOwned ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1245,7 +1471,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
             height: 5,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isOwned ? const Color(0xFF059669) : const Color(0xFFD97706),
+              color:
+                  isOwned ? const Color(0xFF059669) : const Color(0xFFD97706),
             ),
           ),
           const SizedBox(width: 4),
@@ -1254,7 +1481,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: isOwned ? const Color(0xFF059669) : const Color(0xFFD97706),
+              color:
+                  isOwned ? const Color(0xFF059669) : const Color(0xFFD97706),
             ),
           ),
           const SizedBox(width: 2),
@@ -1298,12 +1526,20 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                   ),
                   child: Row(
                     children: _tabs.map((tab) {
-                      final isSelected = _activeTab == tab && !_filterFollowUpsDue;
+                      final isSelected =
+                          _activeTab == tab && !_filterFollowUpsDue;
                       String tabTooltip = 'View all enquiries';
-                      if (tab == 'Open') tabTooltip = 'Active leads currently in progress or quotation stage';
-                      if (tab == 'Booked') tabTooltip = 'Confirmed bookings with vehicle token advances';
-                      if (tab == 'Closed') tabTooltip = 'Discontinued or lost enquiry leads';
-                      if (tab == 'Other Dealer') tabTooltip = 'Leads who purchased from rival dealerships';
+                      if (tab == 'Open')
+                        tabTooltip =
+                            'Active leads currently in progress or quotation stage';
+                      if (tab == 'Booked')
+                        tabTooltip =
+                            'Confirmed bookings with vehicle token advances';
+                      if (tab == 'Closed')
+                        tabTooltip = 'Discontinued or lost enquiry leads';
+                      if (tab == 'Other Dealer')
+                        tabTooltip =
+                            'Leads who purchased from rival dealerships';
 
                       return Tooltip(
                         message: tabTooltip,
@@ -1316,17 +1552,24 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                           },
                           borderRadius: BorderRadius.circular(6),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 6),
                             decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFF0F172A) : Colors.transparent,
+                              color: isSelected
+                                  ? const Color(0xFF0F172A)
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               tab,
                               style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                color: isSelected ? Colors.white : const Color(0xFF475569),
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: isSelected
+                                    ? Colors.white
+                                    : const Color(0xFF475569),
                               ),
                             ),
                           ),
@@ -1340,7 +1583,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
 
                 // Follow-ups due pill
                 Tooltip(
-                  message: 'Filter to view only customer leads with follow-up calls due today or pending',
+                  message:
+                      'Filter to view only customer leads with follow-up calls due today or pending',
                   child: InkWell(
                     onTap: () {
                       setState(() {
@@ -1349,9 +1593,12 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                     },
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: _filterFollowUpsDue ? const Color(0xFFD97706) : const Color(0xFFFEF3C7),
+                        color: _filterFollowUpsDue
+                            ? const Color(0xFFD97706)
+                            : const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: const Color(0xFFFDE68A)),
                       ),
@@ -1360,7 +1607,9 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                           Icon(
                             Icons.notifications_active_outlined,
                             size: 14,
-                            color: _filterFollowUpsDue ? Colors.white : const Color(0xFFD97706),
+                            color: _filterFollowUpsDue
+                                ? Colors.white
+                                : const Color(0xFFD97706),
                           ),
                           const SizedBox(width: 6),
                           Text(
@@ -1368,7 +1617,9 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: _filterFollowUpsDue ? Colors.white : const Color(0xFFD97706),
+                              color: _filterFollowUpsDue
+                                  ? Colors.white
+                                  : const Color(0xFFD97706),
                             ),
                           ),
                         ],
@@ -1380,26 +1631,32 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
 
                 // Search box (clean single-layer Material input)
                 Tooltip(
-                  message: 'Quick search enquiries by customer name, 10-digit mobile, or quotation number',
+                  message:
+                      'Quick search enquiries by customer name, 10-digit mobile, or quotation number',
                   child: SizedBox(
                     width: 250,
                     height: 36,
                     child: TextField(
                       controller: _searchCtrl,
-                      style: const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
+                      style: const TextStyle(
+                          fontSize: 12.5, color: Color(0xFF0F172A)),
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
                         hintText: 'Search name, mobile or quote...',
-                        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                        hintStyle: const TextStyle(
+                            color: Color(0xFF94A3B8), fontSize: 12),
                         prefixIcon: const Padding(
                           padding: EdgeInsets.only(left: 10, right: 6),
-                          child: Icon(Icons.search, size: 16, color: Color(0xFF64748B)),
+                          child: Icon(Icons.search,
+                              size: 16, color: Color(0xFF64748B)),
                         ),
-                        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                        prefixIconConstraints:
+                            const BoxConstraints(minWidth: 0, minHeight: 0),
                         suffixIcon: _searchQuery.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(Icons.close, size: 15, color: Color(0xFF94A3B8)),
+                                icon: const Icon(Icons.close,
+                                    size: 15, color: Color(0xFF94A3B8)),
                                 padding: EdgeInsets.zero,
                                 onPressed: () {
                                   _searchCtrl.clear();
@@ -1407,14 +1664,17 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                 },
                               )
                             : null,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 0),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFE2E8F0)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.4),
+                          borderSide: const BorderSide(
+                              color: Color(0xFFDC2626), width: 1.4),
                         ),
                       ),
                       onChanged: (val) {
@@ -1426,19 +1686,26 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                 const SizedBox(width: 8),
 
                 // Filter icon button
-                _buildSquareIconButton(Icons.tune, _showFilterDialog, tooltip: 'Filter enquiries by branch, type, or purchase mode'),
+                _buildSquareIconButton(Icons.tune, _showFilterDialog,
+                    tooltip:
+                        'Filter enquiries by branch, type, or purchase mode'),
                 const SizedBox(width: 6),
 
                 // Export icon button
-                _buildSquareIconButton(Icons.file_download_outlined, _exportCsv, tooltip: 'Export filtered customer enquiries to CSV / Excel spreadsheet'),
+                _buildSquareIconButton(Icons.file_download_outlined, _exportCsv,
+                    tooltip:
+                        'Export filtered customer enquiries to CSV / Excel spreadsheet'),
                 const SizedBox(width: 6),
 
                 // Print icon button
-                _buildSquareIconButton(Icons.print_outlined, _printDirectory, tooltip: 'Download printable PDF directory summary report'),
+                _buildSquareIconButton(Icons.print_outlined, _printDirectory,
+                    tooltip: 'Download printable PDF directory summary report'),
                 const SizedBox(width: 6),
 
                 // Refresh / View icon button
-                _buildSquareIconButton(Icons.refresh, () => _loadEnquiries(showFeedback: true), tooltip: 'Reload latest enquiries from database'),
+                _buildSquareIconButton(
+                    Icons.refresh, () => _loadEnquiries(showFeedback: true),
+                    tooltip: 'Reload latest enquiries from database'),
               ],
             ),
             const SizedBox(height: 16),
@@ -1446,20 +1713,28 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
             // Full Data Table matching prototype screenshots
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: Color(0xFFDC2626)))
+                  ? const Center(
+                      child:
+                          CircularProgressIndicator(color: Color(0xFFDC2626)))
                   : filtered.isEmpty
                       ? Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.inbox_outlined, size: 48, color: Color(0xFF94A3B8)),
+                              const Icon(Icons.inbox_outlined,
+                                  size: 48, color: Color(0xFF94A3B8)),
                               const SizedBox(height: 12),
                               const Text('No enquiries found in this view',
-                                  style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF475569))),
                               const SizedBox(height: 8),
                               ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
-                                onPressed: () => context.go('/enquiries/vehicle-picker'),
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFDC2626),
+                                    foregroundColor: Colors.white),
+                                onPressed: () =>
+                                    context.go('/enquiries/vehicle-picker'),
                                 child: const Text('+ New Enquiry'),
                               ),
                             ],
@@ -1471,7 +1746,10 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: const Color(0xFFE2E8F0)),
                             boxShadow: const [
-                              BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
+                              BoxShadow(
+                                  color: Color(0x04000000),
+                                  blurRadius: 6,
+                                  offset: Offset(0, 2)),
                             ],
                           ),
                           child: ClipRRect(
@@ -1486,16 +1764,20 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                   headingRowHeight: 40,
                                   dataRowMinHeight: 44,
                                   dataRowMaxHeight: 48,
-                                  headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+                                  headingRowColor: WidgetStateProperty.all(
+                                      const Color(0xFFF8FAFC)),
                                   columns: [
                                     DataColumn(
                                       label: Checkbox(
-                                        value: _selectedIds.length == filtered.length && filtered.isNotEmpty,
+                                        value: _selectedIds.length ==
+                                                filtered.length &&
+                                            filtered.isNotEmpty,
                                         activeColor: const Color(0xFFDC2626),
                                         onChanged: (val) {
                                           setState(() {
                                             if (val == true) {
-                                              _selectedIds.addAll(filtered.map((e) => e['id'].toString()));
+                                              _selectedIds.addAll(filtered.map(
+                                                  (e) => e['id'].toString()));
                                             } else {
                                               _selectedIds.clear();
                                             }
@@ -1503,121 +1785,240 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                         },
                                       ),
                                     ),
-                                    const DataColumn(label: Text('No.', style: _headerStyle), tooltip: 'Lead index & quotation revision number'),
-                                    const DataColumn(label: Text('Name', style: _headerStyle), tooltip: 'Customer full name (Click to open enquiry card)'),
+                                    const DataColumn(
+                                        label: Text('No.', style: _headerStyle),
+                                        tooltip:
+                                            'Lead index & quotation revision number'),
+                                    const DataColumn(
+                                        label:
+                                            Text('Name', style: _headerStyle),
+                                        tooltip:
+                                            'Customer full name (Click to open enquiry card)'),
                                     DataColumn(
                                       label: InkWell(
                                         onTap: () {
                                           setState(() {
-                                            if (_revealedMobiles.length == filtered.length && filtered.isNotEmpty) {
+                                            if (_revealedMobiles.length ==
+                                                    filtered.length &&
+                                                filtered.isNotEmpty) {
                                               _revealedMobiles.clear();
                                             } else {
-                                              _revealedMobiles.addAll(filtered.map((e) => e['id'].toString()));
+                                              _revealedMobiles.addAll(
+                                                  filtered.map((e) =>
+                                                      e['id'].toString()));
                                             }
                                           });
                                         },
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            const Text('Mobile', style: _headerStyle),
+                                            const Text('Mobile',
+                                                style: _headerStyle),
                                             const SizedBox(width: 4),
                                             Icon(
-                                              (_revealedMobiles.length == filtered.length && filtered.isNotEmpty)
+                                              (_revealedMobiles.length ==
+                                                          filtered.length &&
+                                                      filtered.isNotEmpty)
                                                   ? Icons.visibility_outlined
-                                                  : Icons.visibility_off_outlined,
+                                                  : Icons
+                                                      .visibility_off_outlined,
                                               size: 13,
                                               color: const Color(0xFF64748B),
                                             ),
                                           ],
                                         ),
                                       ),
-                                      tooltip: 'Customer mobile contact number (Masked for privacy • Click to toggle reveal/hide all)',
+                                      tooltip:
+                                          'Customer mobile contact number (Masked for privacy • Click to toggle reveal/hide all)',
                                     ),
                                     DataColumn(
                                       label: InkWell(
                                         onTap: () {
                                           setState(() {
-                                            if (_revealedEmails.length == filtered.length && filtered.isNotEmpty) {
+                                            if (_revealedEmails.length ==
+                                                    filtered.length &&
+                                                filtered.isNotEmpty) {
                                               _revealedEmails.clear();
                                             } else {
-                                              _revealedEmails.addAll(filtered.map((e) => e['id'].toString()));
+                                              _revealedEmails.addAll(
+                                                  filtered.map((e) =>
+                                                      e['id'].toString()));
                                             }
                                           });
                                         },
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            const Text('Email', style: _headerStyle),
+                                            const Text('Email',
+                                                style: _headerStyle),
                                             const SizedBox(width: 4),
                                             Icon(
-                                              (_revealedEmails.length == filtered.length && filtered.isNotEmpty)
+                                              (_revealedEmails.length ==
+                                                          filtered.length &&
+                                                      filtered.isNotEmpty)
                                                   ? Icons.visibility_outlined
-                                                  : Icons.visibility_off_outlined,
+                                                  : Icons
+                                                      .visibility_off_outlined,
                                               size: 13,
                                               color: const Color(0xFF64748B),
                                             ),
                                           ],
                                         ),
                                       ),
-                                      tooltip: 'Customer email address (Masked for privacy • Click to toggle reveal/hide all)',
+                                      tooltip:
+                                          'Customer email address (Masked for privacy • Click to toggle reveal/hide all)',
                                     ),
-                                    const DataColumn(label: Text('Type', style: _headerStyle), tooltip: 'Customer enquiry channel: Walk-in or Telephonic inquiry'),
-                                    const DataColumn(label: Text('Source', style: _headerStyle), tooltip: 'Marketing acquisition channel (Walk-in, BikeWale, Digital Ads, etc.)'),
-                                    const DataColumn(label: Text('Branch', style: _headerStyle), tooltip: 'Dealership showroom branch where this enquiry was generated'),
-                                    const DataColumn(label: Text('Area', style: _headerStyle), tooltip: 'Customer residential/work locality in Pune'),
-                                    const DataColumn(label: Text('Model(s)', style: _headerStyle), tooltip: 'Interested Honda motorcycle or scooter model'),
-                                    const DataColumn(label: Text('Mode', style: _headerStyle), tooltip: 'Preferred payment mode (Cash, Bank Finance, etc.)'),
-                                    const DataColumn(label: Text('Financier', style: _headerStyle), tooltip: 'Financing bank or NBFC provider'),
-                                    const DataColumn(label: Text('Exch', style: _headerStyle), tooltip: 'Pre-owned two-wheeler exchange evaluation'),
-                                    const DataColumn(label: Text('Old vehicle', style: _headerStyle), tooltip: 'Make & model of customer trade-in vehicle'),
-                                    const DataColumn(label: Text('Kms', style: _headerStyle), tooltip: 'Odometer mileage on exchange vehicle'),
-                                    const DataColumn(label: Text('Owner', style: _headerStyle), tooltip: 'Exchange vehicle RC ownership transfer tier'),
-                                    const DataColumn(label: Text('Exch value', style: _headerStyle), tooltip: 'Evaluated trade-in valuation in Rupees'),
-                                    const DataColumn(label: Text('Consent', style: _headerStyle), tooltip: 'Customer DPDP privacy & contact consent'),
-                                    const DataColumn(label: Text('Sales Exec', style: _headerStyle), tooltip: 'Showroom sales representative handling this customer'),
-                                    const DataColumn(label: Text('Ownership', style: _headerStyle), tooltip: 'Lead assignment ownership status'),
-                                    const DataColumn(label: Text('Buying', style: _headerStyle), tooltip: 'Customer anticipated purchase timeline'),
-                                    const DataColumn(label: Text('Enq. Date', style: _headerStyle), tooltip: 'Initial enquiry registration timestamp'),
-                                    const DataColumn(label: Text('Status', style: _headerStyle), tooltip: 'Lead stage (Click to transition status)'),
-                                    const DataColumn(label: Text('Remarks', style: _headerStyle), tooltip: 'Consultation notes & follow-up comments'),
-                                    const DataColumn(label: Text('Actions', style: _headerStyle), tooltip: 'Quotation, telephony call, schedule callback & delete'),
+                                    const DataColumn(
+                                        label:
+                                            Text('Type', style: _headerStyle),
+                                        tooltip:
+                                            'Customer enquiry channel: Walk-in or Telephonic inquiry'),
+                                    const DataColumn(
+                                        label:
+                                            Text('Source', style: _headerStyle),
+                                        tooltip:
+                                            'Marketing acquisition channel (Walk-in, BikeWale, Digital Ads, etc.)'),
+                                    const DataColumn(
+                                        label:
+                                            Text('Branch', style: _headerStyle),
+                                        tooltip:
+                                            'Dealership showroom branch where this enquiry was generated'),
+                                    const DataColumn(
+                                        label:
+                                            Text('Area', style: _headerStyle),
+                                        tooltip:
+                                            'Customer residential/work locality in Pune'),
+                                    const DataColumn(
+                                        label: Text('Model(s)',
+                                            style: _headerStyle),
+                                        tooltip:
+                                            'Interested Honda motorcycle or scooter model'),
+                                    const DataColumn(
+                                        label:
+                                            Text('Mode', style: _headerStyle),
+                                        tooltip:
+                                            'Preferred payment mode (Cash, Bank Finance, etc.)'),
+                                    const DataColumn(
+                                        label: Text('Financier',
+                                            style: _headerStyle),
+                                        tooltip:
+                                            'Financing bank or NBFC provider'),
+                                    const DataColumn(
+                                        label:
+                                            Text('Exch', style: _headerStyle),
+                                        tooltip:
+                                            'Pre-owned two-wheeler exchange evaluation'),
+                                    const DataColumn(
+                                        label: Text('Old vehicle',
+                                            style: _headerStyle),
+                                        tooltip:
+                                            'Make & model of customer trade-in vehicle'),
+                                    const DataColumn(
+                                        label: Text('Kms', style: _headerStyle),
+                                        tooltip:
+                                            'Odometer mileage on exchange vehicle'),
+                                    const DataColumn(
+                                        label:
+                                            Text('Owner', style: _headerStyle),
+                                        tooltip:
+                                            'Exchange vehicle RC ownership transfer tier'),
+                                    const DataColumn(
+                                        label: Text('Exch value',
+                                            style: _headerStyle),
+                                        tooltip:
+                                            'Evaluated trade-in valuation in Rupees'),
+                                    const DataColumn(
+                                        label: Text('Consent',
+                                            style: _headerStyle),
+                                        tooltip:
+                                            'Customer DPDP privacy & contact consent'),
+                                    const DataColumn(
+                                        label: Text('Sales Exec',
+                                            style: _headerStyle),
+                                        tooltip:
+                                            'Showroom sales representative handling this customer'),
+                                    const DataColumn(
+                                        label: Text('Ownership',
+                                            style: _headerStyle),
+                                        tooltip:
+                                            'Lead assignment ownership status'),
+                                    const DataColumn(
+                                        label:
+                                            Text('Buying', style: _headerStyle),
+                                        tooltip:
+                                            'Customer anticipated purchase timeline'),
+                                    const DataColumn(
+                                        label: Text('Enq. Date',
+                                            style: _headerStyle),
+                                        tooltip:
+                                            'Initial enquiry registration timestamp'),
+                                    const DataColumn(
+                                        label:
+                                            Text('Status', style: _headerStyle),
+                                        tooltip:
+                                            'Lead stage (Click to transition status)'),
+                                    const DataColumn(
+                                        label: Text('Remarks',
+                                            style: _headerStyle),
+                                        tooltip:
+                                            'Consultation notes & follow-up comments'),
+                                    const DataColumn(
+                                        label: Text('Actions',
+                                            style: _headerStyle),
+                                        tooltip:
+                                            'Quotation, telephony call, schedule callback & delete'),
                                   ],
                                   rows: filtered.asMap().entries.map((entry) {
                                     final idx = entry.key;
                                     final e = entry.value;
                                     final id = e['id'].toString();
-                                    final isSelected = _selectedIds.contains(id);
+                                    final isSelected =
+                                        _selectedIds.contains(id);
 
                                     final customer = e['customer'] ?? {};
-                                    final quote = (e['quotations'] as List?)?.firstOrNull ?? {};
+                                    final quote = (e['quotations'] as List?)
+                                            ?.firstOrNull ??
+                                        {};
                                     final vehicle = quote['vehicle'] ?? {};
-                                    final statusDisplay = _mapStatusToDisplay(e['status'] ?? 'ACTIVE');
+                                    final statusDisplay = _mapStatusToDisplay(
+                                        e['status'] ?? 'ACTIVE');
 
                                     // Row tinting matching prototype
                                     Color rowBg = Colors.white;
                                     if (statusDisplay == 'Booked') {
-                                      rowBg = const Color(0xFFF0FDF4); // light green
+                                      rowBg = const Color(
+                                          0xFFF0FDF4); // light green
                                     } else if (statusDisplay == 'Closed') {
-                                      rowBg = const Color(0xFFFEF2F2); // light red
+                                      rowBg =
+                                          const Color(0xFFFEF2F2); // light red
                                     }
 
-                                    final isExchange = (e['exchange']?.toString().toLowerCase().contains('yes') ?? false);
-                                    final revCount = (e['quotations'] as List?)?.length ?? 1;
+                                    final isExchange = (e['exchange']
+                                            ?.toString()
+                                            .toLowerCase()
+                                            .contains('yes') ??
+                                        false);
+                                    final revCount =
+                                        (e['quotations'] as List?)?.length ?? 1;
 
                                     return DataRow(
-                                      color: WidgetStateProperty.resolveWith<Color>((states) {
-                                        if (states.contains(WidgetState.hovered)) {
+                                      color: WidgetStateProperty.resolveWith<
+                                          Color>((states) {
+                                        if (states
+                                            .contains(WidgetState.hovered)) {
                                           return const Color(0xFFF1F5F9);
                                         }
                                         return rowBg;
                                       }),
-                                      onSelectChanged: (_) => _showEnquiryDetails(e),
+                                      onSelectChanged: (_) =>
+                                          _showEnquiryDetails(e),
                                       cells: [
                                         // Checkbox
                                         DataCell(
                                           Checkbox(
                                             value: isSelected,
-                                            activeColor: const Color(0xFFDC2626),
+                                            activeColor:
+                                                const Color(0xFFDC2626),
                                             onChanged: (val) {
                                               setState(() {
                                                 if (val == true) {
@@ -1633,8 +2034,13 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                         // No. (e.g. 93/2)
                                         DataCell(
                                           Tooltip(
-                                            message: 'Lead #${filtered.length - idx} • Quotation Revision $revCount',
-                                            child: Text('${filtered.length - idx}/$revCount', style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                                            message:
+                                                'Lead #${filtered.length - idx} • Quotation Revision $revCount',
+                                            child: Text(
+                                                '${filtered.length - idx}/$revCount',
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF94A3B8))),
                                           ),
                                         ),
 
@@ -1644,7 +2050,10 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                             onTap: () => _showEnquiryDetails(e),
                                             child: Text(
                                               customer['name'] ?? '-',
-                                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                                              style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF0F172A)),
                                             ),
                                           ),
                                         ),
@@ -1653,24 +2062,37 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                         DataCell(
                                           Builder(
                                             builder: (context) {
-                                              final rawMobile = customer['mobile']?.toString() ?? '-';
-                                              final hasMobile = rawMobile != '-' && rawMobile.isNotEmpty;
-                                              final isRevealed = _revealedMobiles.contains(id);
-                                              final displayMobile = (isRevealed || !hasMobile) ? rawMobile : MaskUtil.maskMobile(rawMobile);
+                                              final rawMobile =
+                                                  customer['mobile']
+                                                          ?.toString() ??
+                                                      '-';
+                                              final hasMobile =
+                                                  rawMobile != '-' &&
+                                                      rawMobile.isNotEmpty;
+                                              final isRevealed =
+                                                  _revealedMobiles.contains(id);
+                                              final displayMobile =
+                                                  (isRevealed || !hasMobile)
+                                                      ? rawMobile
+                                                      : MaskUtil.maskMobile(
+                                                          rawMobile);
 
                                               return InkWell(
                                                 onTap: () {
                                                   if (hasMobile) {
                                                     setState(() {
                                                       if (isRevealed) {
-                                                        _revealedMobiles.remove(id);
+                                                        _revealedMobiles
+                                                            .remove(id);
                                                       } else {
-                                                        _revealedMobiles.add(id);
+                                                        _revealedMobiles
+                                                            .add(id);
                                                       }
                                                     });
                                                   }
                                                 },
-                                                borderRadius: BorderRadius.circular(4),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
                                                 child: Tooltip(
                                                   message: !hasMobile
                                                       ? 'No mobile number recorded'
@@ -1678,25 +2100,50 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                                           ? 'Phone: $rawMobile\nClick to mask (protect sensitive data)'
                                                           : 'Phone: $displayMobile\nClick to reveal customer phone number',
                                                   child: Padding(
-                                                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        vertical: 4,
+                                                        horizontal: 2),
                                                     child: Row(
-                                                      mainAxisSize: MainAxisSize.min,
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
                                                       children: [
                                                         Text(
                                                           displayMobile,
                                                           style: TextStyle(
                                                             fontSize: 12,
-                                                            fontWeight: isRevealed ? FontWeight.w600 : FontWeight.w500,
-                                                            color: isRevealed ? const Color(0xFF0F172A) : const Color(0xFF475569),
-                                                            letterSpacing: isRevealed ? 0 : 0.6,
+                                                            fontWeight:
+                                                                isRevealed
+                                                                    ? FontWeight
+                                                                        .w600
+                                                                    : FontWeight
+                                                                        .w500,
+                                                            color: isRevealed
+                                                                ? const Color(
+                                                                    0xFF0F172A)
+                                                                : const Color(
+                                                                    0xFF475569),
+                                                            letterSpacing:
+                                                                isRevealed
+                                                                    ? 0
+                                                                    : 0.6,
                                                           ),
                                                         ),
                                                         if (hasMobile) ...[
-                                                          const SizedBox(width: 5),
+                                                          const SizedBox(
+                                                              width: 5),
                                                           Icon(
-                                                            isRevealed ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                                            isRevealed
+                                                                ? Icons
+                                                                    .visibility_outlined
+                                                                : Icons
+                                                                    .visibility_off_outlined,
                                                             size: 13,
-                                                            color: isRevealed ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                                                            color: isRevealed
+                                                                ? const Color(
+                                                                    0xFFDC2626)
+                                                                : const Color(
+                                                                    0xFF94A3B8),
                                                           ),
                                                         ],
                                                       ],
@@ -1712,24 +2159,35 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                         DataCell(
                                           Builder(
                                             builder: (context) {
-                                              final rawEmail = customer['email']?.toString() ?? '-';
-                                              final hasEmail = rawEmail != '-' && rawEmail.isNotEmpty;
-                                              final isRevealed = _revealedEmails.contains(id);
-                                              final displayEmail = (isRevealed || !hasEmail) ? rawEmail : MaskUtil.maskEmail(rawEmail);
+                                              final rawEmail = customer['email']
+                                                      ?.toString() ??
+                                                  '-';
+                                              final hasEmail =
+                                                  rawEmail != '-' &&
+                                                      rawEmail.isNotEmpty;
+                                              final isRevealed =
+                                                  _revealedEmails.contains(id);
+                                              final displayEmail =
+                                                  (isRevealed || !hasEmail)
+                                                      ? rawEmail
+                                                      : MaskUtil.maskEmail(
+                                                          rawEmail);
 
                                               return InkWell(
                                                 onTap: () {
                                                   if (hasEmail) {
                                                     setState(() {
                                                       if (isRevealed) {
-                                                        _revealedEmails.remove(id);
+                                                        _revealedEmails
+                                                            .remove(id);
                                                       } else {
                                                         _revealedEmails.add(id);
                                                       }
                                                     });
                                                   }
                                                 },
-                                                borderRadius: BorderRadius.circular(4),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
                                                 child: Tooltip(
                                                   message: !hasEmail
                                                       ? 'No email recorded'
@@ -1737,30 +2195,56 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                                           ? 'Email: $rawEmail\nClick to mask (protect sensitive data)'
                                                           : 'Email: $displayEmail\nClick to reveal customer email address',
                                                   child: Padding(
-                                                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        vertical: 4,
+                                                        horizontal: 2),
                                                     child: SizedBox(
                                                       width: 155,
                                                       child: Row(
-                                                        mainAxisSize: MainAxisSize.min,
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
                                                         children: [
                                                           Flexible(
                                                             child: Text(
                                                               displayEmail,
-                                                              overflow: TextOverflow.ellipsis,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
                                                               style: TextStyle(
                                                                 fontSize: 11,
-                                                                fontWeight: isRevealed ? FontWeight.w600 : FontWeight.w400,
-                                                                color: isRevealed ? const Color(0xFF0F172A) : const Color(0xFF64748B),
-                                                                letterSpacing: isRevealed ? 0 : 0.3,
+                                                                fontWeight: isRevealed
+                                                                    ? FontWeight
+                                                                        .w600
+                                                                    : FontWeight
+                                                                        .w400,
+                                                                color: isRevealed
+                                                                    ? const Color(
+                                                                        0xFF0F172A)
+                                                                    : const Color(
+                                                                        0xFF64748B),
+                                                                letterSpacing:
+                                                                    isRevealed
+                                                                        ? 0
+                                                                        : 0.3,
                                                               ),
                                                             ),
                                                           ),
                                                           if (hasEmail) ...[
-                                                            const SizedBox(width: 5),
+                                                            const SizedBox(
+                                                                width: 5),
                                                             Icon(
-                                                              isRevealed ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                                              isRevealed
+                                                                  ? Icons
+                                                                      .visibility_outlined
+                                                                  : Icons
+                                                                      .visibility_off_outlined,
                                                               size: 13,
-                                                              color: isRevealed ? const Color(0xFFDC2626) : const Color(0xFF94A3B8),
+                                                              color: isRevealed
+                                                                  ? const Color(
+                                                                      0xFFDC2626)
+                                                                  : const Color(
+                                                                      0xFF94A3B8),
                                                             ),
                                                           ],
                                                         ],
@@ -1776,31 +2260,51 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                         // Type
                                         DataCell(
                                           Tooltip(
-                                            message: 'Inquiry Channel: ${e['enquiryType'] ?? 'Walkin'}',
-                                            child: Text(e['enquiryType'] ?? 'Walkin', style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B))),
+                                            message:
+                                                'Inquiry Channel: ${e['enquiryType'] ?? 'Walkin'}',
+                                            child: Text(
+                                                e['enquiryType'] ?? 'Walkin',
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF1E293B))),
                                           ),
                                         ),
 
                                         // Source
                                         DataCell(
                                           Tooltip(
-                                            message: 'Lead Source: ${e['leadSource']?['name'] ?? e['enquiryType'] ?? 'Walk-in'}',
-                                            child: Text(e['leadSource']?['name'] ?? e['enquiryType'] ?? 'Walk-in', style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B))),
+                                            message:
+                                                'Lead Source: ${e['leadSource']?['name'] ?? e['enquiryType'] ?? 'Walk-in'}',
+                                            child: Text(
+                                                e['leadSource']?['name'] ??
+                                                    e['enquiryType'] ??
+                                                    'Walk-in',
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF1E293B))),
                                           ),
                                         ),
 
                                         // Branch
                                         DataCell(
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 3),
                                             decoration: BoxDecoration(
                                               color: const Color(0xFFEFF6FF),
-                                              borderRadius: BorderRadius.circular(4),
-                                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              border: Border.all(
+                                                  color:
+                                                      const Color(0xFFBFDBFE)),
                                             ),
                                             child: Text(
-                                              e['branch']?['name'] ?? 'Showroom',
-                                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1D4ED8)),
+                                              e['branch']?['name'] ??
+                                                  'Showroom',
+                                              style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF1D4ED8)),
                                             ),
                                           ),
                                         ),
@@ -1808,8 +2312,14 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                         // Area
                                         DataCell(
                                           Tooltip(
-                                            message: 'Locality: ${customer['area']?['name'] ?? 'Hadapsar'}',
-                                            child: Text(customer['area']?['name'] ?? 'Hadapsar', style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B))),
+                                            message:
+                                                'Locality: ${customer['area']?['name'] ?? 'Hadapsar'}',
+                                            child: Text(
+                                                customer['area']?['name'] ??
+                                                    'Hadapsar',
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF1E293B))),
                                           ),
                                         ),
 
@@ -1817,23 +2327,36 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                         DataCell(
                                           Text(
                                             vehicle['name'] ?? 'Activa 110 Dlx',
-                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF0F172A)),
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: Color(0xFF0F172A)),
                                           ),
                                         ),
 
                                         // Mode
                                         DataCell(
                                           Tooltip(
-                                            message: 'Payment Mode: ${e['purchaseMode'] ?? 'Cash'}\n${e['financier']?['name'] != null ? 'Financier: ${e['financier']['name']}' : ''}',
-                                            child: Text(e['purchaseMode'] ?? 'Cash', style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B))),
+                                            message:
+                                                'Payment Mode: ${e['purchaseMode'] ?? 'Cash'}\n${e['financier']?['name'] != null ? 'Financier: ${e['financier']['name']}' : ''}',
+                                            child: Text(
+                                                e['purchaseMode'] ?? 'Cash',
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF1E293B))),
                                           ),
                                         ),
 
                                         // Financier
                                         DataCell(
                                           Tooltip(
-                                            message: 'Financier Partner: ${e['financier']?['name'] ?? 'Not financed'}',
-                                            child: Text(e['financier']?['name'] ?? '-', style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                                            message:
+                                                'Financier Partner: ${e['financier']?['name'] ?? 'Not financed'}',
+                                            child: Text(
+                                                e['financier']?['name'] ?? '-',
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF475569))),
                                           ),
                                         ),
 
@@ -1843,34 +2366,64 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                             isExchange ? 'Yes' : '-',
                                             style: TextStyle(
                                               fontSize: 12,
-                                              fontWeight: isExchange ? FontWeight.w700 : FontWeight.normal,
-                                              color: isExchange ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+                                              fontWeight: isExchange
+                                                  ? FontWeight.w700
+                                                  : FontWeight.normal,
+                                              color: isExchange
+                                                  ? const Color(0xFFDC2626)
+                                                  : const Color(0xFF64748B),
                                             ),
                                           ),
                                         ),
 
                                         // Old vehicle
-                                        DataCell(Text(isExchange ? (e['oldVehicle'] ?? 'Activa') : '-', style: const TextStyle(fontSize: 12, color: Color(0xFF475569)))),
+                                        DataCell(Text(
+                                            isExchange
+                                                ? (e['oldVehicle'] ?? 'Activa')
+                                                : '-',
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF475569)))),
 
                                         // Kms
-                                        DataCell(Text(isExchange ? '25000' : '-', style: const TextStyle(fontSize: 12, color: Color(0xFF475569)))),
+                                        DataCell(Text(
+                                            isExchange ? '25000' : '-',
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF475569)))),
 
                                         // Owner
-                                        DataCell(Text(isExchange ? '1st Owner' : '-', style: const TextStyle(fontSize: 12, color: Color(0xFF475569)))),
+                                        DataCell(Text(
+                                            isExchange ? '1st Owner' : '-',
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF475569)))),
 
                                         // Exch value
-                                        DataCell(Text(isExchange ? '25000.00' : '-', style: const TextStyle(fontSize: 12, color: Color(0xFF475569)))),
+                                        DataCell(Text(
+                                            isExchange ? '25000.00' : '-',
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF475569)))),
 
                                         // Consent (red Yes)
-                                        const DataCell(Text('Yes', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFFDC2626)))),
+                                        const DataCell(Text('Yes',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: Color(0xFFDC2626)))),
 
                                         // Sales Exec
                                         DataCell(
                                           SizedBox(
                                             width: 120,
                                             child: Text(
-                                              e['assignedTo']?['name'] ?? e['createdBy']?['name'] ?? 'Big Wing Sales Exec',
-                                              style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B)),
+                                              e['assignedTo']?['name'] ??
+                                                  e['createdBy']?['name'] ??
+                                                  'Big Wing Sales Exec',
+                                              style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Color(0xFF1E293B)),
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
@@ -1880,10 +2433,19 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                         DataCell(_buildOwnershipBadge('Owned')),
 
                                         // Buying
-                                        DataCell(Text(e['buyingWhen'] ?? 'This week', style: const TextStyle(fontSize: 12, color: Color(0xFF1E293B)))),
+                                        DataCell(Text(
+                                            e['buyingWhen'] ?? 'This week',
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF1E293B)))),
 
                                         // Enq. Date
-                                        DataCell(Text(DateFormatter.formatDate(e['createdAt']), style: const TextStyle(fontSize: 12, color: Color(0xFF475569)))),
+                                        DataCell(Text(
+                                            DateFormatter.formatDate(
+                                                e['createdAt']),
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF475569)))),
 
                                         // Status dropdown
                                         DataCell(_buildStatusDropdown(e)),
@@ -1894,7 +2456,9 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                             width: 120,
                                             child: Text(
                                               e['remarks'] ?? '-',
-                                              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                              style: const TextStyle(
+                                                  fontSize: 11,
+                                                  color: Color(0xFF64748B)),
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
@@ -1907,30 +2471,52 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                             children: [
                                               // Quotation button [$] R2
                                               Tooltip(
-                                                message: 'View quotation revision R$revCount • Grand Total: ${quote['grandTotal'] != null ? CurrencyFormatter.format(quote['grandTotal']) : 'Pending'}',
+                                                message:
+                                                    'View quotation revision R$revCount • Grand Total: ${quote['grandTotal'] != null ? CurrencyFormatter.format(quote['grandTotal']) : 'Pending'}',
                                                 child: InkWell(
                                                   onTap: () {
                                                     if (quote['id'] != null) {
-                                                      _showQuotationModal(e, quote);
+                                                      _showQuotationModal(
+                                                          e, quote);
                                                     } else {
                                                       _showEnquiryDetails(e);
                                                     }
                                                   },
-                                                  borderRadius: BorderRadius.circular(4),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
                                                   child: Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 3),
                                                     decoration: BoxDecoration(
                                                       color: Colors.white,
-                                                      borderRadius: BorderRadius.circular(4),
-                                                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
+                                                      border: Border.all(
+                                                          color: const Color(
+                                                              0xFFCBD5E1)),
                                                     ),
                                                     child: Row(
-                                                      mainAxisSize: MainAxisSize.min,
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
                                                       children: [
-                                                        const Icon(Icons.currency_rupee, size: 11, color: Color(0xFF334155)),
+                                                        const Icon(
+                                                            Icons
+                                                                .currency_rupee,
+                                                            size: 11,
+                                                            color: Color(
+                                                                0xFF334155)),
                                                         Text(
                                                           'R$revCount',
-                                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
+                                                          style: const TextStyle(
+                                                              fontSize: 11,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w700,
+                                                              color: Color(
+                                                                  0xFF334155)),
                                                         ),
                                                       ],
                                                     ),
@@ -1941,29 +2527,50 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
 
                                               // Phone Call icon
                                               IconButton(
-                                                icon: const Icon(Icons.phone_outlined, size: 15, color: Color(0xFF64748B)),
-                                                tooltip: 'Call Customer via Exotel',
+                                                icon: const Icon(
+                                                    Icons.phone_outlined,
+                                                    size: 15,
+                                                    color: Color(0xFF64748B)),
+                                                tooltip:
+                                                    'Call Customer via Exotel',
                                                 splashRadius: 14,
-                                                visualDensity: VisualDensity.compact,
-                                                onPressed: () => _initiateCall(id, customer['name'] ?? 'Customer'),
+                                                visualDensity:
+                                                    VisualDensity.compact,
+                                                onPressed: () => _initiateCall(
+                                                    id,
+                                                    customer['name'] ??
+                                                        'Customer'),
                                               ),
 
                                               // Follow-up history icon
                                               IconButton(
-                                                icon: const Icon(Icons.history_rounded, size: 16, color: Color(0xFF64748B)),
-                                                tooltip: 'Schedule / View Follow-ups',
+                                                icon: const Icon(
+                                                    Icons.history_rounded,
+                                                    size: 16,
+                                                    color: Color(0xFF64748B)),
+                                                tooltip:
+                                                    'Schedule / View Follow-ups',
                                                 splashRadius: 14,
-                                                visualDensity: VisualDensity.compact,
-                                                onPressed: () => _showScheduleFollowUp(e),
+                                                visualDensity:
+                                                    VisualDensity.compact,
+                                                onPressed: () =>
+                                                    _showScheduleFollowUp(e),
                                               ),
 
                                               // Delete icon
                                               IconButton(
-                                                icon: const Icon(Icons.delete_outline, size: 15, color: Color(0xFFEF4444)),
+                                                icon: const Icon(
+                                                    Icons.delete_outline,
+                                                    size: 15,
+                                                    color: Color(0xFFEF4444)),
                                                 tooltip: 'Delete Enquiry',
                                                 splashRadius: 14,
-                                                visualDensity: VisualDensity.compact,
-                                                onPressed: () => _deleteEnquiry(id, customer['name'] ?? 'Customer'),
+                                                visualDensity:
+                                                    VisualDensity.compact,
+                                                onPressed: () => _deleteEnquiry(
+                                                    id,
+                                                    customer['name'] ??
+                                                        'Customer'),
                                               ),
                                             ],
                                           ),
@@ -1983,7 +2590,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     );
   }
 
-  Widget _buildSquareIconButton(IconData icon, VoidCallback onTap, {String? tooltip}) {
+  Widget _buildSquareIconButton(IconData icon, VoidCallback onTap,
+      {String? tooltip}) {
     final btn = InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),

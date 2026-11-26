@@ -81,23 +81,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
               try {
                 final dio = ref.read(dioProvider);
-                final res = await dio.post('/auth/forgot-password', data: {
+                await dio.post('/auth/forgot-password', data: {
                   'mobile': mobile,
                 });
-                final data = res.data;
                 setDialogState(() {
                   isOtpSent = true;
                   isSubmitting = false;
-                  generatedOtp = data['devOtp']?.toString() ?? '123456';
-                  otpController.text = generatedOtp!;
                 });
               } catch (e) {
-                // In demo/offline fallback mode, simulate instant OTP delivery
                 setDialogState(() {
-                  isOtpSent = true;
                   isSubmitting = false;
-                  generatedOtp = '123456';
-                  otpController.text = '123456';
+                  errorMessage = e is DioException
+                      ? (e.response?.data?['message']?.toString() ??
+                          'Could not send OTP. Please check your connection and try again.')
+                      : 'Could not send OTP. Please try again.';
                 });
               }
             }
@@ -540,76 +537,80 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 16),
                 ],
 
-                // Mobile number field (standard single-layer Material input)
+                // Mobile number field (accessible, WCAG AA contrast)
                 const Text(
                   'Mobile number',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF0F172A),
+                    color: AppColors.ink,
                   ),
                 ),
                 const SizedBox(height: 8),
-                TextField(
-                  controller: _mobileController,
-                  keyboardType: TextInputType.phone,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF0F172A),
-                  ),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    hintText: '98765 43210',
-                    hintStyle: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF94A3B8),
+                Semantics(
+                  textField: true,
+                  label: 'Mobile number',
+                  child: TextField(
+                    controller: _mobileController,
+                    keyboardType: TextInputType.phone,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.ink,
                     ),
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.only(left: 14, right: 10),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.phone_outlined,
-                              size: 18, color: Color(0xFF64748B)),
-                          SizedBox(width: 8),
-                          Text(
-                            '+91',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF475569),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: AppColors.background,
+                      hintText: '98765 43210',
+                      hintStyle: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.secondary,
+                      ),
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.only(left: 14, right: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.phone_outlined,
+                                size: 18, color: AppColors.secondary),
+                            SizedBox(width: 8),
+                            Text(
+                              '+91',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.body,
+                              ),
                             ),
-                          ),
-                          SizedBox(width: 10),
-                          SizedBox(
-                            height: 20,
-                            width: 1,
-                            child: ColoredBox(color: Color(0xFFE2E8F0)),
-                          ),
-                        ],
+                            SizedBox(width: 10),
+                            SizedBox(
+                              height: 20,
+                              width: 1,
+                              child: ColoredBox(color: AppColors.border),
+                            ),
+                          ],
+                        ),
+                      ),
+                      prefixIconConstraints:
+                          const BoxConstraints(minWidth: 0, minHeight: 0),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 15),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                            color: AppColors.brand, width: 1.5),
                       ),
                     ),
-                    prefixIconConstraints:
-                        const BoxConstraints(minWidth: 0, minHeight: 0),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 15),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                          color: Color(0xFFDC2626), width: 1.5),
-                    ),
+                    onSubmitted: (_) => _submit(),
                   ),
-                  onSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: 18),
 
-                // Password field + Forgot password?
+                // Password field + Forgot password? (48dp touch target)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -618,75 +619,79 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF0F172A),
+                        color: AppColors.ink,
                       ),
                     ),
-                    InkWell(
-                      onTap: _showForgotPasswordDialog,
-                      borderRadius: BorderRadius.circular(4),
-                      child: const Padding(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        child: Text(
-                          'Forgot password?',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFFDC2626),
-                          ),
+                    TextButton(
+                      onPressed: _showForgotPasswordDialog,
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      child: const Text(
+                        'Forgot password?',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.brand,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF0F172A),
-                  ),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    hintText: 'Enter password',
-                    hintStyle: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF94A3B8),
+                const SizedBox(height: 4),
+                Semantics(
+                  textField: true,
+                  label: 'Password',
+                  child: TextField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.ink,
                     ),
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.only(left: 14, right: 10),
-                      child: Icon(Icons.lock_outline,
-                          size: 18, color: Color(0xFF64748B)),
-                    ),
-                    prefixIconConstraints:
-                        const BoxConstraints(minWidth: 0, minHeight: 0),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        size: 18,
-                        color: const Color(0xFF64748B),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: AppColors.background,
+                      hintText: 'Enter password',
+                      hintStyle: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.secondary,
                       ),
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.only(left: 14, right: 10),
+                        child: Icon(Icons.lock_outline,
+                            size: 18, color: AppColors.secondary),
+                      ),
+                      prefixIconConstraints:
+                          const BoxConstraints(minWidth: 0, minHeight: 0),
+                      suffixIcon: IconButton(
+                        tooltip: _obscurePassword ? 'Show password' : 'Hide password',
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          size: 20,
+                          color: AppColors.secondary,
+                        ),
+                        onPressed: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 15),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                            color: AppColors.brand, width: 1.5),
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 15),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                          color: Color(0xFFDC2626), width: 1.5),
-                    ),
+                    onSubmitted: (_) => _submit(),
                   ),
-                  onSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: 22),
 

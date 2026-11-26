@@ -128,6 +128,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
 
   bool _isLoadingMasters = true;
   bool _isCalculating = false;
+  bool _calculationError = false;
   Map<String, dynamic>? _liveCalculation;
   bool _isSaving = false;
 
@@ -260,7 +261,10 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   Future<void> _calculateQuote() async {
     if (_selectedVehicleId == null || _selectedBranchId == null) return;
     if (!mounted) return;
-    setState(() => _isCalculating = true);
+    setState(() {
+      _isCalculating = true;
+      _calculationError = false;
+    });
 
     try {
       final dio = ref.read(dioProvider);
@@ -278,11 +282,16 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       setState(() {
         _liveCalculation = res.data;
         _isCalculating = false;
+        _calculationError = false;
       });
       _syncLiveFloorSession();
     } catch (_) {
       if (!mounted) return;
-      setState(() => _isCalculating = false);
+      setState(() {
+        _isCalculating = false;
+        _calculationError = true;
+        _liveCalculation = null;
+      });
     }
   }
 
@@ -971,11 +980,21 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         ? '${selectedBranch['name']} · ${selectedBranch['address']}'
         : (_settings?['address'] ?? 'Pune, Maharashtra');
 
-    final gstin = _settings?['gstNumber'] ?? '27AABCY1234F1Z5';
-    final bankName = _settings?['bankName'] ?? 'HDFC Bank';
-    final accountNo = _settings?['accountNumber'] ?? '50200012345678';
-    final ifsc = _settings?['ifsc'] ?? 'HDFC0001234';
-    final upiId = _settings?['upiId'] ?? 'yashhonda@hdfcbank';
+    final gstin = _settings?['gstNumber']?.toString().isNotEmpty == true
+        ? _settings!['gstNumber']
+        : 'Not configured';
+    final bankName = _settings?['bankName']?.toString().isNotEmpty == true
+        ? _settings!['bankName']
+        : 'Not configured';
+    final accountNo = _settings?['accountNumber']?.toString().isNotEmpty == true
+        ? _settings!['accountNumber']
+        : 'Not configured';
+    final ifsc = _settings?['ifsc']?.toString().isNotEmpty == true
+        ? _settings!['ifsc']
+        : 'Not configured';
+    final upiId = _settings?['upiId']?.toString().isNotEmpty == true
+        ? _settings!['upiId']
+        : 'Not configured';
 
     final rawEx = _liveCalculation?['exShowroom'];
     final exShowroom = _selectedVehicle != null
@@ -1014,32 +1033,37 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Quote Preview (live)',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                Text(
+                  _calculationError
+                      ? 'Quote preview — price not verified'
+                      : 'Quote Preview (live)',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: _calculationError ? AppColors.danger : AppColors.ink,
+                  ),
                 ),
                 Text(
                   _selectedVehicle != null ? vehicleName : 'No vehicle selected',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                  style: const TextStyle(fontSize: 12, color: AppColors.secondary),
                 ),
               ],
             ),
             Row(
               children: [
-                OutlinedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Rendering print-ready quotation PDF preview...')),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF0F172A),
-                    side: const BorderSide(color: Color(0xFFCBD5E1)),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                Tooltip(
+                  message: 'PDF available after the enquiry is created',
+                  child: OutlinedButton.icon(
+                    onPressed: null,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.secondary,
+                      side: const BorderSide(color: AppColors.border),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    ),
+                    icon: const Icon(Icons.print_outlined, size: 14),
+                    label: const Text('PDF after create', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                   ),
-                  icon: const Icon(Icons.print_outlined, size: 14),
-                  label: const Text('View PDF', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
@@ -1479,17 +1503,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
             ),
             child: _isSaving
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('+ Create', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                      SizedBox(width: 8),
-                      Text(
-                        'Ctrl Enter',
-                        style: TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
+                : const Text('+ Create Enquiry', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -1507,21 +1521,21 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.ink),
         ),
         const SizedBox(height: 4),
-        SizedBox(
-          height: 38,
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.normal),
+              hintStyle: const TextStyle(fontSize: 13, color: AppColors.secondary, fontWeight: FontWeight.normal),
               filled: true,
-              fillColor: const Color(0xFFF8FAFC),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+              fillColor: AppColors.background,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
                 borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -1554,25 +1568,25 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.ink),
         ),
         const SizedBox(height: 4),
         Container(
-          height: 38,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(6),
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: highlightBorder ? AppColors.primary : const Color(0xFFE2E8F0),
+              color: highlightBorder ? AppColors.brand : AppColors.border,
             ),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<T>(
               value: value,
               isExpanded: true,
-              hint: hintText != null ? Text(hintText, style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))) : null,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+              hint: hintText != null ? Text(hintText, style: const TextStyle(fontSize: 13, color: AppColors.secondary)) : null,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.ink),
               items: items,
               onChanged: onChanged,
             ),

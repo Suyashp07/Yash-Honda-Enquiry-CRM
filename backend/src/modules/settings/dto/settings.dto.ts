@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsNumber, IsBoolean } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsNumber, IsBoolean, IsArray } from 'class-validator';
 
 export class UpdateSettingsDto {
   @ApiProperty({ example: 'Yash Honda Two-Wheelers Pvt Ltd' })
@@ -61,5 +61,15 @@ export class UpdateSettingsDto {
   @IsBoolean()
   @IsOptional()
   applyHypothecationDefault?: boolean;
+
+  @ApiProperty({ example: false, required: false })
+  @IsBoolean()
+  @IsOptional()
+  officeHoursEnabled?: boolean;
+
+  @ApiProperty({ required: false, type: Array })
+  @IsArray()
+  @IsOptional()
+  officeWindows?: Array<{ startTime: string; endTime: string; enabled: boolean }>;
 }
 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
@@ -107,8 +107,33 @@ export class UsersService {
     });
   }
 
-  async update(id: string, dto: UpdateUserDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdateUserDto, currentUser?: any) {
+    const target = await this.findOne(id);
+
+    if (currentUser && currentUser.id === id) {
+      if (dto.status === 'Inactive') {
+        throw new BadRequestException('You cannot deactivate your own account.');
+      }
+      if (dto.role && dto.role !== target.role && dto.role !== Role.OWNER && dto.role !== Role.SUPER_ADMIN) {
+        throw new BadRequestException('You cannot demote your own administrator role.');
+      }
+    }
+
+    const isAdminRole = target.role === Role.SUPER_ADMIN || target.role === Role.OWNER;
+    const isDemotingOrDeactivating =
+      dto.status === 'Inactive' ||
+      (dto.role && dto.role !== Role.SUPER_ADMIN && dto.role !== Role.OWNER);
+    if (isAdminRole && isDemotingOrDeactivating) {
+      const activeAdmins = await this.prisma.user.count({
+        where: {
+          role: { in: [Role.SUPER_ADMIN, Role.OWNER] },
+          status: 'Active',
+        },
+      });
+      if (activeAdmins <= 1) {
+        throw new BadRequestException('Cannot deactivate or demote the last active administrator.');
+      }
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const updateData: any = {};
@@ -155,8 +180,22 @@ export class UsersService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, currentUser?: any) {
+    const target = await this.findOne(id);
+    if (currentUser && currentUser.id === id) {
+      throw new BadRequestException('You cannot deactivate your own account.');
+    }
+    if (target.role === Role.SUPER_ADMIN || target.role === Role.OWNER) {
+      const activeAdmins = await this.prisma.user.count({
+        where: {
+          role: { in: [Role.SUPER_ADMIN, Role.OWNER] },
+          status: 'Active',
+        },
+      });
+      if (activeAdmins <= 1) {
+        throw new BadRequestException('Cannot deactivate the last active administrator.');
+      }
+    }
     return this.prisma.user.update({
       where: { id },
       data: { status: 'Inactive' },
@@ -170,7 +209,7 @@ export class UsersService {
         'Quotes': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Follow-ups': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Dashboard': { view: false, create: false, edit: false, delete: false, export: false, send: false },
-        'Reports': { view: false, create: false, edit: false, delete: false, export: false, send: false },
+        'Reports': { view: true, create: false, edit: false, delete: false, export: true, send: false },
         'Masters': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Users': { view: false, create: false, edit: false, delete: false, export: false, send: false },
       },
@@ -215,7 +254,7 @@ export class UsersService {
         'Quotes': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Follow-ups': { view: true, create: true, edit: true, delete: false, export: false, send: false },
         'Dashboard': { view: false, create: false, edit: false, delete: false, export: false, send: false },
-        'Reports': { view: false, create: false, edit: false, delete: false, export: false, send: false },
+        'Reports': { view: true, create: false, edit: false, delete: false, export: true, send: false },
         'Masters': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Users': { view: false, create: false, edit: false, delete: false, export: false, send: false },
       },

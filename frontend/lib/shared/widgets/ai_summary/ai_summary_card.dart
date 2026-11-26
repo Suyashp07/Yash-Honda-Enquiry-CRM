@@ -30,6 +30,14 @@ class _AiSummaryCardState extends ConsumerState<AiSummaryCard> {
     _fetchSummary(forceRefresh: false);
   }
 
+  @override
+  void didUpdateWidget(covariant AiSummaryCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.branchCode != widget.branchCode || oldWidget.range != widget.range) {
+      _fetchSummary(forceRefresh: false);
+    }
+  }
+
   Future<void> _fetchSummary({bool forceRefresh = false}) async {
     setState(() {
       if (forceRefresh) {
@@ -99,20 +107,9 @@ class _AiSummaryCardState extends ConsumerState<AiSummaryCard> {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF7ED), Colors.white],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.aiSoft,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFED7AA)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFF97316).withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: AppColors.aiBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,18 +122,18 @@ class _AiSummaryCardState extends ConsumerState<AiSummaryCard> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEA580C).withOpacity(0.12),
+                      color: AppColors.aiAccent.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Icon(Icons.auto_awesome, size: 16, color: Color(0xFFEA580C)),
+                    child: const Icon(Icons.auto_awesome_outlined, size: 16, color: AppColors.aiAccent),
                   ),
                   const SizedBox(width: 10),
                   const Text(
-                    'AI Dealership Executive Briefing',
+                    'AI-Assisted Executive Briefing',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF9A3412),
+                      color: AppColors.aiAccent,
                       letterSpacing: 0.3,
                     ),
                   ),

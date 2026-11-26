@@ -5,6 +5,7 @@ import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
 
 @ApiTags('users')
@@ -54,15 +55,15 @@ export class UsersController {
   @Put(':id')
   @Roles(Role.OWNER, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Update user, password or branch assignments (Super Admin only)' })
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.usersService.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUser() currentUser: any) {
+    return this.usersService.update(id, dto, currentUser);
   }
 
   @Delete(':id')
   @Roles(Role.OWNER, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Deactivate staff account (Super Admin only)' })
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() currentUser: any) {
+    return this.usersService.remove(id, currentUser);
   }
 }
 
