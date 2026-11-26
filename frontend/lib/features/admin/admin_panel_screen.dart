@@ -1348,22 +1348,52 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     final codeCtrl = TextEditingController(
         text: editingItem != null ? _getColourCode(editingItem) : 'BLK');
     final nameCtrl = TextEditingController(text: editingItem?['name'] ?? '');
-    final hexCtrl =
+    final codeInputCtrl =
         TextEditingController(text: editingItem?['hex'] ?? '#111827');
+    String colorFormat = 'HEX'; // 'HEX' | 'RGB'
 
-    const suggestedColors = [
-      '#FFFFFF', // White
-      '#111827', // Black
-      '#94A3B8', // Grey
-      '#DC2626', // Red
-      '#2563EB', // Blue
-      '#F59E0B', // Amber
-    ];
+    String? normalizeToHex(String raw, String fmt) {
+      final s = raw.trim();
+      if (fmt == 'HEX') {
+        final cleaned = s.replaceAll('#', '');
+        if (!RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(cleaned)) return null;
+        return '#${cleaned.toUpperCase()}';
+      } else {
+        final cleaned = s
+            .replaceAll(RegExp(r'rgba?\(|\)', caseSensitive: false), '')
+            .trim();
+        final parts = cleaned
+            .split(RegExp(r'[\s,]+'))
+            .where((p) => p.isNotEmpty)
+            .toList();
+        if (parts.length != 3) return null;
+        final r = int.tryParse(parts[0]);
+        final g = int.tryParse(parts[1]);
+        final b = int.tryParse(parts[2]);
+        if (r == null ||
+            g == null ||
+            b == null ||
+            r < 0 ||
+            r > 255 ||
+            g < 0 ||
+            g > 255 ||
+            b < 0 ||
+            b > 255) {
+          return null;
+        }
+        String toHex2(int n) =>
+            n.toRadixString(16).padLeft(2, '0').toUpperCase();
+        return '#${toHex2(r)}${toHex2(g)}${toHex2(b)}';
+      }
+    }
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlgState) => AlertDialog(
+        builder: (context, setDlgState) {
+          final resolvedHex =
+              normalizeToHex(codeInputCtrl.text, colorFormat) ?? '#111827';
+          return AlertDialog(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           shape:
@@ -1371,7 +1401,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
           title: Text(
-            editingItem != null ? 'Edit Colours' : 'Add Colours',
+            editingItem != null ? 'Edit Colour' : 'Add Standard Colour',
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
@@ -1384,43 +1414,9 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Code field
+                // Colour Name
                 const Text(
-                  'Code',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: Color(0xFF1E293B)),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: codeCtrl,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. BLK',
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFDC2626)),
-                    ),
-                  ),
-                  style:
-                      const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
-                ),
-                const SizedBox(height: 16),
-
-                // Name field
-                const Text(
-                  'Name',
+                  'Colour Name',
                   style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
@@ -1430,7 +1426,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 TextField(
                   controller: nameCtrl,
                   decoration: InputDecoration(
-                    hintText: 'e.g. Black',
+                    hintText: 'e.g. Rebel Red Metallic',
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 10),
@@ -1452,95 +1448,106 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Hex field
+                // Format Dropdown (HEX | RGB)
                 const Text(
-                  'Hex',
+                  'Colour Code Format',
                   style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                       color: Color(0xFF1E293B)),
                 ),
                 const SizedBox(height: 6),
-                Container(
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                DropdownButtonFormField<String>(
+                  initialValue: colorFormat,
+                  items: const [
+                    DropdownMenuItem(value: 'HEX', child: Text('HEX (e.g. #DC2626)')),
+                    DropdownMenuItem(value: 'RGB', child: Text('RGB (e.g. 220, 38, 38)')),
+                  ],
+                  onChanged: (val) {
+                    if (val == null || val == colorFormat) return;
+                    setDlgState(() {
+                      if (val == 'RGB') {
+                        final hex = normalizeToHex(codeInputCtrl.text, 'HEX');
+                        if (hex != null) {
+                          final c = _parseColor(hex);
+                          codeInputCtrl.text =
+                              '${(c.r * 255).round()}, ${(c.g * 255).round()}, ${(c.b * 255).round()}';
+                        } else {
+                          codeInputCtrl.text = '17, 24, 39';
+                        }
+                      } else {
+                        final hex = normalizeToHex(codeInputCtrl.text, 'RGB');
+                        codeInputCtrl.text = hex ?? '#111827';
+                      }
+                      colorFormat = val;
+                    });
+                  },
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFDC2626)),
+                    ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 26,
+                ),
+                const SizedBox(height: 16),
+
+                // Colour Code + Live Swatch
+                Text(
+                  colorFormat == 'HEX' ? 'HEX Colour Code' : 'RGB Colour Code',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Color(0xFF1E293B)),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: codeInputCtrl,
+                  onChanged: (_) => setDlgState(() {}),
+                  decoration: InputDecoration(
+                    hintText:
+                        colorFormat == 'HEX' ? '#DC2626' : '220, 38, 38',
+                    isDense: true,
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Container(
+                        width: 28,
+                        height: 24,
                         decoration: BoxDecoration(
-                          color: _parseColor(hexCtrl.text),
+                          color: _parseColor(resolvedHex),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                              color: const Color(0xFFCBD5E1), width: 0.5),
+                              color: const Color(0xFFCBD5E1), width: 0.8),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: hexCtrl,
-                          onChanged: (_) => setDlgState(() {}),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: '#111827',
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          style: const TextStyle(
-                              fontSize: 14, color: Color(0xFF0F172A)),
-                        ),
-                      ),
-                    ],
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFDC2626)),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-
-                // Palette Swatches Row
-                Row(
-                  children: suggestedColors.map((hexStr) {
-                    final isWhite = hexStr == '#FFFFFF';
-                    final isCurrent = hexCtrl.text.trim().toUpperCase() ==
-                        hexStr.toUpperCase();
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 10),
-                      child: InkWell(
-                        onTap: () {
-                          hexCtrl.text = hexStr;
-                          setDlgState(() {});
-                        },
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _parseColor(hexStr),
-                            border: Border.all(
-                              color: isWhite
-                                  ? const Color(0xFFCBD5E1)
-                                  : (isCurrent
-                                      ? const Color(0xFF0F172A)
-                                      : Colors.transparent),
-                              width: isCurrent ? 2 : 1,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 10),
-
-                // Helper text
-                const Text(
-                  'Choose a shade, select a suggested colour, or enter a six-digit hex code.',
-                  style: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+                  style:
+                      const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
                 ),
               ],
             ),
@@ -1575,18 +1582,33 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                     borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () async {
+                final cName = nameCtrl.text.trim();
+                final hexVal =
+                    normalizeToHex(codeInputCtrl.text, colorFormat);
+                if (cName.isEmpty || hexVal == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(cName.isEmpty
+                          ? 'Please enter a valid Colour Name.'
+                          : colorFormat == 'HEX'
+                              ? 'Please enter a valid 6-digit HEX code (e.g. #DC2626).'
+                              : 'Please enter valid RGB values between 0 and 255 (e.g. 220, 38, 38).'),
+                    ),
+                  );
+                  return;
+                }
                 final dio = ref.read(dioProvider);
                 try {
                   if (editingItem != null) {
                     await dio
                         .put('/vehicles/colours/${editingItem['id']}', data: {
-                      'name': nameCtrl.text.trim(),
-                      'hex': hexCtrl.text.trim(),
+                      'name': cName,
+                      'hex': hexVal,
                     });
                   } else {
                     await dio.post('/vehicles/colours', data: {
-                      'name': nameCtrl.text.trim(),
-                      'hex': hexCtrl.text.trim(),
+                      'name': cName,
+                      'hex': hexVal,
                     });
                   }
                   if (ctx.mounted) Navigator.pop(ctx);
@@ -1610,7 +1632,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
             ),
           ],
-        ),
+        );
+        },
       ),
     );
   }
