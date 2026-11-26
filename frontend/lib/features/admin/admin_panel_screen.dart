@@ -209,7 +209,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       case 'colours':
         return 'Colours';
       case 'accessories':
-        return 'Add-ons';
+        return 'Accessories';
       case 'financiers':
         return 'Financiers';
       case 'areas':
@@ -1736,6 +1736,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             : 'MC');
     String branchWing = editingItem?['wing'] ?? 'RedWing';
     bool isPriceEditable = editingItem?['isPriceEditable'] ?? false;
+    bool isStandardAcc = editingItem?['isStandard'] ?? false;
+    final accImageUrlCtrl =
+        TextEditingController(text: editingItem?['imageUrl'] ?? '');
+    PlatformFile? pickedAccImage;
 
     final Set<String> selectedColourIds = {
       for (final vc in (editingItem?['colours'] as List? ?? []))
@@ -2520,8 +2524,85 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                             onChanged: (val) => setDlgState(
                                 () => isPriceEditable = val ?? false),
                           ),
-                          const Text('Editable at Point of Sale by Rep',
-                              style: TextStyle(fontSize: 13)),
+                          const Expanded(
+                            child: Text('Editable at Point of Sale by Rep',
+                                style: TextStyle(fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: isStandardAcc,
+                            activeColor: const Color(0xFFCC0000),
+                            onChanged: (val) => setDlgState(
+                                () => isStandardAcc = val ?? false),
+                          ),
+                          const Expanded(
+                            child: Text(
+                                'Standard (Included by default in Build My Honda)',
+                                style: TextStyle(fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Text('Accessory Image (Upload or URL)',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 12)),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F172A),
+                              borderRadius: BorderRadius.circular(10),
+                              border:
+                                  Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: pickedAccImage?.bytes != null
+                                ? Image.memory(pickedAccImage!.bytes!,
+                                    fit: BoxFit.cover)
+                                : SmartMediaImage(
+                                    source: accImageUrlCtrl.text.trim(),
+                                    fit: BoxFit.cover,
+                                    fallback: const Icon(
+                                        Icons.image_outlined,
+                                        color: Color(0xFF94A3B8)),
+                                  ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: accImageUrlCtrl,
+                              onChanged: (_) => setDlgState(() {}),
+                              decoration: const InputDecoration(
+                                hintText: 'Paste image URL or upload file ->',
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 9),
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final picked = await FilePicker.platform.pickFiles(
+                                type: FileType.image,
+                                withData: true,
+                              );
+                              if (picked != null && picked.files.isNotEmpty) {
+                                setDlgState(
+                                    () => pickedAccImage = picked.files.first);
+                              }
+                            },
+                            icon: const Icon(Icons.upload_rounded, size: 15),
+                            label: const Text('Upload',
+                                style: TextStyle(fontSize: 12)),
+                          ),
                         ],
                       ),
                     ],
@@ -2703,19 +2784,42 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       }
                     } else if (_currentSection == 'accessories') {
                       final p = num.tryParse(priceCtrl.text) ?? 500;
+                      final imgUrlVal = accImageUrlCtrl.text.trim().isNotEmpty
+                          ? accImageUrlCtrl.text.trim()
+                          : null;
+                      String? savedAccId;
                       if (editingItem != null) {
+                        savedAccId = editingItem['id']?.toString();
                         await dio
                             .put('/accessories/${editingItem['id']}', data: {
                           'name': nameCtrl.text.trim(),
                           'defaultPrice': p,
                           'isPriceEditable': isPriceEditable,
+                          'isStandard': isStandardAcc,
+                          if (pickedAccImage == null) 'imageUrl': imgUrlVal,
                         });
                       } else {
-                        await dio.post('/accessories', data: {
+                        final res = await dio.post('/accessories', data: {
                           'name': nameCtrl.text.trim(),
                           'defaultPrice': p,
                           'isPriceEditable': isPriceEditable,
+                          'isStandard': isStandardAcc,
+                          if (pickedAccImage == null && imgUrlVal != null)
+                            'imageUrl': imgUrlVal,
                         });
+                        savedAccId = res.data?['id']?.toString();
+                      }
+                      if (pickedAccImage?.bytes != null &&
+                          savedAccId != null &&
+                          savedAccId.isNotEmpty) {
+                        final formData = FormData();
+                        formData.files.add(MapEntry(
+                          'file',
+                          MultipartFile.fromBytes(pickedAccImage!.bytes!,
+                              filename: pickedAccImage!.name),
+                        ));
+                        await dio.post('/accessories/$savedAccId/image',
+                            data: formData);
                       }
                     } else if (_currentSection == 'financiers') {
                       if (editingItem != null) {

@@ -121,6 +121,14 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
       tooltip: 'Palette shades, paint codes & vehicle swatches',
     ),
     AdminSubItem(
+      title: 'Accessories',
+      route: '/admin/accessories',
+      icon: Icons.build_circle_outlined,
+      group: 'Catalog',
+      tooltip:
+          'Manage helmets, seat covers, RSA, warranty, ceramic coating & images',
+    ),
+    AdminSubItem(
       title: 'Finance Providers',
       route: '/admin/financiers',
       icon: Icons.account_balance_outlined,
