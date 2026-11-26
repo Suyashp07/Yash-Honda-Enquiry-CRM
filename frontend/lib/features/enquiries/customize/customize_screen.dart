@@ -1162,67 +1162,104 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         // The Official Yash Honda Quotation Paper Card
         Expanded(
           child: SingleChildScrollView(
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+            child: Builder(
+              builder: (context) {
+                final mgName =
+                    (_selectedVehicle?['modelGroup']?['name'] ?? '')
+                        .toString()
+                        .toLowerCase();
+                final catName =
+                    (_selectedVehicle?['category'] ?? '').toString().toLowerCase();
+                final isBigWing =
+                    mgName.contains('big') || catName.contains('big');
+                final accentColor = isBigWing
+                    ? const Color(0xFFD97706)
+                    : const Color(0xFFCC0000);
+
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Dealership Title & Official Honda Wing Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: Column(
+                      // Dealership Title & Official Honda Wing Header
+                      Container(
+                        padding: isBigWing
+                            ? const EdgeInsets.all(14)
+                            : EdgeInsets.zero,
+                        decoration: isBigWing
+                            ? BoxDecoration(
+                                color: const Color(0xFF0B0D12),
+                                borderRadius: BorderRadius.circular(6),
+                              )
+                            : null,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Yash Honda',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFFCC0000),
-                                letterSpacing: -0.5,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Yash Honda',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      color: isBigWing
+                                          ? const Color(0xFFFDE68A)
+                                          : const Color(0xFFCC0000),
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    branchAddress,
+                                    style: TextStyle(
+                                        fontSize: 9,
+                                        color: isBigWing
+                                            ? const Color(0xFFCBD5E1)
+                                            : const Color(0xFF64748B)),
+                                  ),
+                                  Text(
+                                    'GSTIN: $gstin',
+                                    style: TextStyle(
+                                        fontSize: 9,
+                                        color: isBigWing
+                                            ? const Color(0xFFCBD5E1)
+                                            : const Color(0xFF64748B)),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isBigWing
+                                        ? 'Authorised BigWing Dealer · Pune'
+                                        : 'Authorised Dealer · Pune',
+                                    style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: isBigWing
+                                            ? const Color(0xFFF59E0B)
+                                            : const Color(0xFFCC0000)),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              branchAddress,
-                              style: const TextStyle(
-                                  fontSize: 9, color: Color(0xFF64748B)),
-                            ),
-                            Text(
-                              'GSTIN: $gstin',
-                              style: const TextStyle(
-                                  fontSize: 9, color: Color(0xFF64748B)),
-                            ),
-                            const SizedBox(height: 2),
-                            const Text(
-                              'Authorised Dealer · Pune',
-                              style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFFCC0000)),
-                            ),
+                            // Honda Wing Official Dealership Badge
+                            _buildQuoteLogo(isBigWing: isBigWing),
                           ],
                         ),
                       ),
-                      // Honda Wing Official Dealership Badge or Custom Uploaded Logo from Company Profile
-                      _buildQuoteLogo(),
-                    ],
-                  ),
                   const Divider(height: 20, color: Color(0xFFE2E8F0)),
 
                   // Metadata Grid: Quote No, Date, Customer, Mobile
@@ -1340,19 +1377,19 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Grand Total',
                         style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFFCC0000)),
+                            color: accentColor),
                       ),
                       Text(
                         CurrencyFormatter.format(grandTotal),
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFFCC0000)),
+                            color: accentColor),
                       ),
                     ],
                   ),
@@ -1435,10 +1472,12 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                     style: TextStyle(
                         fontSize: 8, color: Color(0xFF94A3B8), height: 1.3),
                   ),
-                ],
-              ),
-            ),
+                  ],
+                ),
+              );
+            },
           ),
+        ),
         ),
       ],
     );
@@ -1480,7 +1519,19 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     );
   }
 
-  Widget _buildQuoteLogo() {
+  Widget _buildQuoteLogo({bool isBigWing = false}) {
+    if (isBigWing) {
+      return Container(
+        constraints: const BoxConstraints(maxHeight: 38, maxWidth: 110),
+        alignment: Alignment.centerRight,
+        child: Image.asset(
+          'assets/honda_bigwing_logo.png',
+          height: 32,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const HondaWingLogo(),
+        ),
+      );
+    }
     final logoUrl = _settings?['logoUrl']?.toString();
     if (logoUrl != null && logoUrl.isNotEmpty) {
       return Container(
