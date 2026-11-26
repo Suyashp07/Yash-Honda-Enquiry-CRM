@@ -4035,6 +4035,9 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                   splashRadius: 18,
                   padding: const EdgeInsets.all(6),
                   constraints: const BoxConstraints(),
+                  style: IconButton.styleFrom(
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                   tooltip: 'Edit ${item['name'] ?? item['code'] ?? 'item'}',
                   onPressed: () => _showAddEditDialog(editingItem: item),
                 ),
@@ -4045,6 +4048,9 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                   splashRadius: 18,
                   padding: const EdgeInsets.all(6),
                   constraints: const BoxConstraints(),
+                  style: IconButton.styleFrom(
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                   tooltip: 'Delete ${item['name'] ?? item['code'] ?? 'item'}',
                   onPressed: () => _deleteItem(item),
                 ),
