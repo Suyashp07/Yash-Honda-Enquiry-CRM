@@ -321,6 +321,7 @@ export class AnalyticsService {
             customer_mobile: e.customer?.mobile ?? '',
             vehicle_name: q?.vehicle?.name ?? (e.remarks?.split('·')[0]?.trim() || 'Honda Model'),
             colour: q?.colourName ?? '',
+            buying_when: e.buyingWhen ?? '',
             grand_total: q?.grandTotal ? Number(q.grandTotal) : null,
             created_at: e.createdAt.toISOString(),
           };

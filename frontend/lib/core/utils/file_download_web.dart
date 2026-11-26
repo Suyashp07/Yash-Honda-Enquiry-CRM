@@ -1,5 +1,6 @@
 // ignore: avoid_web_libraries_in_flutter, deprecated_member_use
 import 'dart:html' as html;
+import 'dart:convert';
 import 'dart:typed_data';
 
 void downloadFileBytes(Uint8List bytes, String filename, String mimeType) {
@@ -12,4 +13,10 @@ void downloadFileBytes(Uint8List bytes, String filename, String mimeType) {
   anchor.click();
   anchor.remove();
   html.Url.revokeObjectUrl(url);
+}
+
+Future<bool> downloadTextFile(String content, String filename,
+    [String mimeType = 'text/csv;charset=utf-8']) async {
+  downloadFileBytes(Uint8List.fromList(utf8.encode(content)), filename, mimeType);
+  return true;
 }

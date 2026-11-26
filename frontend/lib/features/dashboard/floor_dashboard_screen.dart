@@ -7,10 +7,15 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/breakpoints.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/providers/branch_provider.dart';
+import '../../core/theme/app_icons.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_typography.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/mask_util.dart';
+import '../../shared/widgets/app_components.dart';
 import '../auth/auth_notifier.dart';
 
 class FloorDashboardScreen extends ConsumerStatefulWidget {
@@ -203,10 +208,16 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           await _mergeLocalLiveSessions(Map<String, dynamic>.from(res.data));
 
       if (!mounted) return;
+      ref.read(lastDataUpdatedProvider.notifier).state = DateTime.now();
+      ref.read(dataFreshnessErrorProvider.notifier).state = false;
       setState(() {
         _dashboardData = mergedData;
       });
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) {
+        ref.read(dataFreshnessErrorProvider.notifier).state = true;
+      }
+    }
   }
 
   Future<void> _loadDashboard({String? branchId, DateTime? date}) async {
@@ -229,6 +240,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           await _mergeLocalLiveSessions(Map<String, dynamic>.from(res.data));
 
       if (!mounted) return;
+      ref.read(lastDataUpdatedProvider.notifier).state = DateTime.now();
+      ref.read(dataFreshnessErrorProvider.notifier).state = false;
       setState(() {
         _currentDate = targetDate;
         _selectedBranch = activeBranch;
@@ -514,18 +527,98 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // Row 3: Showroom Floor Timeline Table Grid (embedded seamlessly with top border)
-                  _buildTimelineGrid(filteredReps, sessions),
+                  // Row 3: Mobile Rep Agenda OR Desktop Timeline Grid
+                  if (Breakpoints.isPhone(context))
+                    _buildMobileRepAgenda(filteredReps, sessions)
+                  else
+                    _buildTimelineGrid(filteredReps, sessions),
                 ],
               ),
             ),
             const SizedBox(height: 16),
 
             // 3. Timeline Legend at Bottom
-            _buildTimelineLegend(),
+            if (!Breakpoints.isPhone(context)) _buildTimelineLegend(),
             const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMobileRepAgenda(List<dynamic> reps, List<dynamic> sessions) {
+    if (reps.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(AppSpacing.s16),
+        child: EmptyState(
+          icon: AppIcons.customer,
+          title: 'No sales reps match',
+          message: 'Try clearing your search or selecting another branch.',
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.s16, 0, AppSpacing.s16, AppSpacing.s16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Today at a glance', style: AppTypography.section),
+          const SizedBox(height: AppSpacing.s12),
+          ...reps.map((rep) {
+            final repId = rep['id']?.toString() ?? '';
+            final repName = rep['name']?.toString() ?? 'Sales Rep';
+            final status = rep['status']?.toString() ?? 'Available';
+            final activeSession = sessions
+                .where((s) => s['sales_exec_id']?.toString() == repId)
+                .firstOrNull;
+            final customerName = activeSession?['customer_name']?.toString() ??
+                rep['activeCustomerName']?.toString();
+            final vehicleName = activeSession?['vehicle_name']?.toString();
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+              child: AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(repName, style: AppTypography.bodyStrong),
+                        ),
+                        StatusBadge.rep(status, compact: true),
+                      ],
+                    ),
+                    if (customerName != null && customerName.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.s8),
+                      Text(
+                        vehicleName != null && vehicleName.isNotEmpty
+                            ? '$customerName • $vehicleName'
+                            : customerName,
+                        style: AppTypography.body,
+                      ),
+                    ] else ...[
+                      const SizedBox(height: AppSpacing.s8),
+                      Text(
+                        'Available for walk-in or callback',
+                        style: AppTypography.caption,
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.s12),
+                    AppButton(
+                      label: 'Start session',
+                      icon: AppIcons.add,
+                      variant: AppButtonVariant.secondary,
+                      fullWidth: true,
+                      onPressed: () => context.go('/tablet?repId=$repId'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -552,9 +645,9 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     final busyReps = reps.where((r) => r['status'] == 'Busy').length;
     final idleReps = totalReps - busyReps;
 
-    final inProgress = outcomes['inProgress'] ?? (busyReps > 0 ? busyReps : 1);
-    final quoted = outcomes['quoted'] ?? 14;
-    final booked = outcomes['booked'] ?? (summary['bookingsToday'] ?? 4);
+    final inProgress = outcomes['inProgress'] ?? busyReps;
+    final quoted = outcomes['quoted'] ?? 0;
+    final booked = outcomes['booked'] ?? (summary['bookingsToday'] ?? 0);
 
     final selectedBranch = ref.watch(selectedBranchIdProvider);
     final isAllBranches = selectedBranch == 'all' || selectedBranch.isEmpty;
@@ -1806,28 +1899,55 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     final isInProgress = !isBooked &&
         (rawStatus == 'IN_PROGRESS' ||
             session['id']?.toString().startsWith('live-') == true);
+    final buyingWhen = session['buying_when']?.toString() ?? '';
+    final isImmediate =
+        !isBooked && buyingWhen.toLowerCase().contains('immediate');
 
-    // 1. Quoted: Amber (#FEF3C7 bg, #F59E0B left accent, #FDE68A border)
-    // 2. In progress: Rose/Red (#FDE8E8 bg, #EF4444 left accent, #FECACA border)
-    // 3. Booked: Mint Green (#DEF7EC bg, #10B981 left accent, #A7F3D0 border)
+    // 1. Booked: Mint Green (#DEF7EC bg, #10B981 left accent) — Green already used for Booked
+    // 2. Buying Immediately (hot lead): Blue (#EFF6FF bg, #2563EB left accent)
+    // 3. In progress: Rose/Red (#FDE8E8 bg, #EF4444 left accent)
+    // 4. Quoted: Amber (#FEF3C7 bg, #F59E0B left accent)
     final Color bgColor = isBooked
         ? const Color(0xFFDEF7EC)
-        : (isInProgress ? const Color(0xFFFDE8E8) : const Color(0xFFFEF3C7));
+        : (isImmediate
+            ? const Color(0xFFEFF6FF)
+            : (isInProgress
+                ? const Color(0xFFFDE8E8)
+                : const Color(0xFFFEF3C7)));
     final Color accentColor = isBooked
         ? const Color(0xFF10B981)
-        : (isInProgress ? const Color(0xFFEF4444) : const Color(0xFFF59E0B));
+        : (isImmediate
+            ? const Color(0xFF2563EB)
+            : (isInProgress
+                ? const Color(0xFFEF4444)
+                : const Color(0xFFF59E0B)));
     final Color borderColor = isBooked
         ? const Color(0xFFA7F3D0)
-        : (isInProgress ? const Color(0xFFFECACA) : const Color(0xFFFDE68A));
+        : (isImmediate
+            ? const Color(0xFFBFDBFE)
+            : (isInProgress
+                ? const Color(0xFFFECACA)
+                : const Color(0xFFFDE68A)));
     final Color titleColor = isBooked
         ? const Color(0xFF065F46)
-        : (isInProgress ? const Color(0xFF991B1B) : const Color(0xFF78350F));
+        : (isImmediate
+            ? const Color(0xFF1E3A8A)
+            : (isInProgress
+                ? const Color(0xFF991B1B)
+                : const Color(0xFF78350F)));
     final Color subColor = isBooked
         ? const Color(0xFF047857)
-        : (isInProgress ? const Color(0xFFDC2626) : const Color(0xFF92400E));
+        : (isImmediate
+            ? const Color(0xFF2563EB)
+            : (isInProgress
+                ? const Color(0xFFDC2626)
+                : const Color(0xFF92400E)));
 
-    final String statusLabel =
-        isBooked ? 'Booked' : (isInProgress ? 'In progress' : 'Quote');
+    final String statusLabel = isBooked
+        ? 'Booked'
+        : (isInProgress
+            ? 'In progress'
+            : (isImmediate ? 'Quote · Immediate' : 'Quote'));
     final bool showClock = isInProgress ||
         (isBooked && vehicle.toString().toLowerCase().contains('unicorn'));
 
@@ -1932,6 +2052,12 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           'Booked',
           const Color(0xFF16A34A),
           tooltip: 'Vehicle booking confirmed with advance payment',
+        ),
+        const SizedBox(width: 16),
+        _buildLegendItem(
+          'Buying Immediately',
+          const Color(0xFF2563EB),
+          tooltip: 'Hot lead planning immediate purchase (Green is already used for Booked)',
         ),
         const SizedBox(width: 16),
         Tooltip(

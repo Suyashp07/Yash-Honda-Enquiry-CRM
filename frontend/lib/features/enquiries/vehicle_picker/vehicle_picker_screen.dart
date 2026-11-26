@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/breakpoints.dart';
 import '../../../core/networking/api_client.dart';
+import '../../../core/providers/branch_provider.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_status.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../shared/widgets/app_components.dart';
 
 class VehiclePickerScreen extends ConsumerStatefulWidget {
   const VehiclePickerScreen({super.key});
@@ -14,8 +22,11 @@ class VehiclePickerScreen extends ConsumerStatefulWidget {
 
 class _VehiclePickerScreenState extends ConsumerState<VehiclePickerScreen> {
   String _selectedCategory = 'All';
+  String _searchQuery = '';
   List<dynamic> _vehicles = [];
   bool _isLoading = true;
+  String? _errorMessage;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -24,216 +35,241 @@ class _VehiclePickerScreenState extends ConsumerState<VehiclePickerScreen> {
   }
 
   Future<void> _loadVehicles() async {
-    setState(() => _isLoading = true);
+    final reqId = ++_requestId;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final dio = ref.read(dioProvider);
       final query = _selectedCategory == 'All' ? null : {'category': _selectedCategory};
       final res = await dio.get('/vehicles', queryParameters: query);
 
+      if (!mounted || reqId != _requestId) return;
+      ref.read(lastDataUpdatedProvider.notifier).state = DateTime.now();
+      ref.read(dataFreshnessErrorProvider.notifier).state = false;
       setState(() {
-        _vehicles = res.data;
+        _vehicles = res.data is List ? res.data as List : [];
         _isLoading = false;
       });
-    } catch (e) {
-      setState(() => _isLoading = false);
+    } catch (_) {
+      if (!mounted || reqId != _requestId) return;
+      ref.read(dataFreshnessErrorProvider.notifier).state = true;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Could not load vehicles. Check your connection and try again.';
+      });
     }
+  }
+
+  List<dynamic> get _filteredVehicles {
+    if (_searchQuery.trim().isEmpty) return _vehicles;
+    final q = _searchQuery.trim().toLowerCase();
+    return _vehicles.where((v) {
+      final name = (v['name'] ?? '').toString().toLowerCase();
+      final code = (v['code'] ?? '').toString().toLowerCase();
+      final group = (v['modelGroup']?['name'] ?? '').toString().toLowerCase();
+      return name.contains(q) || code.contains(q) || group.contains(q);
+    }).toList();
+  }
+
+  String? _resolveImageUrl(Map<String, dynamic> v) {
+    final raw = v['listingImageUrl']?.toString() ?? v['detailImageUrl']?.toString();
+    if (raw == null || raw.isEmpty) return null;
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    return '${ApiConstants.baseUrl.replaceFirst('/api', '')}$raw';
   }
 
   @override
   Widget build(BuildContext context) {
+    final gutter = Breakpoints.gutterFor(context);
+    final filtered = _filteredVehicles;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(gutter),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'New Customer Enquiry — Select Vehicle',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Select category and vehicle model to begin enquiry & quotation flow',
-                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-                ElevatedButton.icon(
+            PageHeader(
+              title: 'Select vehicle',
+              subtitle: 'Choose a model to start an enquiry and live quotation',
+              actions: [
+                AppButton(
+                  label: 'View all enquiries',
+                  icon: AppIcons.enquiries,
+                  variant: AppButtonVariant.secondary,
                   onPressed: () => context.go('/enquiries'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.textPrimary),
-                  icon: const Icon(Icons.list_alt, size: 18),
-                  label: const Text('View All Enquiries'),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-
-            // Category Filter Pills
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: ['All', 'Scooter', 'MC', 'BigBike'].map((cat) {
-                  final isSelected = _selectedCategory == cat;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: ChoiceChip(
-                      label: Text(
-                        cat == 'MC' ? 'Motorcycles (MC)' : cat,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                      selected: isSelected,
-                      selectedColor: AppColors.primary,
-                      backgroundColor: Colors.white,
-                      onSelected: (val) {
-                        if (val) {
-                          setState(() => _selectedCategory = cat);
-                          _loadVehicles();
-                        }
-                      },
+            const SizedBox(height: AppSpacing.s16),
+            FilterBar(
+              resultCount: _isLoading ? null : filtered.length,
+              resultLabel: 'models',
+              hasActiveFilters: _selectedCategory != 'All' || _searchQuery.isNotEmpty,
+              onClearAll: () {
+                setState(() {
+                  _selectedCategory = 'All';
+                  _searchQuery = '';
+                });
+                _loadVehicles();
+              },
+              filters: [
+                SizedBox(
+                  width: 260,
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      hintText: 'Search model or code...',
+                      prefixIcon: Icon(AppIcons.search, size: 20),
                     ),
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                  ),
+                ),
+                ...['All', 'Scooter', 'MC', 'BigBike'].map((cat) {
+                  final isSelected = _selectedCategory == cat;
+                  return ChoiceChip(
+                    label: Text(cat == 'MC' ? 'Motorcycles' : cat),
+                    selected: isSelected,
+                    onSelected: (val) {
+                      if (val) {
+                        setState(() => _selectedCategory = cat);
+                        _loadVehicles();
+                      }
+                    },
                   );
-                }).toList(),
-              ),
+                }),
+              ],
             ),
-            const SizedBox(height: 24),
-
-            // Vehicle Grid
+            const SizedBox(height: AppSpacing.s16),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _vehicles.isEmpty
-                      ? const Center(child: Text('No vehicles found in this category'))
-                      : GridView.builder(
-                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 320,
-                            crossAxisSpacing: 18,
-                            mainAxisSpacing: 18,
-                            childAspectRatio: 0.85,
-                          ),
-                          itemCount: _vehicles.length,
-                          itemBuilder: (context, index) {
-                            final v = _vehicles[index];
-                            final colours = (v['colours'] as List?) ?? [];
-                            final modelGroup = v['modelGroup']?['name'] ?? '';
+                  ? const LoadingState(rows: 4)
+                  : _errorMessage != null
+                      ? ErrorState(message: _errorMessage!, onRetry: _loadVehicles)
+                      : filtered.isEmpty
+                          ? EmptyState(
+                              icon: AppIcons.vehicle,
+                              title: 'No vehicles match',
+                              message: 'Try clearing your search or selecting another category.',
+                              actionLabel: 'Show all vehicles',
+                              onAction: () {
+                                setState(() {
+                                  _selectedCategory = 'All';
+                                  _searchQuery = '';
+                                });
+                                _loadVehicles();
+                              },
+                            )
+                          : GridView.builder(
+                              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 340,
+                                crossAxisSpacing: AppSpacing.s16,
+                                mainAxisSpacing: AppSpacing.s16,
+                                mainAxisExtent: 320,
+                              ),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final v = Map<String, dynamic>.from(filtered[index]);
+                                final colours = (v['colours'] as List?) ?? [];
+                                final modelGroup = v['modelGroup']?['name']?.toString() ?? '';
+                                final imgUrl = _resolveImageUrl(v);
 
-                            return InkWell(
-                              onTap: () {
-                                context.go(
-                                  '/enquiries/customize',
-                                  extra: {'vehicle': v},
+                                return AppCard(
+                                  onTap: () => context.go(
+                                    '/enquiries/customize',
+                                    extra: {'vehicle': v},
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          if (modelGroup.isNotEmpty)
+                                            StatusBadge(
+                                              compact: true,
+                                              showIcon: false,
+                                              style: StatusStyle(
+                                                label: modelGroup,
+                                                foreground: AppColors.brand,
+                                                background: AppColors.brandSoft,
+                                                border: AppColors.brandBorder,
+                                                icon: AppIcons.vehicle,
+                                              ),
+                                            ),
+                                          Text(
+                                            v['code']?.toString() ?? '',
+                                            style: AppTypography.caption,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: AppSpacing.s8),
+                                      Expanded(
+                                        child: Center(
+                                          child: imgUrl != null
+                                              ? Image.network(
+                                                  imgUrl,
+                                                  fit: BoxFit.contain,
+                                                  errorBuilder: (_, __, ___) => const Icon(
+                                                    AppIcons.vehicle,
+                                                    size: 48,
+                                                    color: AppColors.secondary,
+                                                  ),
+                                                )
+                                              : const Icon(
+                                                  AppIcons.vehicle,
+                                                  size: 48,
+                                                  color: AppColors.secondary,
+                                                ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.s8),
+                                      Text(
+                                        v['name']?.toString() ?? 'Honda Vehicle',
+                                        style: AppTypography.section,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: AppSpacing.s4),
+                                      Text(
+                                        'Ex-showroom: ${CurrencyFormatter.format(v['exShowroomPrice'])}',
+                                        style: AppTypography.caption,
+                                      ),
+                                      Text(
+                                        'On-road: ${CurrencyFormatter.format(v['onRoadPrice'])}',
+                                        style: AppTypography.bodyStrong.copyWith(
+                                          color: AppColors.brand,
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.s8),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              '${colours.length} colours',
+                                              style: AppTypography.caption,
+                                            ),
+                                          ),
+                                          const Text(
+                                            'Select vehicle',
+                                            style: TextStyle(
+                                              color: AppColors.brand,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          const Icon(Icons.arrow_forward,
+                                              size: 16, color: AppColors.brand),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 );
                               },
-                              borderRadius: BorderRadius.circular(14),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: AppColors.border),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.02),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                padding: const EdgeInsets.all(18),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Badge & Icon
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: modelGroup == 'BigWing'
-                                                ? const Color(0xFFFEF3C7)
-                                                : const Color(0xFFFFE5E5),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            modelGroup.toUpperCase(),
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w800,
-                                              color: modelGroup == 'BigWing'
-                                                  ? const Color(0xFFB45309)
-                                                  : AppColors.primary,
-                                            ),
-                                          ),
-                                        ),
-                                        const Icon(Icons.two_wheeler, size: 28, color: AppColors.textSecondary),
-                                      ],
-                                    ),
-                                    const Spacer(),
-
-                                    // Vehicle Name & Code
-                                    Text(
-                                      v['name'] ?? '',
-                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-                                    ),
-                                    Text(
-                                      'Code: ${v['code']} • ${v['category']}',
-                                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                    ),
-                                    const SizedBox(height: 12),
-
-                                    // Colour dots
-                                    Row(
-                                      children: colours.take(5).map((vc) {
-                                        final hexStr = vc['colour']?['hex'] ?? '#CCCCCC';
-                                        final color = Color(int.parse(hexStr.replaceFirst('#', '0xFF')));
-                                        return Container(
-                                          margin: const EdgeInsets.only(right: 5),
-                                          width: 14,
-                                          height: 14,
-                                          decoration: BoxDecoration(
-                                            color: color,
-                                            shape: BoxShape.circle,
-                                            border: Border.all(color: Colors.black12, width: 1),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                    const SizedBox(height: 14),
-
-                                    // On-road Price (Pune)
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Text('Pune On-Road', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
-                                            Text(
-                                              CurrencyFormatter.format(v['onRoadPrice']),
-                                              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.primary),
-                                            ),
-                                          ],
-                                        ),
-                                        const Icon(Icons.arrow_forward_rounded, size: 18, color: AppColors.primary),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                            ),
             ),
           ],
         ),
@@ -241,4 +277,3 @@ class _VehiclePickerScreenState extends ConsumerState<VehiclePickerScreen> {
     );
   }
 }
-
