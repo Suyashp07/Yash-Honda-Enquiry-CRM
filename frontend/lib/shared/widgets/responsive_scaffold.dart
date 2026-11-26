@@ -269,7 +269,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
     required bool forceCompact,
   }) {
     final collapsed = forceCompact || _isSidebarCollapsed;
-    final sidebarWidth = collapsed ? 72.0 : 230.0;
+    final sidebarWidth = collapsed ? 68.0 : 208.0;
     final adminItems = _permittedAdminItems(user);
 
     return Scaffold(
@@ -287,14 +287,10 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Brand Mark: Wing logo + "Yash Honda" + Role subtitle
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    collapsed ? 14 : 16,
-                    20,
-                    collapsed ? 14 : 12,
-                    16,
-                  ),
+                // Top Brand Mark: Full Honda Logo (Wing + HONDA) alongside "Yash Honda" + consistent toggle
+                Container(
+                  height: 64,
+                  padding: EdgeInsets.symmetric(horizontal: collapsed ? 8 : 12),
                   child: Row(
                     children: [
                       Expanded(
@@ -310,13 +306,19 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const HondaWingLogo(width: 40, height: 28),
+                                HondaWingLogo(
+                                  width: collapsed ? 26 : 38,
+                                  height: collapsed ? 18 : 22,
+                                  showWordmark: !collapsed,
+                                ),
                                 if (!collapsed) ...[
-                                  const SizedBox(width: 10),
+                                  const SizedBox(width: 8),
                                   Flexible(
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         const Text(
                                           'Yash Honda',
@@ -346,28 +348,38 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                           ),
                         ),
                       ),
-                      if (!collapsed && !forceCompact)
-                        IconButton(
-                          icon: const Icon(Icons.menu_open,
-                              size: 18, color: Color(0xFF64748B)),
-                          tooltip: 'Collapse navigation',
-                          onPressed: () =>
-                              setState(() => _isSidebarCollapsed = true),
+                      if (!forceCompact)
+                        Tooltip(
+                          message: collapsed
+                              ? 'Expand navigation'
+                              : 'Collapse navigation',
+                          child: InkWell(
+                            onTap: () => setState(
+                                () => _isSidebarCollapsed = !_isSidebarCollapsed),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              width: 26,
+                              height: 26,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(6),
+                                border:
+                                    Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Icon(
+                                collapsed
+                                    ? Icons.chevron_right_rounded
+                                    : Icons.chevron_left_rounded,
+                                size: 18,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
                         ),
                     ],
                   ),
                 ),
-                if (collapsed && !forceCompact)
-                  Center(
-                    child: IconButton(
-                      icon: const Icon(Icons.menu,
-                          size: 20, color: Color(0xFF64748B)),
-                      tooltip: 'Expand navigation',
-                      onPressed: () =>
-                          setState(() => _isSidebarCollapsed = false),
-                    ),
-                  ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
 
                 // Main Navigation Links
                 Expanded(
