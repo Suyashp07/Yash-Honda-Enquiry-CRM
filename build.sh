@@ -1,20 +1,7 @@
 #!/bin/bash
 set -e
 
-# If production web bundle already exists, deploy instantly!
-if [ -f "frontend/build/web/main.dart.js" ] || [ -f "build/web/main.dart.js" ]; then
-  echo "Found pre-built Flutter web bundle! Preparing static files for deployment..."
-  mkdir -p build/web frontend/build/web 2>/dev/null || true
-  if [ -d "frontend/build/web" ]; then
-    cp -rf frontend/build/web/* build/web/ 2>/dev/null || true
-  elif [ -d "build/web" ]; then
-    cp -rf build/web/* frontend/build/web/ 2>/dev/null || true
-  fi
-  echo "Flutter web static assets successfully ready for Vercel edge deployment!"
-  exit 0
-fi
-
-# Fallback: Compile using Flutter stable SDK with memory-safe flags
+# Always compile Flutter Web from source so deployments reflect the latest Dart changes
 git config --global --add safe.directory '*' 2>/dev/null || true
 FLUTTER_DIR="$HOME/flutter-stable"
 
