@@ -1034,14 +1034,6 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             _selectedVehicle = null;
             _invalidateQuoteCache();
           });
-        },
-        onDoubleTap: () {
-          setState(() {
-            _selectedCategory = code;
-            _selectedCcFilter = 'All';
-            _selectedVehicle = null;
-            _invalidateQuoteCache();
-          });
           _nextStep();
         },
         child: AnimatedContainer(
