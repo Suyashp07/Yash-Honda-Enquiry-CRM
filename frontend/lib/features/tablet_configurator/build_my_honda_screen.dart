@@ -1246,25 +1246,31 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                         ],
                       ),
                     )
-                  : ListView.separated(
-                      controller: _vehicleCarouselCtrl,
-                      scrollDirection: Axis.horizontal,
-                      itemCount: vehicles.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 18),
-                      itemBuilder: (context, index) {
-                        final v = vehicles[index];
-                        final isSel = _selectedVehicle?['id'] == v['id'] ||
-                            _selectedVehicle?['code'] == v['code'];
-                        final displayPrice = _showOnRoadPrice
-                            ? (v['onRoadPrice'] ?? 0)
-                            : (v['exShowroomPrice'] ?? 0);
-                        final cc = v['ccDisplacement'];
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final colsCount =
+                            constraints.maxWidth >= 640 ? 2 : 1;
+                        return GridView.builder(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: colsCount,
+                            mainAxisSpacing: 18,
+                            crossAxisSpacing: 18,
+                            childAspectRatio: colsCount == 2 ? 1.18 : 1.32,
+                          ),
+                          itemCount: vehicles.length,
+                          itemBuilder: (context, index) {
+                            final v = vehicles[index];
+                            final isSel = _selectedVehicle?['id'] == v['id'] ||
+                                _selectedVehicle?['code'] == v['code'];
+                            final displayPrice = _showOnRoadPrice
+                                ? (v['onRoadPrice'] ?? 0)
+                                : (v['exShowroomPrice'] ?? 0);
+                            final cc = v['ccDisplacement'];
+                            final cols = _getColoursForVehicle(v);
 
-                        final cols = _getColoursForVehicle(v);
-
-                        return SizedBox(
-                          width: 350,
-                          child: InkWell(
+                            return InkWell(
                             onTap: () => _selectVehicle(v, advance: true),
                             borderRadius: BorderRadius.circular(22),
                             child: AnimatedContainer(
@@ -1513,33 +1519,12 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 ],
                               ),
                             ),
-                          ),
+                          );
+                          },
                         );
                       },
                     ),
         ),
-
-        const SizedBox(height: 14),
-        // Pagination Dots matching Mockup 2
-        if (vehicles.isNotEmpty)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(vehicles.length.clamp(1, 6), (i) {
-              final active =
-                  i == _carouselDotIndex.clamp(0, vehicles.length - 1);
-              return Container(
-                width: active ? 8 : 6,
-                height: active ? 8 : 6,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: active
-                      ? const Color(0xFFDC2626)
-                      : const Color(0xFFCBD5E1),
-                ),
-              );
-            }),
-          ),
       ],
     );
   }
