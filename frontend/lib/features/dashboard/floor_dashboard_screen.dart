@@ -37,6 +37,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   final _searchController = TextEditingController();
   final _timelineScrollController = ScrollController();
   String _searchQuery = '';
+  String _repStatusFilter = 'all'; // 'all' | 'active' | 'available'
+  String _repSortMode = 'default'; // 'default' | 'active_first' | 'available_first' | 'name_asc'
   String _viewMode = 'rows'; // 'rows' or 'columns'
   int _zoomLevel = 100;
 
@@ -456,9 +458,12 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     final reps = (_dashboardData?['reps'] as List?) ?? [];
     final sessions = (_dashboardData?['sessions'] as List?) ?? [];
 
-    // Filter reps if filtered by pill or search
+    // Filter reps if filtered by pill, status filter, or search
     final filteredReps = reps.where((rep) {
       if (_selectedRepId != 'all' && rep['id'] != _selectedRepId) return false;
+      final isBusy = rep['status'] == 'Busy';
+      if (_repStatusFilter == 'active' && !isBusy) return false;
+      if (_repStatusFilter == 'available' && isBusy) return false;
       if (_searchQuery.isNotEmpty) {
         final name = (rep['name'] as String?)?.toLowerCase() ?? '';
         final phone = (rep['mobile'] as String?) ?? '';
@@ -480,6 +485,30 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
       }
       return true;
     }).toList();
+
+    if (_repSortMode == 'active_first') {
+      filteredReps.sort((a, b) {
+        final aBusy = a['status'] == 'Busy' ? 0 : 1;
+        final bBusy = b['status'] == 'Busy' ? 0 : 1;
+        if (aBusy != bBusy) return aBusy.compareTo(bBusy);
+        return (a['name'] ?? '')
+            .toString()
+            .compareTo((b['name'] ?? '').toString());
+      });
+    } else if (_repSortMode == 'available_first') {
+      filteredReps.sort((a, b) {
+        final aAvail = a['status'] != 'Busy' ? 0 : 1;
+        final bAvail = b['status'] != 'Busy' ? 0 : 1;
+        if (aAvail != bAvail) return aAvail.compareTo(bAvail);
+        return (a['name'] ?? '')
+            .toString()
+            .compareTo((b['name'] ?? '').toString());
+      });
+    } else if (_repSortMode == 'name_asc') {
+      filteredReps.sort((a, b) => (a['name'] ?? '')
+          .toString()
+          .compareTo((b['name'] ?? '').toString()));
+    }
 
     // NOTE: the page title ("Live floor" / "Updated just now") is intentionally
     // NOT rendered here anymore. It's already rendered once by the parent
@@ -925,6 +954,177 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             ),
           ),
         ),
+
+        const SizedBox(width: 8),
+
+        // Filter & Sort icon button (Active / Available / Sort)
+        Builder(builder: (context) {
+          final isFiltered =
+              _repStatusFilter != 'all' || _repSortMode != 'default';
+          return PopupMenuButton<String>(
+            tooltip: 'Filter & sort sales reps (Active / Available)',
+            offset: const Offset(0, 40),
+            color: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            onSelected: (val) {
+              setState(() {
+                if (val.startsWith('filter:')) {
+                  _repStatusFilter = val.substring('filter:'.length);
+                } else if (val.startsWith('sort:')) {
+                  _repSortMode = val.substring('sort:'.length);
+                }
+              });
+            },
+            itemBuilder: (ctx) => [
+              const PopupMenuItem<String>(
+                enabled: false,
+                height: 28,
+                child: Text(
+                  'FILTER BY STATUS',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'filter:all',
+                child: Row(
+                  children: [
+                    Icon(
+                      _repStatusFilter == 'all'
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      size: 16,
+                      color: const Color(0xFF0F172A),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('All Reps', style: TextStyle(fontSize: 13)),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'filter:active',
+                child: Row(
+                  children: [
+                    const Icon(Icons.circle,
+                        size: 10, color: Color(0xFFDC2626)),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child:
+                          Text('Active (Busy)', style: TextStyle(fontSize: 13)),
+                    ),
+                    if (_repStatusFilter == 'active')
+                      const Icon(Icons.check,
+                          size: 16, color: Color(0xFFDC2626)),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'filter:available',
+                child: Row(
+                  children: [
+                    const Icon(Icons.circle,
+                        size: 10, color: Color(0xFF16A34A)),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child:
+                          Text('Available', style: TextStyle(fontSize: 13)),
+                    ),
+                    if (_repStatusFilter == 'available')
+                      const Icon(Icons.check,
+                          size: 16, color: Color(0xFF16A34A)),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                enabled: false,
+                height: 28,
+                child: Text(
+                  'SORT BY',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'sort:active_first',
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text('Active First',
+                          style: TextStyle(fontSize: 13)),
+                    ),
+                    if (_repSortMode == 'active_first')
+                      const Icon(Icons.check,
+                          size: 16, color: Color(0xFFDC2626)),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'sort:available_first',
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text('Available First',
+                          style: TextStyle(fontSize: 13)),
+                    ),
+                    if (_repSortMode == 'available_first')
+                      const Icon(Icons.check,
+                          size: 16, color: Color(0xFFDC2626)),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'sort:name_asc',
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child:
+                          Text('Name (A–Z)', style: TextStyle(fontSize: 13)),
+                    ),
+                    if (_repSortMode == 'name_asc')
+                      const Icon(Icons.check,
+                          size: 16, color: Color(0xFFDC2626)),
+                  ],
+                ),
+              ),
+            ],
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: isFiltered
+                    ? const Color(0xFFFEF2F2)
+                    : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isFiltered
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFFE2E8F0),
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.sort_rounded,
+                size: 18,
+                color: isFiltered
+                    ? const Color(0xFFDC2626)
+                    : const Color(0xFF475569),
+              ),
+            ),
+          );
+        }),
 
         const Spacer(),
 
