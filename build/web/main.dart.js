@@ -124484,7 +124484,7 @@ if(s.w==="matrix")q.push(s.akK())
 if(s.w==="summary2")q.push(s.ale())
 B.l.H(p,q)}return A.jJ(r,B.aI,A.dN(A.aa(p,B.Q,B.p,B.r,0,B.B),r,B.Y,B.ry,r,r,B.an),r)},
 alk(){var s,r,q,p,o,n=this,m=null,l=A.z(10),k=A.av(B.a2,B.F,1),j=A.a([new A.bi(0,B.at,B.a_.hd(0.02),B.cW,4)],t.V),i=A.z(6),h=A.av(B.a2,B.F,1),g=t.p
-i=A.a([A.R(m,A.X(A.a([n.XI("matrix","Matrix View",B.a3o,"Performance matrix comparing branches, walk-ins, bookings & conversion rates"),n.XI("summary2","Summary 2",B.a38,"Executive KPI cards and model contribution analytics")],g),B.v,B.p,B.a0,0,m),B.w,m,m,new A.a0(B.bP,m,h,i,m,m,B.K),m,36,m,m,m,m,m)],g)
+i=A.a([A.R(m,A.X(A.a([n.XI("matrix","Matrix View",B.a3o,"Performance matrix comparing branches, walk-ins, bookings & conversion rates"),n.XI("summary2","Summary",B.a38,"Executive KPI cards and model contribution analytics")],g),B.v,B.p,B.a0,0,m),B.w,m,m,new A.a0(B.bP,m,h,i,m,m,B.K),m,36,m,m,m,m,m)],g)
 if(n.w==="matrix"){h=A.z(6)
 s=n.Q
 r=s?B.fn:B.x

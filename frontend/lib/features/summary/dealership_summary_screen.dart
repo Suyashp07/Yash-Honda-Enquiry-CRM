@@ -162,7 +162,7 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildViewTab('matrix', 'Matrix View', Icons.table_chart_outlined, tooltip: 'Performance matrix comparing branches, walk-ins, bookings & conversion rates'),
-                _buildViewTab('summary2', 'Summary 2', Icons.grid_view_outlined, tooltip: 'Executive KPI cards and model contribution analytics'),
+                _buildViewTab('summary2', 'Summary', Icons.grid_view_outlined, tooltip: 'Executive KPI cards and model contribution analytics'),
               ],
             ),
           ),
