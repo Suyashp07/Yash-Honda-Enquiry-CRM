@@ -1,7 +1,10 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import '../../core/constants/app_colors.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/providers/branch_provider.dart';
@@ -125,6 +128,110 @@ class _DealershipSummaryScreenState
     }
   }
 
+  Map<String, dynamic> _buildFullTabularMatrix() {
+    final branches = (_summaryData?['branches'] as List?) ?? [];
+    final asOnDate = _summaryData?['asOnDate'] ?? {};
+    final totalLeads = asOnDate['totalLeads'] ?? {};
+    final totalBk = asOnDate['totalBk'] ?? {};
+    final conversion = asOnDate['conversion'] ?? {};
+
+    final modeBreakup = (_summaryData?['modeBreakup'] as List?) ?? [];
+    final sourceBreakup = (_summaryData?['sourceBreakup'] as List?) ?? [];
+    final modelWiseLeads = (_summaryData?['modelWiseLeads'] as List?) ?? [];
+    final modelWiseBk = (_summaryData?['modelWiseBk'] as List?) ?? [];
+    final salesExWiseBk = (_summaryData?['salesExWiseBk'] as List?) ?? [];
+
+    final mtdModelConv = (_summaryData?['mtdModelConv'] as List?) ?? [];
+    final mtdSalesExConv = (_summaryData?['mtdSalesExConv'] as List?) ?? [];
+    final mtdSourceConv = (_summaryData?['mtdSourceConv'] as List?) ?? [];
+    final mtdModeConv = (_summaryData?['mtdModeConv'] as List?) ?? [];
+
+    final date = _summaryData?['date'] ?? '';
+    final monthStart = _summaryData?['monthStart'] ?? '';
+    final branchIds = [...branches.map((b) => b['id'].toString()), 'all'];
+
+    final headers = <String>[
+      'METRIC / BREAKDOWN',
+      ...List.generate(branches.length, (i) {
+        final b = branches[i];
+        return 'LOC ${i + 1}: ${b['name'] ?? ''}';
+      }),
+      'CONSOLIDATED',
+    ];
+
+    final rows = <Map<String, dynamic>>[];
+
+    void addSection(String title) {
+      rows.add({'isSection': true, 'label': title, 'cells': <String>[]});
+    }
+
+    void addDataRow(String label, List<String> cells, {bool isBold = false}) {
+      rows.add({
+        'isSection': false,
+        'isBold': isBold,
+        'label': label,
+        'cells': cells,
+      });
+    }
+
+    void addMatrixRows(List<dynamic> list, {String fallback = '0'}) {
+      for (final item in list) {
+        final label = (item['label'] ?? '').toString();
+        final vals = item['values'] ?? {};
+        addDataRow(
+          label,
+          branchIds.map((id) => (vals[id] ?? fallback).toString()).toList(),
+        );
+      }
+    }
+
+    addSection('AS ON DATE ($date)');
+    addDataRow(
+      'TOTAL LEADS',
+      branchIds.map((id) => (totalLeads[id] ?? 0).toString()).toList(),
+      isBold: true,
+    );
+    addDataRow(
+      'TOTAL BK',
+      branchIds.map((id) => (totalBk[id] ?? 0).toString()).toList(),
+      isBold: true,
+    );
+    addDataRow(
+      'CONVERSION',
+      branchIds.map((id) => (conversion[id] ?? '0.00%').toString()).toList(),
+      isBold: true,
+    );
+
+    addSection('MODE BREAK UP');
+    addMatrixRows(modeBreakup);
+
+    addSection('SOURCE');
+    addMatrixRows(sourceBreakup);
+
+    addSection('MODEL WISE LEADS');
+    addMatrixRows(modelWiseLeads);
+
+    addSection('MODEL WISE BK');
+    addMatrixRows(modelWiseBk);
+
+    addSection('SALES EX WISE BK');
+    addMatrixRows(salesExWiseBk);
+
+    addSection('MTD LEADS TO CONVERSION ($monthStart TO $date)');
+    addMatrixRows(mtdModelConv, fallback: '-');
+
+    addSection('MTD SALES EX WISE CONV');
+    addMatrixRows(mtdSalesExConv, fallback: '-');
+
+    addSection('SOURCE WISE CONVERSION (MTD)');
+    addMatrixRows(mtdSourceConv, fallback: '-');
+
+    addSection('MODE WISE BREAKUP (MTD)');
+    addMatrixRows(mtdModeConv, fallback: '-');
+
+    return {'headers': headers, 'rows': rows};
+  }
+
   Future<void> _handlePrint() async {
     if (_summaryData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -133,7 +240,9 @@ class _DealershipSummaryScreenState
       return;
     }
     try {
-      final branches = (_summaryData?['branches'] as List?) ?? [];
+      final matrix = _buildFullTabularMatrix();
+      final headers = matrix['headers'] as List<String>;
+      final rows = matrix['rows'] as List<Map<String, dynamic>>;
       final periodLabel = _selectedPeriod == 'custom'
           ? '${DateFormat('dd MMM yyyy').format(_fromDate)} to ${DateFormat('dd MMM yyyy').format(_toDate)}'
           : '${_selectedPeriod.toUpperCase()} (${DateFormat('dd MMM yyyy').format(_selectedDate)})';
@@ -144,15 +253,22 @@ class _DealershipSummaryScreenState
           .replaceAll('<', '&lt;')
           .replaceAll('>', '&gt;');
 
-      final rowsHtml = branches.map((b) {
-        final name = esc(b['name']);
-        final code = esc(b['code']);
-        final total = b['total'] ?? b['totalLeads'] ?? 0;
-        final walkIns = b['walkIns'] ?? 0;
-        final calls = b['callsRecd'] ?? b['telephonic'] ?? 0;
-        final booked = b['booked'] ?? b['bookings'] ?? 0;
-        final conv = b['conversionRate'] ?? 0;
-        return '<tr><td>$name ($code)</td><td>$total</td><td>$walkIns</td><td>$calls</td><td>$booked</td><td>$conv%</td></tr>';
+      final headerHtml =
+          headers.map((h) => '<th>${esc(h)}</th>').join('');
+      final bodyHtml = rows.map((r) {
+        if (r['isSection'] == true) {
+          return '<tr class="section"><td colspan="${headers.length}">${esc(r['label'])}</td></tr>';
+        }
+        final cells = r['cells'] as List<String>;
+        final cls = r['isBold'] == true ? ' class="bold-row"' : '';
+        final tds = [
+          '<td>${esc(r['label'])}</td>',
+          ...cells.asMap().entries.map((entry) {
+            final isLast = entry.key == cells.length - 1;
+            return '<td${isLast ? ' class="cons"' : ''}>${esc(entry.value)}</td>';
+          }),
+        ].join('');
+        return '<tr$cls>$tds</tr>';
       }).join('');
 
       final htmlDoc = '''<!DOCTYPE html>
@@ -161,23 +277,24 @@ class _DealershipSummaryScreenState
 <meta charset="utf-8">
 <title>Yash Honda - Dealership Summary</title>
 <style>
-  body { font-family: Arial, sans-serif; color: #0F172A; margin: 24px; }
-  h1 { font-size: 18px; margin: 0 0 4px 0; color: #CC0000; }
-  p { font-size: 12px; color: #475569; margin: 0 0 16px 0; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th, td { border: 1px solid #CBD5E1; padding: 8px 10px; text-align: left; }
+  body { font-family: Arial, sans-serif; color: #0F172A; margin: 18px; }
+  h1 { font-size: 16px; margin: 0 0 4px 0; color: #CC0000; }
+  p { font-size: 11px; color: #475569; margin: 0 0 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  th, td { border: 1px solid #CBD5E1; padding: 5px 7px; text-align: left; }
   th { background: #F1F5F9; font-weight: 700; }
-  @page { size: A4 landscape; margin: 12mm; }
+  tr.section td { background: #FEF2F2; color: #CC0000; font-weight: 800; letter-spacing: 0.4px; }
+  tr.bold-row td { font-weight: 700; }
+  td.cons { background: #FFFBEB; font-weight: 700; }
+  @page { size: A4 landscape; margin: 10mm; }
 </style>
 </head>
 <body>
   <h1>Yash Honda — Dealership Summary</h1>
   <p>Period: ${esc(periodLabel)}</p>
   <table>
-    <thead>
-      <tr><th>Branch</th><th>Total Leads</th><th>Walk-ins</th><th>Telephonic</th><th>Bookings</th><th>Conversion</th></tr>
-    </thead>
-    <tbody>$rowsHtml</tbody>
+    <thead><tr>$headerHtml</tr></thead>
+    <tbody>$bodyHtml</tbody>
   </table>
   <script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 250); });</script>
 </body>
@@ -201,19 +318,26 @@ class _DealershipSummaryScreenState
       return;
     }
     try {
-      final branches = (_summaryData?['branches'] as List?) ?? [];
-      final buffer = StringBuffer();
-      buffer.writeln('Branch,Code,Leads,Walk-ins,Telephonic,Booked,Conversion %');
-      for (final b in branches) {
-        final name = (b['name'] ?? '').toString().replaceAll(',', ' ');
-        final code = (b['code'] ?? '').toString();
-        final total = b['total'] ?? b['totalLeads'] ?? 0;
-        final walkIns = b['walkIns'] ?? 0;
-        final calls = b['callsRecd'] ?? b['telephonic'] ?? 0;
-        final booked = b['booked'] ?? b['bookings'] ?? 0;
-        final conv = b['conversionRate'] ?? 0;
-        buffer.writeln('$name,$code,$total,$walkIns,$calls,$booked,$conv%');
+      String csvCell(dynamic val) {
+        final s = (val ?? '').toString().replaceAll('"', '""');
+        return '"$s"';
       }
+
+      final matrix = _buildFullTabularMatrix();
+      final headers = matrix['headers'] as List<String>;
+      final rows = matrix['rows'] as List<Map<String, dynamic>>;
+
+      final buffer = StringBuffer();
+      buffer.writeln(headers.map(csvCell).join(','));
+      for (final r in rows) {
+        if (r['isSection'] == true) {
+          buffer.writeln(csvCell('--- ${r['label']} ---'));
+        } else {
+          final cells = r['cells'] as List<String>;
+          buffer.writeln([r['label'], ...cells].map(csvCell).join(','));
+        }
+      }
+
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
       await downloadTextFile(
         buffer.toString(),
@@ -223,14 +347,180 @@ class _DealershipSummaryScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: AppColors.success,
-            content: Text('Dealership summary CSV exported.'),
+            content: Text('Full dealership summary CSV exported.'),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
+          SnackBar(content: Text('CSV export failed: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportPdf() async {
+    if (_summaryData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No summary data loaded to export.')),
+      );
+      return;
+    }
+    try {
+      final matrix = _buildFullTabularMatrix();
+      final headers = matrix['headers'] as List<String>;
+      final rows = matrix['rows'] as List<Map<String, dynamic>>;
+      final periodLabel = _selectedPeriod == 'custom'
+          ? '${DateFormat('dd MMM yyyy').format(_fromDate)} to ${DateFormat('dd MMM yyyy').format(_toDate)}'
+          : '${_selectedPeriod.toUpperCase()} (${DateFormat('dd MMM yyyy').format(_selectedDate)})';
+
+      final doc = pw.Document();
+      doc.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4.landscape,
+          margin: const pw.EdgeInsets.all(20),
+          header: (ctx) => pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 8),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  'Yash Honda — Dealership Summary',
+                  style: pw.TextStyle(
+                    fontSize: 13,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColor.fromHex('#CC0000'),
+                  ),
+                ),
+                pw.Text(
+                  'Period: $periodLabel',
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    color: PdfColor.fromHex('#475569'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          build: (ctx) => [
+            pw.Table(
+              border: pw.TableBorder.all(
+                color: PdfColor.fromHex('#CBD5E1'),
+                width: 0.5,
+              ),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(2.4),
+                for (var i = 1; i < headers.length; i++)
+                  i: const pw.FlexColumnWidth(1.1),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor.fromHex('#F1F5F9'),
+                  ),
+                  children: headers
+                      .map((h) => pw.Padding(
+                            padding: const pw.EdgeInsets.all(4),
+                            child: pw.Text(
+                              h,
+                              style: pw.TextStyle(
+                                fontSize: 7.5,
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColor.fromHex('#0F172A'),
+                              ),
+                            ),
+                          ))
+                      .toList(),
+                ),
+                ...rows.map((r) {
+                  if (r['isSection'] == true) {
+                    return pw.TableRow(
+                      decoration: pw.BoxDecoration(
+                        color: PdfColor.fromHex('#FEF2F2'),
+                      ),
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 3.5),
+                          child: pw.Text(
+                            r['label'].toString(),
+                            style: pw.TextStyle(
+                              fontSize: 7.5,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColor.fromHex('#CC0000'),
+                            ),
+                          ),
+                        ),
+                        ...List.generate(
+                          headers.length - 1,
+                          (_) => pw.SizedBox(),
+                        ),
+                      ],
+                    );
+                  }
+                  final cells = r['cells'] as List<String>;
+                  final isBold = r['isBold'] == true;
+                  return pw.TableRow(
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text(
+                          r['label'].toString(),
+                          style: pw.TextStyle(
+                            fontSize: 7.5,
+                            fontWeight: isBold
+                                ? pw.FontWeight.bold
+                                : pw.FontWeight.normal,
+                            color: PdfColor.fromHex('#0F172A'),
+                          ),
+                        ),
+                      ),
+                      ...cells.asMap().entries.map((entry) {
+                        final isCons = entry.key == cells.length - 1;
+                        return pw.Container(
+                          color: isCons ? PdfColor.fromHex('#FFFBEB') : null,
+                          padding: const pw.EdgeInsets.all(4),
+                          child: pw.Text(
+                            entry.value,
+                            style: pw.TextStyle(
+                              fontSize: 7.5,
+                              fontWeight: (isBold || isCons)
+                                  ? pw.FontWeight.bold
+                                  : pw.FontWeight.normal,
+                              color: PdfColor.fromHex('#1E293B'),
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      final bytes = await doc.save();
+      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      downloadFileBytes(
+        Uint8List.fromList(bytes),
+        'dealership_summary_${_selectedPeriod}_$dateStr.pdf',
+        'application/pdf',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: AppColors.success,
+            content: Text('Full dealership summary PDF exported.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF export failed: $e')),
         );
       }
     }
@@ -550,14 +840,66 @@ class _DealershipSummaryScreenState
             ],
           ),
 
-          // Download, Print & Refresh (matching Enquiries screen)
+          // Download (CSV / PDF), Print & Refresh (matching Enquiries screen)
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildSquareIconButton(
-                Icons.file_download_outlined,
-                _exportCsv,
-                tooltip: 'Download summary CSV',
+              PopupMenuButton<String>(
+                tooltip: 'Download summary (CSV or PDF)',
+                offset: const Offset(0, 40),
+                color: Colors.white,
+                surfaceTintColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                onSelected: (fmt) {
+                  if (fmt == 'csv') {
+                    _exportCsv();
+                  } else if (fmt == 'pdf') {
+                    _exportPdf();
+                  }
+                },
+                itemBuilder: (ctx) => const [
+                  PopupMenuItem<String>(
+                    value: 'csv',
+                    child: Row(
+                      children: [
+                        Icon(Icons.table_chart_outlined,
+                            size: 18, color: Color(0xFF16A34A)),
+                        SizedBox(width: 10),
+                        Text('Download CSV (.csv)',
+                            style: TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'pdf',
+                    child: Row(
+                      children: [
+                        Icon(Icons.picture_as_pdf_outlined,
+                            size: 18, color: Color(0xFFDC2626)),
+                        SizedBox(width: 10),
+                        Text('Download PDF (.pdf)',
+                            style: TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ],
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.file_download_outlined,
+                      size: 18, color: Color(0xFF475569)),
+                ),
               ),
               const SizedBox(width: 6),
               _buildSquareIconButton(
