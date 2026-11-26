@@ -1260,8 +1260,10 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                             : (v['exShowroomPrice'] ?? 0);
                         final cc = v['ccDisplacement'];
 
+                        final cols = _getColoursForVehicle(v);
+
                         return SizedBox(
-                          width: 278,
+                          width: 350,
                           child: InkWell(
                             onTap: () => _selectVehicle(v, advance: true),
                             borderRadius: BorderRadius.circular(22),
@@ -1273,7 +1275,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 border: Border.all(
                                   color: isSel
                                       ? const Color(0xFFDC2626)
-                                      : const Color(0xFFF1F5F9),
+                                      : const Color(0xFFE2E8F0),
                                   width: isSel ? 2.2 : 1.0,
                                 ),
                                 boxShadow: [
@@ -1288,7 +1290,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                               ),
                               child: Column(
                                 children: [
-                                  // Top Card Image
+                                  // Top Card Image Stage (fits full landscape vehicle cleanly)
                                   Expanded(
                                     child: ClipRRect(
                                       borderRadius: const BorderRadius.vertical(
@@ -1297,55 +1299,51 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                         fit: StackFit.expand,
                                         children: [
                                           Container(
-                                            color: const Color(0xFFF8FAFC),
+                                            decoration: const BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  Color(0xFFFFFFFF),
+                                                  Color(0xFFF8FAFC),
+                                                  Color(0xFFF1F5F9),
+                                                ],
+                                              ),
+                                            ),
+                                            padding: const EdgeInsets.fromLTRB(
+                                                16, 36, 16, 12),
                                             child: SmartMediaImage(
                                               source: _resolveListingImage(v),
-                                              fit: BoxFit.cover,
+                                              fit: BoxFit.contain,
                                               fallback: Center(
-                                                child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.all(16),
-                                                  child: Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      const Icon(
-                                                        Icons
-                                                            .two_wheeler_outlined,
-                                                        size: 42,
+                                                child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(
+                                                      Icons
+                                                          .two_wheeler_outlined,
+                                                      size: 46,
+                                                      color: Color(0xFF94A3B8),
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      v['name']?.toString() ??
+                                                          '',
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w700,
                                                         color:
-                                                            Color(0xFF94A3B8),
+                                                            Color(0xFF475569),
                                                       ),
-                                                      const SizedBox(height: 8),
-                                                      Text(
-                                                        v['name']?.toString() ??
-                                                            '',
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: const TextStyle(
-                                                          fontSize: 12,
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                          color:
-                                                              Color(0xFF475569),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 2),
-                                                      const Text(
-                                                        'Upload image in Admin Panel',
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                        style: TextStyle(
-                                                          fontSize: 10.5,
-                                                          color:
-                                                              Color(0xFF94A3B8),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
                                             ),
@@ -1360,8 +1358,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                                         horizontal: 10,
                                                         vertical: 4),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.black
-                                                      .withValues(alpha: 0.65),
+                                                  color: const Color(0xFF0F172A)
+                                                      .withValues(alpha: 0.82),
                                                   borderRadius:
                                                       BorderRadius.circular(14),
                                                 ),
@@ -1375,52 +1373,141 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                                 ),
                                               ),
                                             ),
+                                          if (cols.isNotEmpty)
+                                            Positioned(
+                                              top: 14,
+                                              right: 14,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.92),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color:
+                                                        const Color(0xFFE2E8F0),
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    ...cols.take(4).map((c) =>
+                                                        Container(
+                                                          width: 10,
+                                                          height: 10,
+                                                          margin:
+                                                              const EdgeInsets
+                                                                  .only(
+                                                                  right: 3),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: _parseColor(
+                                                                c['hex']
+                                                                    ?.toString()),
+                                                            shape:
+                                                                BoxShape.circle,
+                                                            border: Border.all(
+                                                              color: const Color(
+                                                                  0x33000000),
+                                                              width: 0.7,
+                                                            ),
+                                                          ),
+                                                        )),
+                                                    if (cols.length > 4)
+                                                      Text(
+                                                        '+${cols.length - 4}',
+                                                        style: const TextStyle(
+                                                          fontSize: 9.5,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color:
+                                                              Color(0xFF475569),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
                                         ],
                                       ),
                                     ),
                                   ),
 
                                   // Bottom Vehicle Name & Price Bar
-                                  SizedBox(
+                                  Container(
                                     width: double.infinity,
-                                    child: Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                          16, 12, 16, 14),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            v['name']?.toString() ?? '',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w700,
-                                              color: Color(0xFF334155),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '${CurrencyFormatter.format(displayPrice)}*',
-                                            style: const TextStyle(
-                                              fontSize: 19,
-                                              fontWeight: FontWeight.w900,
-                                              color: Color(0xFF0F172A),
-                                              letterSpacing: -0.4,
-                                            ),
-                                          ),
-                                          Text(
-                                            _showOnRoadPrice
-                                                ? 'On-Road Price (Pune)'
-                                                : 'Ex-Showroom Price',
-                                            style: const TextStyle(
-                                              fontSize: 10.5,
-                                              color: Color(0xFF94A3B8),
-                                            ),
-                                          ),
-                                        ],
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.vertical(
+                                          bottom: Radius.circular(20)),
+                                      border: Border(
+                                        top: BorderSide(
+                                            color: Color(0xFFF1F5F9)),
                                       ),
+                                    ),
+                                    padding: const EdgeInsets.fromLTRB(
+                                        18, 12, 18, 14),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                v['name']?.toString() ?? '',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 14.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Color(0xFF0F172A),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 3),
+                                              Text(
+                                                '${CurrencyFormatter.format(displayPrice)}*',
+                                                style: const TextStyle(
+                                                  fontSize: 19,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Color(0xFFDC2626),
+                                                  letterSpacing: -0.4,
+                                                ),
+                                              ),
+                                              Text(
+                                                _showOnRoadPrice
+                                                    ? 'On-Road Price (Pune)'
+                                                    : 'Ex-Showroom Price',
+                                                style: const TextStyle(
+                                                  fontSize: 10.5,
+                                                  color: Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFEF2F2),
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                          ),
+                                          child: const Icon(
+                                            Icons.arrow_forward_rounded,
+                                            size: 16,
+                                            color: Color(0xFFDC2626),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],

@@ -364,7 +364,7 @@ export const HONDA_2WHEELERS_CATALOG: HardcodedHondaVehicle[] = [
     "exShowroomPrice": 168499,
     "onRoadPrice": 194616,
     "brochureUrl": "https://edge.sitecorecloud.io/hondamotorc388f-hmsi8ece-prodb777-e813/media/Project/HONDA2WI/honda2wheelersindia/motorcycle/nx200BigWing/calculator/Nx200-Brochure.pdf",
-    "listingImageUrl": "https://edge.sitecorecloud.io/hondamotorc388f-hmsi8ece-prodb777-e813/media/Project/HONDA2WI/honda2wheelersindia/motorcycle/nx200BigWing/technology-assist-slipper-clutch-400x534.png",
+    "listingImageUrl": "https://edge.sitecorecloud.io/hondamotorc388f-hmsi8ece-prodb777-e813/media/Project/HONDA2WI/honda2wheelersindia/motorcycle/nx200/Colours/Pearl_Nightstar_Black.png",
     "detailImageUrl": "https://edge.sitecorecloud.io/hondamotorc388f-hmsi8ece-prodb777-e813/media/Project/HONDA2WI/honda2wheelersindia/motorcycle/nx200/Colours/Pearl_Nightstar_Black.png",
     "colours": [
       {
