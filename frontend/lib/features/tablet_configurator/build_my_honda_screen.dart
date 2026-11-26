@@ -3476,24 +3476,15 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
       final isBigWing = mgName.toLowerCase().contains('big') ||
           _selectedCategory == 'BigBike' ||
           quoteNo.toUpperCase().startsWith('BW');
-      pw.MemoryImage? bigWingLogoImg;
-      if (isBigWing) {
-        try {
-          final byteData =
-              await rootBundle.load('assets/honda_bigwing_logo.png');
-          bigWingLogoImg = pw.MemoryImage(byteData.buffer.asUint8List());
-        } catch (_) {}
-      }
-      final wingColorHex = '#DC2626';
-      final wingSvg = '''
-<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
-  <polygon points="6,55 96,55 78,47 14,47" fill="$wingColorHex"/>
-  <path d="M14,44 Q32,8 98,6 L93,13 Q36,16 24,44 Z" fill="$wingColorHex"/>
-  <path d="M18,44 Q36,18 92,16 L87,23 Q40,26 28,44 Z" fill="$wingColorHex"/>
-  <path d="M22,44 Q40,28 86,26 L81,33 Q44,36 32,44 Z" fill="$wingColorHex"/>
-  <path d="M26,44 Q44,38 80,36 L75,43 Q48,45 36,44 Z" fill="$wingColorHex"/>
-</svg>
-''';
+      pw.MemoryImage? wingLogoImg;
+      try {
+        final byteData = await rootBundle.load(
+          isBigWing
+              ? 'assets/honda_bigwing_logo.png'
+              : 'assets/honda_wing_logo.png',
+        );
+        wingLogoImg = pw.MemoryImage(byteData.buffer.asUint8List());
+      } catch (_) {}
       final branchObj = _backendBranches.firstWhere(
         (b) => b['id']?.toString() == _selectedBranchId,
         orElse: () => <String, dynamic>{},
@@ -3570,27 +3561,12 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                         ),
                       ],
                     ),
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.center,
-                      children: [
-                        if (isBigWing && bigWingLogoImg != null)
-                          pw.Image(bigWingLogoImg, width: 64, height: 42)
-                        else ...[
-                          pw.SvgImage(svg: wingSvg, width: 46, height: 28),
-                          pw.SizedBox(height: 2),
-                          pw.Text(
-                            isBigWing ? 'HONDA BigWing' : 'HONDA',
-                            style: pw.TextStyle(
-                              color: isBigWing
-                                  ? PdfColor.fromHex('#E2E8F0')
-                                  : PdfColor.fromHex('#DC2626'),
-                              fontSize: 8,
-                              fontWeight: pw.FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                    if (wingLogoImg != null)
+                      pw.Image(
+                        wingLogoImg,
+                        width: isBigWing ? 64 : 48,
+                        height: isBigWing ? 42 : 34,
+                      ),
                   ],
                 ),
               ),

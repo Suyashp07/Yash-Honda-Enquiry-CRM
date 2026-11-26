@@ -226,7 +226,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
                           : '/enquiries'),
                       child: Row(
                         children: [
-                          const HondaWingLogo(width: 40, height: 24),
+                          const HondaWingLogo(width: 40, height: 28),
                           const SizedBox(width: 10),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
