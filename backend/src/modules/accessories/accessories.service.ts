@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAccessoryDto, UpdateAccessoryDto } from './dto/accessory.dto';
 
@@ -46,9 +46,16 @@ export class AccessoriesService {
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.accessory.update({
+    const usedCount = await this.prisma.quotationAccessory.count({
+      where: { accessoryId: id },
+    });
+    if (usedCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete accessory because it is used in existing quotations. Mark it Inactive instead.',
+      );
+    }
+    return this.prisma.accessory.delete({
       where: { id },
-      data: { status: 'Inactive' },
     });
   }
 }

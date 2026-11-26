@@ -196,10 +196,19 @@ export class UsersService {
         throw new BadRequestException('Cannot deactivate the last active administrator.');
       }
     }
-    return this.prisma.user.update({
-      where: { id },
-      data: { status: 'Inactive' },
-    });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.userBranch.deleteMany({ where: { userId: id } });
+        return tx.user.delete({ where: { id } });
+      });
+    } catch (error: any) {
+      if (error?.code === 'P2003') {
+        throw new BadRequestException(
+          'Cannot delete user because they have linked enquiries or activity. Mark them Inactive instead.',
+        );
+      }
+      throw error;
+    }
   }
 
   async getRolePermissions() {

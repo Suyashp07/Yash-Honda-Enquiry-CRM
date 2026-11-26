@@ -38,9 +38,14 @@ export class FinanciersService {
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.financier.update({
-      where: { id },
-      data: { status: 'Inactive' },
+    return this.prisma.$transaction(async (tx) => {
+      await tx.enquiry.updateMany({
+        where: { financierId: id },
+        data: { financierId: null },
+      });
+      return tx.financier.delete({
+        where: { id },
+      });
     });
   }
 }

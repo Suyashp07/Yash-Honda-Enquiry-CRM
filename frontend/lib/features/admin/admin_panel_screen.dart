@@ -349,7 +349,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           ],
         ),
         content: Text(
-            'Are you sure you want to deactivate "${item['name'] ?? item['code'] ?? 'this item'}"?'),
+            'Are you sure you want to permanently delete "${item['name'] ?? item['code'] ?? 'this item'}"?'),
         actions: [
           OutlinedButton(
             style: OutlinedButton.styleFrom(
@@ -423,13 +423,20 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       _loadSectionData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Item marked as Inactive')),
+          const SnackBar(content: Text('Item deleted successfully')),
         );
       }
     } catch (e) {
+      String message = 'Failed to delete item';
+      if (e is DioException && e.response?.data is Map) {
+        final msg = e.response?.data['message'];
+        if (msg != null && msg.toString().isNotEmpty) {
+          message = msg is List ? msg.join(', ') : msg.toString();
+        }
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete item: $e')),
+          SnackBar(content: Text(message)),
         );
       }
     }

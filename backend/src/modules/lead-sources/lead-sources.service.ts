@@ -38,9 +38,14 @@ export class LeadSourcesService {
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.leadSource.update({
-      where: { id },
-      data: { status: 'Inactive' },
+    return this.prisma.$transaction(async (tx) => {
+      await tx.enquiry.updateMany({
+        where: { leadSourceId: id },
+        data: { leadSourceId: null },
+      });
+      return tx.leadSource.delete({
+        where: { id },
+      });
     });
   }
 }

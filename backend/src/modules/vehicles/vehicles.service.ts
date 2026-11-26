@@ -211,9 +211,18 @@ export class VehiclesService {
 
   async removeVehicle(id: string) {
     await this.findOneVehicle(id);
-    return this.prisma.vehicle.update({
-      where: { id },
-      data: { status: 'Inactive' },
+    const [itemCount, quoteCount] = await Promise.all([
+      this.prisma.quotationItem.count({ where: { vehicleId: id } }),
+      this.prisma.quotation.count({ where: { vehicleId: id } }),
+    ]);
+    if (itemCount > 0 || quoteCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete vehicle because it is used in existing quotations. Mark it Inactive instead.',
+      );
+    }
+    return this.prisma.$transaction(async (tx) => {
+      await tx.vehicleColour.deleteMany({ where: { vehicleId: id } });
+      return tx.vehicle.delete({ where: { id } });
     });
   }
 
@@ -238,9 +247,16 @@ export class VehiclesService {
   }
 
   async removeModelGroup(id: string) {
-    return this.prisma.modelGroup.update({
+    const vehicleCount = await this.prisma.vehicle.count({
+      where: { modelGroupId: id },
+    });
+    if (vehicleCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete model group because it has linked vehicles. Mark it Inactive instead.',
+      );
+    }
+    return this.prisma.modelGroup.delete({
       where: { id },
-      data: { status: 'Inactive' },
     });
   }
 
@@ -265,9 +281,9 @@ export class VehiclesService {
   }
 
   async removeColour(id: string) {
-    return this.prisma.colour.update({
-      where: { id },
-      data: { status: 'Inactive' },
+    return this.prisma.$transaction(async (tx) => {
+      await tx.vehicleColour.deleteMany({ where: { colourId: id } });
+      return tx.colour.delete({ where: { id } });
     });
   }
 }

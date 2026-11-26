@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBranchDto, UpdateBranchDto } from './dto/branch.dto';
 
@@ -62,9 +62,18 @@ export class BranchesService {
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.branch.update({
+    const [userCount, enquiryCount, quoteCount] = await Promise.all([
+      this.prisma.userBranch.count({ where: { branchId: id } }),
+      this.prisma.enquiry.count({ where: { branchId: id } }),
+      this.prisma.quotation.count({ where: { branchId: id } }),
+    ]);
+    if (userCount > 0 || enquiryCount > 0 || quoteCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete branch because it has linked users, enquiries, or quotations. Mark it Inactive instead.',
+      );
+    }
+    return this.prisma.branch.delete({
       where: { id },
-      data: { status: 'Inactive' },
     });
   }
 }

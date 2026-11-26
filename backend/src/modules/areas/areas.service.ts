@@ -38,9 +38,14 @@ export class AreasService {
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.area.update({
-      where: { id },
-      data: { status: 'Inactive' },
+    return this.prisma.$transaction(async (tx) => {
+      await tx.customer.updateMany({
+        where: { areaId: id },
+        data: { areaId: null },
+      });
+      return tx.area.delete({
+        where: { id },
+      });
     });
   }
 }
