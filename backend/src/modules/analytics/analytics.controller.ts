@@ -84,15 +84,19 @@ export class AnalyticsController {
   @Roles(Role.SUPER_ADMIN, Role.BRANCH_MANAGER, Role.SALES_EXEC)
   @ApiOperation({ summary: 'Comprehensive Dealership As-On-Date & MTD Conversion Matrix with Financials' })
   @ApiQuery({ name: 'date', required: false, description: 'YYYY-MM-DD' })
-  @ApiQuery({ name: 'period', required: false, enum: ['today', 'week', 'mtd', 'ytd'] })
+  @ApiQuery({ name: 'period', required: false, enum: ['today', 'week', 'mtd', 'ytd', 'custom'] })
   @ApiQuery({ name: 'branchId', required: false })
+  @ApiQuery({ name: 'from', required: false, description: 'YYYY-MM-DD (for custom period)' })
+  @ApiQuery({ name: 'to', required: false, description: 'YYYY-MM-DD (for custom period)' })
   getComprehensiveDealershipSummary(
     @CurrentUser() user: any,
     @Query('date') date?: string,
     @Query('period') period: string = 'today',
     @Query('branchId') branchId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
   ) {
-    return this.analyticsService.getComprehensiveDealershipSummary(user, date, period, branchId);
+    return this.analyticsService.getComprehensiveDealershipSummary(user, date, period, branchId, from, to);
   }
 
   @Get('v3/summary')

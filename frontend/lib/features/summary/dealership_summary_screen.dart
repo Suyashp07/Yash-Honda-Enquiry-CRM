@@ -19,8 +19,10 @@ class DealershipSummaryScreen extends ConsumerStatefulWidget {
 
 class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScreen> {
   String _activeView = 'matrix'; // 'matrix', 'summary2'
-  String _selectedPeriod = 'today'; // 'today', 'week', 'mtd', 'ytd'
+  String _selectedPeriod = 'today'; // 'today', 'week', 'mtd', 'ytd', 'custom'
   DateTime _selectedDate = DateTime.now();
+  DateTime _fromDate = DateTime.now().subtract(const Duration(days: 6));
+  DateTime _toDate = DateTime.now();
   String _selectedBranch = 'all';
   bool _swapRowsCols = false;
   String _transposedFilter = 'all';
@@ -43,11 +45,17 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
       _selectedBranch = ref.read(selectedBranchIdProvider);
 
-      final res = await dio.get('/analytics/summary/dealership', queryParameters: {
+      final queryParams = <String, dynamic>{
         'date': dateStr,
         'period': _selectedPeriod,
         'branchId': _selectedBranch,
-      });
+      };
+      if (_selectedPeriod == 'custom') {
+        queryParams['from'] = DateFormat('yyyy-MM-dd').format(_fromDate);
+        queryParams['to'] = DateFormat('yyyy-MM-dd').format(_toDate);
+      }
+
+      final res = await dio.get('/analytics/summary/dealership', queryParameters: queryParams);
 
       if (!mounted) return;
       ref.read(lastDataUpdatedProvider.notifier).state = DateTime.now();
@@ -76,7 +84,11 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
 
   void _stepDate(int delta) {
     setState(() {
-      if (_selectedPeriod == 'week') {
+      if (_selectedPeriod == 'custom') {
+        final spanDays = _toDate.difference(_fromDate).inDays + 1;
+        _fromDate = _fromDate.add(Duration(days: delta * spanDays));
+        _toDate = _toDate.add(Duration(days: delta * spanDays));
+      } else if (_selectedPeriod == 'week') {
         _selectedDate = _selectedDate.add(Duration(days: delta * 7));
       } else if (_selectedPeriod == 'mtd') {
         _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + delta, _selectedDate.day);
@@ -87,6 +99,25 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
       }
     });
     _loadSummary();
+  }
+
+  Future<void> _pickCustomDateRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2024, 1, 1),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDateRange: DateTimeRange(start: _fromDate, end: _toDate),
+      helpText: 'Select Summary Date Range',
+      saveText: 'Apply',
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _selectedPeriod = 'custom';
+        _fromDate = picked.start;
+        _toDate = picked.end;
+      });
+      _loadSummary();
+    }
   }
 
   Future<void> _handlePrint() async {
@@ -274,10 +305,11 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                {'id': 'today', 'tip': 'Analytics for today'},
-                {'id': 'week', 'tip': 'Analytics for this week'},
-                {'id': 'mtd', 'tip': 'Month-to-Date cumulative analytics'},
-                {'id': 'ytd', 'tip': 'Year-to-Date annual metrics'},
+                {'id': 'today', 'label': 'TODAY', 'tip': 'Analytics for today'},
+                {'id': 'week', 'label': 'WEEK', 'tip': 'Analytics for this week'},
+                {'id': 'mtd', 'label': 'MTD', 'tip': 'Month-to-Date cumulative analytics'},
+                {'id': 'ytd', 'label': 'YTD', 'tip': 'Year-to-Date annual metrics'},
+                {'id': 'custom', 'label': 'CUSTOM', 'tip': 'Select custom from-to date range'},
               ].map((item) {
                 final p = item['id']!;
                 final isSel = _selectedPeriod == p;
@@ -285,8 +317,12 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                   message: item['tip']!,
                   child: InkWell(
                     onTap: () {
-                      setState(() => _selectedPeriod = p);
-                      _loadSummary();
+                      if (p == 'custom') {
+                        _pickCustomDateRange();
+                      } else {
+                        setState(() => _selectedPeriod = p);
+                        _loadSummary();
+                      }
                     },
                     borderRadius: BorderRadius.circular(5),
                     child: Container(
@@ -296,7 +332,7 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                         borderRadius: BorderRadius.circular(5),
                       ),
                       child: Text(
-                        p.toUpperCase(),
+                        item['label']!,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -344,19 +380,44 @@ class _DealershipSummaryScreenState extends ConsumerState<DealershipSummaryScree
                 ),
               ),
               Tooltip(
-                message: 'Selected date: ${DateFormat('EEEE, d MMMM yyyy').format(_selectedDate)}',
-                child: Container(
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFCBD5E1)),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                message: _selectedPeriod == 'custom'
+                    ? 'Click to change custom date range'
+                    : 'Selected date: ${DateFormat('EEEE, d MMMM yyyy').format(_selectedDate)}',
+                child: InkWell(
+                  onTap: _selectedPeriod == 'custom' ? _pickCustomDateRange : null,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: _selectedPeriod == 'custom'
+                            ? AppColors.primary
+                            : const Color(0xFFCBD5E1),
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_selectedPeriod == 'custom') ...[
+                          const Icon(Icons.date_range, size: 15, color: AppColors.primary),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(
+                          _selectedPeriod == 'custom'
+                              ? '${DateFormat('dd MMM').format(_fromDate)} – ${DateFormat('dd MMM yyyy').format(_toDate)}'
+                              : DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

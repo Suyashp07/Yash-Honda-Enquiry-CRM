@@ -485,6 +485,8 @@ export class AnalyticsService {
     dateStr?: string,
     period: string = 'today',
     branchId?: string,
+    fromStr?: string,
+    toStr?: string,
   ) {
     const targetDate = dateStr ? new Date(`${dateStr}T12:00:00Z`) : new Date();
     const y = targetDate.getUTCFullYear();
@@ -492,9 +494,12 @@ export class AnalyticsService {
     const d = targetDate.getUTCDate();
 
     let startDate: Date;
-    const endDate: Date = new Date(Date.UTC(y, m, d, 23, 59, 59, 999));
+    let endDate: Date = new Date(Date.UTC(y, m, d, 23, 59, 59, 999));
 
-    if (period === 'week') {
+    if (period === 'custom' && fromStr && toStr) {
+      startDate = new Date(`${fromStr}T00:00:00.000Z`);
+      endDate = new Date(`${toStr}T23:59:59.999Z`);
+    } else if (period === 'week') {
       startDate = new Date(Date.UTC(y, m, d - 7, 0, 0, 0));
     } else if (period === 'mtd') {
       startDate = new Date(Date.UTC(y, m, 1, 0, 0, 0));
@@ -505,7 +510,9 @@ export class AnalyticsService {
       startDate = new Date(Date.UTC(y, m, d, 0, 0, 0));
     }
 
-    const monthStartDate = new Date(Date.UTC(y, m, 1, 0, 0, 0));
+    const monthStartDate = new Date(
+      Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), 1, 0, 0, 0),
+    );
 
     // Branches filter based on user role and branchId query
     const branchFilter =
