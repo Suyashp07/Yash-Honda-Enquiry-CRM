@@ -1,7 +1,11 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart'
+    show
+        FilteringTextInputFormatter,
+        LengthLimitingTextInputFormatter,
+        rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pdf/pdf.dart';
@@ -3545,7 +3549,13 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                 TextField(
                   controller: _customerMobileController,
                   keyboardType: TextInputType.phone,
+                  maxLength: 10,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
                   decoration: InputDecoration(
+                    counterText: '',
                     labelText: 'Mobile Number (WhatsApp) *',
                     hintText: '10-digit mobile number',
                     prefixIcon: const Icon(Icons.phone_outlined),
@@ -3684,7 +3694,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                       final mobile = _customerMobileController.text.trim();
                       final email = _customerEmailController.text.trim();
 
-                      if (name.isEmpty || mobile.length < 10) {
+                      if (name.isEmpty || mobile.length != 10) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                               content: Text(

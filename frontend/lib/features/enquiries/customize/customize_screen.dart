@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -663,6 +664,11 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                 controller: _mobileController,
                 hint: '10-digit mobile',
                 keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                maxLength: 10,
               ),
             ),
             const SizedBox(width: 12),
@@ -1723,6 +1729,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
     required TextEditingController controller,
     required String hint,
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+    int? maxLength,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1738,8 +1746,11 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            maxLength: maxLength,
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             decoration: InputDecoration(
+              counterText: '',
               hintText: hint,
               hintStyle: const TextStyle(
                   fontSize: 13,
