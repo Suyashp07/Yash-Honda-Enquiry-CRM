@@ -126,6 +126,11 @@ export class UpdateVehicleDto {
   category?: string;
 
   @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  modelGroupId?: string;
+
+  @ApiProperty({ required: false })
   @IsNumber()
   @IsOptional()
   exShowroomPrice?: number;

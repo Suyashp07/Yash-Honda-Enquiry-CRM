@@ -1668,6 +1668,21 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     };
     List<Map<String, dynamic>> allColours = [];
     bool coloursLoaded = false;
+    List<Map<String, dynamic>> allModelGroups = [];
+    String? selectedModelGroupId = editingItem?['modelGroupId']?.toString() ??
+        editingItem?['modelGroup']?['id']?.toString();
+    bool modelGroupsLoaded = false;
+
+    String? pickDefaultModelGroupId(String cat, List<Map<String, dynamic>> mgs) {
+      if (mgs.isEmpty) return null;
+      final wantBig = cat == 'BigBike';
+      final match = mgs.firstWhere(
+        (m) =>
+            m['name'].toString().toLowerCase().contains('big') == wantBig,
+        orElse: () => mgs.first,
+      );
+      return match['id']?.toString();
+    }
 
     showDialog(
       context: context,
@@ -1682,6 +1697,25 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       .map((e) => Map<String, dynamic>.from(e as Map))
                       .where((c) => (c['status'] ?? 'Active') == 'Active')
                       .toList();
+                });
+              }
+            }).catchError((_) {});
+          }
+          if (_currentSection == 'vehicles' && !modelGroupsLoaded) {
+            modelGroupsLoaded = true;
+            ref.read(dioProvider).get('/vehicles/model-groups').then((res) {
+              if (res.data is List && context.mounted) {
+                final mgs = (res.data as List)
+                    .map((e) => Map<String, dynamic>.from(e as Map))
+                    .where((m) => (m['status'] ?? 'Active') == 'Active')
+                    .toList();
+                setDlgState(() {
+                  allModelGroups = mgs;
+                  if (selectedModelGroupId == null ||
+                      !mgs.any((m) => m['id']?.toString() == selectedModelGroupId)) {
+                    selectedModelGroupId =
+                        pickDefaultModelGroupId(vehicleType, mgs);
+                  }
                 });
               }
             }).catchError((_) {});
@@ -1772,8 +1806,14 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                                       value: 'BigBike',
                                       child: Text('Big Bike (BigWing)')),
                                 ],
-                                onChanged: (val) =>
-                                    setDlgState(() => vehicleType = val ?? 'MC'),
+                                onChanged: (val) => setDlgState(() {
+                                  vehicleType = val ?? 'MC';
+                                  if (allModelGroups.isNotEmpty) {
+                                    selectedModelGroupId =
+                                        pickDefaultModelGroupId(
+                                            vehicleType, allModelGroups);
+                                  }
+                                }),
                                 decoration: const InputDecoration(
                                   isDense: true,
                                   contentPadding: EdgeInsets.symmetric(
@@ -1811,6 +1851,36 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Honda Wing (Showroom Division)',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<String>(
+                      value: allModelGroups.any(
+                              (m) => m['id']?.toString() == selectedModelGroupId)
+                          ? selectedModelGroupId
+                          : null,
+                      hint: const Text('Loading Honda Wings...'),
+                      items: allModelGroups.map((mg) {
+                        final mgName = mg['name']?.toString() ?? 'Wing';
+                        final isBig = mgName.toLowerCase().contains('big');
+                        return DropdownMenuItem<String>(
+                          value: mg['id']?.toString(),
+                          child: Text(isBig
+                              ? '$mgName (Premium & Big Bikes · ${mg['quotePrefix'] ?? 'BWQ'})'
+                              : '$mgName (Commuter & Scooters · ${mg['quotePrefix'] ?? 'RWQ'})'),
+                        );
+                      }).toList(),
+                      onChanged: (val) =>
+                          setDlgState(() => selectedModelGroupId = val),
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -2157,6 +2227,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       await dio.put('/vehicles/${editingItem['id']}', data: {
                         'name': nameCtrl.text.trim(),
                         'category': vehicleType,
+                        if (selectedModelGroupId != null)
+                          'modelGroupId': selectedModelGroupId,
                         'exShowroomPrice': exShowroom,
                         'onRoadPrice': onRoad,
                         if (ccVal != null) 'ccDisplacement': ccVal,
@@ -2164,28 +2236,21 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                         'colourIds': selectedColourIds.toList(),
                       });
                     } else {
-                      final mgRes = await dio.get('/vehicles/model-groups');
-                      final mgs = (mgRes.data as List);
-                      final targetMg = vehicleType == 'BigBike'
-                          ? mgs.firstWhere(
-                              (m) => m['name']
-                                  .toString()
-                                  .toLowerCase()
-                                  .contains('big'),
-                              orElse: () => mgs.first)
-                          : mgs.firstWhere(
-                              (m) => !m['name']
-                                  .toString()
-                                  .toLowerCase()
-                                  .contains('big'),
-                              orElse: () => mgs.first);
+                      String? mgId = selectedModelGroupId;
+                      if (mgId == null) {
+                        final mgRes = await dio.get('/vehicles/model-groups');
+                        final mgs = (mgRes.data as List)
+                            .map((e) => Map<String, dynamic>.from(e as Map))
+                            .toList();
+                        mgId = pickDefaultModelGroupId(vehicleType, mgs);
+                      }
                       await dio.post('/vehicles', data: {
                         'code': codeCtrl.text.trim().isEmpty
                             ? 'MOD-${DateTime.now().millisecondsSinceEpoch}'
                             : codeCtrl.text.trim(),
                         'name': nameCtrl.text.trim(),
                         'category': vehicleType,
-                        'modelGroupId': targetMg['id'],
+                        'modelGroupId': mgId,
                         'exShowroomPrice': exShowroom,
                         'onRoadPrice': onRoad,
                         if (ccVal != null) 'ccDisplacement': ccVal,
