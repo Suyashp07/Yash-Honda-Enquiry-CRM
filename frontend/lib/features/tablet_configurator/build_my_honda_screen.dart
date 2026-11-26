@@ -1263,7 +1263,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                         return SizedBox(
                           width: 278,
                           child: InkWell(
-                            onTap: () => _selectVehicle(v),
+                            onTap: () => _selectVehicle(v, advance: true),
                             borderRadius: BorderRadius.circular(22),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
