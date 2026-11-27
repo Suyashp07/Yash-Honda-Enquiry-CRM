@@ -1014,7 +1014,7 @@ class _DealershipSummaryScreenState
             ? (availWidth * 0.21).clamp(165.0, 220.0)
             : 180.0;
         final double rawColWidth =
-            (availWidth - metricWidth - 2) / math.max(1, colCount);
+            (availWidth - metricWidth - 2) / (colCount < 1 ? 1 : colCount);
         final double colWidth = rawColWidth < 92.0 ? 96.0 : rawColWidth;
         final double consolidatedWidth = colWidth;
         final double totalWidth = metricWidth + (colWidth * colCount);
