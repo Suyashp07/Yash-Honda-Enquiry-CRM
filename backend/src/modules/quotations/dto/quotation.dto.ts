@@ -41,6 +41,11 @@ export class CalculateQuotationDto {
   @Type(() => QuotationAccessoryInputDto)
   @IsOptional()
   accessories?: QuotationAccessoryInputDto[];
+
+  @ApiProperty({ example: 500, required: false, description: 'Custom hypothecation charge for Finance mode' })
+  @IsNumber()
+  @IsOptional()
+  hypothecationCharge?: number;
 }
 
 export class CreateQuotationDto extends CalculateQuotationDto {

@@ -48,11 +48,35 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   // Step 4 Accessories State (admin-controlled Standard vs Optional)
   final Set<String> _selectedOptionalAccessoryIds = {};
 
-  // Step 5 Finance State (Display only — does not affect price per spec)
+  // Step 5 Finance State
   String _paymentMode = 'Cash'; // 'Cash' | 'Finance'
   String _selectedFinanceType = 'Bank Loan';
   String? _selectedFinancierId;
   String? _selectedFinancierName;
+  final _downPaymentController = TextEditingController();
+  final _emi24Controller = TextEditingController();
+  final _emi36Controller = TextEditingController();
+  final _emi48Controller = TextEditingController();
+  final _hypothecationController = TextEditingController(text: '500');
+  String? _emiDefaultsVehicleId;
+
+  void _populateEmiDefaults(double total, {bool force = false}) {
+    if (total <= 0) return;
+    final vid = _selectedVehicle?['id']?.toString();
+    if (!force &&
+        _emiDefaultsVehicleId == vid &&
+        _downPaymentController.text.trim().isNotEmpty) {
+      return;
+    }
+    _emiDefaultsVehicleId = vid;
+    _downPaymentController.text = (total * 0.20).round().toString();
+    _emi24Controller.text = ((total * 0.80 * 1.12) / 24).round().toString();
+    _emi36Controller.text = ((total * 0.80 * 1.18) / 36).round().toString();
+    _emi48Controller.text = ((total * 0.80 * 1.24) / 48).round().toString();
+    if (_hypothecationController.text.trim().isEmpty) {
+      _hypothecationController.text = '500';
+    }
+  }
 
   // Step 6 Exchange State
   bool _wantExchange = false;
@@ -2225,6 +2249,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   InkWell(
                     onTap: () => setState(() {
                       _paymentMode = 'Finance';
+                      _populateEmiDefaults(_estimatedTotal);
                       _invalidateQuoteCache();
                     }),
                     borderRadius: BorderRadius.circular(18),
@@ -2365,6 +2390,61 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 },
                               ),
                             ],
+                            const SizedBox(height: 14),
+                            const Text(
+                              'FINANCING',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF64748B),
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildWizardFinanceInput(
+                                    label: 'Down Payment',
+                                    controller: _downPaymentController,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _buildWizardFinanceInput(
+                                    label: 'EMI · 24m',
+                                    controller: _emi24Controller,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _buildWizardFinanceInput(
+                                    label: 'EMI · 36m',
+                                    controller: _emi36Controller,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _buildWizardFinanceInput(
+                                    label: 'EMI · 48m',
+                                    controller: _emi48Controller,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _buildWizardFinanceInput(
+                                    label: 'Hypothecation',
+                                    controller: _hypothecationController,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Down payment and each EMI tenure default from the vehicle\'s Model Master figures and are independently editable - changing one does not recalculate the others.',
+                              style: TextStyle(
+                                  fontSize: 10.5, color: Color(0xFF64748B)),
+                            ),
                             const SizedBox(height: 16),
                             const Row(
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -2389,6 +2469,52 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               ),
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWizardFinanceInput({
+    required String label,
+    required TextEditingController controller,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0F172A),
+          ),
+        ),
+        const SizedBox(height: 4),
+        TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF0F172A),
+          ),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            filled: true,
+            fillColor: Colors.white,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+            ),
+          ),
+          onChanged: (_) => setState(() {}),
         ),
       ],
     );
@@ -3217,6 +3343,41 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                         ? const Color(0xFF0F172A)
                         : const Color(0xFF94A3B8),
                   ),
+                  if (_paymentMode == 'Finance') ...[
+                    const SizedBox(height: 6),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 29),
+                      child: Column(
+                        children: [
+                          if (_downPaymentController.text.trim().isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 3),
+                              child: _buildSidebarSubRow(
+                                '• Down Payment',
+                                '₹${_downPaymentController.text.trim()}',
+                              ),
+                            ),
+                          if (_emi36Controller.text.trim().isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 3),
+                              child: _buildSidebarSubRow(
+                                '• EMI (24/36/48m)',
+                                '₹${_emi24Controller.text.trim()} / ₹${_emi36Controller.text.trim()} / ₹${_emi48Controller.text.trim()}',
+                              ),
+                            ),
+                          if ((double.tryParse(
+                                      _hypothecationController.text.trim()) ??
+                                  0) >
+                              0)
+                            _buildSidebarSubRow(
+                              '• Hypothecation',
+                              '+₹${_hypothecationController.text.trim()}',
+                              valueColor: const Color(0xFFDC2626),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 14),
                   Builder(builder: (context) {
                     final exVal = double.tryParse(
@@ -3793,9 +3954,23 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           ? 'Exchange: Yes (${_exchangeModelController.text.trim()} ${_exchangeYear != 'Select Year' ? _exchangeYear : ''}, Expected: ₹${_exchangeExpectedPriceController.text.trim()})'
           : 'No';
 
+      final financeParts = <String>[];
+      if (_paymentMode == 'Finance') {
+        final dp = _downPaymentController.text.trim();
+        final e24 = _emi24Controller.text.trim();
+        final e36 = _emi36Controller.text.trim();
+        final e48 = _emi48Controller.text.trim();
+        final hypo = _hypothecationController.text.trim();
+        if (dp.isNotEmpty) financeParts.add('DP: ₹$dp');
+        if (e24.isNotEmpty) financeParts.add('24m: ₹$e24');
+        if (e36.isNotEmpty) financeParts.add('36m: ₹$e36');
+        if (e48.isNotEmpty) financeParts.add('48m: ₹$e48');
+        if (hypo.isNotEmpty) financeParts.add('Hypothecation: ₹$hypo');
+      }
+
       final remarks =
           'Build My Honda • $_selectedCategory • $_selectedColourName'
-          '${_paymentMode == 'Finance' ? ' • $_selectedFinanceType${_selectedFinancierName != null ? ' ($_selectedFinancierName)' : ''}' : ' • Pay in Cash'}'
+          '${_paymentMode == 'Finance' ? ' • $_selectedFinanceType${_selectedFinancierName != null ? ' ($_selectedFinancierName)' : ''}${financeParts.isNotEmpty ? ' (${financeParts.join(', ')})' : ''}' : ' • Pay in Cash'}'
           '${_wantExchange ? ' • $exchangeDesc' : ''}';
 
       final payload = {
@@ -3817,6 +3992,9 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           'vehicleId': v['id'],
           'colourName': _selectedColourName,
           if (quoteAccessories.isNotEmpty) 'accessories': quoteAccessories,
+          if (_paymentMode == 'Finance')
+            'hypothecationCharge':
+                double.tryParse(_hypothecationController.text.trim()) ?? 500,
         },
       };
 

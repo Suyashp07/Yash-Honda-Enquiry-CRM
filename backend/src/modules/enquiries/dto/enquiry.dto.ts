@@ -48,6 +48,11 @@ export class InitialQuotationInputDto {
   @Type(() => QuotationAccessoryInputDto)
   @IsOptional()
   accessories?: QuotationAccessoryInputDto[];
+
+  @ApiProperty({ example: 500, required: false })
+  @IsNumber()
+  @IsOptional()
+  hypothecationCharge?: number;
 }
 
 export class CreateEnquiryDto {

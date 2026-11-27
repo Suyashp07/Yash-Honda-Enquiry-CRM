@@ -47,11 +47,15 @@ export class QuotationsService {
     ];
 
     // Hypothecation charge if Finance
-    if (dto.purchaseMode?.toLowerCase() === 'finance' && settings) {
-      if (settings.hypothecationCharge && Number(settings.hypothecationCharge) > 0) {
+    if (dto.purchaseMode?.toLowerCase() === 'finance') {
+      const hypoCharge =
+        dto.hypothecationCharge !== undefined && dto.hypothecationCharge !== null
+          ? Number(dto.hypothecationCharge)
+          : Number(settings?.hypothecationCharge ?? 0);
+      if (hypoCharge > 0) {
         items.push({
           label: 'Bank Hypothecation Loan Endorsement',
-          amount: Number(settings.hypothecationCharge),
+          amount: hypoCharge,
         });
       }
     }

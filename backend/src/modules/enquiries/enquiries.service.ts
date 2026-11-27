@@ -79,6 +79,7 @@ export class EnquiriesService {
             colourName: dto.quotation.colourName,
             purchaseMode: dto.purchaseMode,
             accessories: dto.quotation.accessories,
+            hypothecationCharge: dto.quotation.hypothecationCharge,
           },
           tx,
         );

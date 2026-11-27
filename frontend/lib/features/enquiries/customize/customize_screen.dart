@@ -123,6 +123,30 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   String _buyingWhen = 'Immediate';
   String _exchange = 'no'; // 'no', 'yes', 'yes_print'
 
+  final _downPaymentController = TextEditingController();
+  final _emi24Controller = TextEditingController();
+  final _emi36Controller = TextEditingController();
+  final _emi48Controller = TextEditingController();
+  final _hypothecationController = TextEditingController(text: '500');
+  String? _emiDefaultsVehicleId;
+
+  void _populateEmiDefaults(double total, {bool force = false}) {
+    if (total <= 0) return;
+    if (!force &&
+        _emiDefaultsVehicleId == _selectedVehicleId &&
+        _downPaymentController.text.trim().isNotEmpty) {
+      return;
+    }
+    _emiDefaultsVehicleId = _selectedVehicleId;
+    _downPaymentController.text = (total * 0.20).round().toString();
+    _emi24Controller.text = ((total * 0.80 * 1.12) / 24).round().toString();
+    _emi36Controller.text = ((total * 0.80 * 1.18) / 36).round().toString();
+    _emi48Controller.text = ((total * 0.80 * 1.24) / 48).round().toString();
+    if (_hypothecationController.text.trim().isEmpty) {
+      _hypothecationController.text = '500';
+    }
+  }
+
   final Set<String> _selectedAccessoryIds = {};
   bool _sendEmail = false;
   bool _sendWhatsApp = false;
@@ -286,9 +310,19 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         'colourName': _selectedColour,
         'purchaseMode': _purchaseMode,
         'accessories': accList,
+        if (_purchaseMode == 'Finance')
+          'hypothecationCharge':
+              double.tryParse(_hypothecationController.text.trim()) ?? 500,
       });
 
       if (!mounted) return;
+      final calcData = res.data as Map<String, dynamic>?;
+      final calcTotal = double.tryParse(
+              calcData?['grandTotal']?.toString() ?? '') ??
+          0.0;
+      if (_purchaseMode == 'Finance') {
+        _populateEmiDefaults(calcTotal);
+      }
       setState(() {
         _liveCalculation = res.data;
         _isCalculating = false;
@@ -378,7 +412,21 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         if (kms.isNotEmpty) exchParts.add('Kms: $kms');
         if (exp.isNotEmpty) exchParts.add('Expected: ₹$exp');
       }
+      final financeParts = <String>[];
+      if (_purchaseMode == 'Finance') {
+        final dp = _downPaymentController.text.trim();
+        final e24 = _emi24Controller.text.trim();
+        final e36 = _emi36Controller.text.trim();
+        final e48 = _emi48Controller.text.trim();
+        final hypo = _hypothecationController.text.trim();
+        if (dp.isNotEmpty) financeParts.add('DP: ₹$dp');
+        if (e24.isNotEmpty) financeParts.add('24m: ₹$e24');
+        if (e36.isNotEmpty) financeParts.add('36m: ₹$e36');
+        if (e48.isNotEmpty) financeParts.add('48m: ₹$e48');
+        if (hypo.isNotEmpty) financeParts.add('Hypothecation: ₹$hypo');
+      }
       final combinedRemarks = [
+        if (financeParts.isNotEmpty) 'Financing (${financeParts.join(', ')})',
         if (exchParts.isNotEmpty) 'Exchange (${exchParts.join(', ')})',
         if (baseRemarks.isNotEmpty) baseRemarks,
       ].join(' • ');
@@ -407,6 +455,9 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
           'vehicleId': _selectedVehicleId,
           'colourName': _selectedColour,
           'accessories': accList,
+          if (_purchaseMode == 'Finance')
+            'hypothecationCharge':
+                double.tryParse(_hypothecationController.text.trim()) ?? 500,
         },
       });
 
@@ -819,6 +870,64 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
           ],
         ),
         const SizedBox(height: 18),
+
+        // FINANCING Section (when Finance selected)
+        if (_purchaseMode == 'Finance') ...[
+          const Text(
+            'FINANCING',
+            style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF64748B),
+                letterSpacing: 0.5),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildFinancingInput(
+                  label: 'Down Payment',
+                  controller: _downPaymentController,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildFinancingInput(
+                  label: 'EMI · 24m',
+                  controller: _emi24Controller,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildFinancingInput(
+                  label: 'EMI · 36m',
+                  controller: _emi36Controller,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildFinancingInput(
+                  label: 'EMI · 48m',
+                  controller: _emi48Controller,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildFinancingInput(
+                  label: 'Hypothecation',
+                  controller: _hypothecationController,
+                  onChanged: (_) => _calculateQuote(),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Down payment and each EMI tenure default from the vehicle\'s Model Master figures and are independently editable - changing one does not recalculate the others.',
+            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+          ),
+          const SizedBox(height: 16),
+        ],
 
         // ADD-ONS Section
         const Text(
@@ -1374,7 +1483,14 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
 
                     // Hypothecation Charge if Finance
                     if (_purchaseMode == 'Finance')
-                      _buildPriceRow('Hypothecation Charge', '₹1,500'),
+                      _buildPriceRow(
+                        'Hypothecation Charge',
+                        CurrencyFormatter.format(
+                          double.tryParse(
+                                  _hypothecationController.text.trim()) ??
+                              500,
+                        ),
+                      ),
                   ],
 
                   const Divider(height: 20, color: Color(0xFFE2E8F0)),
@@ -1414,23 +1530,29 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                     Row(
                       children: [
                         Expanded(
-                            child: _buildEmiBox('Down Payment',
-                                CurrencyFormatter.format(grandTotal * 0.20))),
+                            child: _buildEmiBox(
+                                'Down Payment',
+                                CurrencyFormatter.format(double.tryParse(
+                                        _downPaymentController.text.trim()) ??
+                                    (grandTotal * 0.20)))),
                         Expanded(
                             child: _buildEmiBox(
                                 'EMI · 24m',
-                                CurrencyFormatter.format(
-                                    (grandTotal * 0.80 * 1.12) / 24))),
+                                CurrencyFormatter.format(double.tryParse(
+                                        _emi24Controller.text.trim()) ??
+                                    ((grandTotal * 0.80 * 1.12) / 24)))),
                         Expanded(
                             child: _buildEmiBox(
                                 'EMI · 36m',
-                                CurrencyFormatter.format(
-                                    (grandTotal * 0.80 * 1.18) / 36))),
+                                CurrencyFormatter.format(double.tryParse(
+                                        _emi36Controller.text.trim()) ??
+                                    ((grandTotal * 0.80 * 1.18) / 36)))),
                         Expanded(
                             child: _buildEmiBox(
                                 'EMI · 48m',
-                                CurrencyFormatter.format(
-                                    (grandTotal * 0.80 * 1.24) / 48))),
+                                CurrencyFormatter.format(double.tryParse(
+                                        _emi48Controller.text.trim()) ??
+                                    ((grandTotal * 0.80 * 1.24) / 48)))),
                       ],
                     ),
                   ],
@@ -1634,6 +1756,56 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                   color: Color(0xFF0F172A))),
         ],
       ),
+    );
+  }
+
+  Widget _buildFinancingInput({
+    required String label,
+    required TextEditingController controller,
+    ValueChanged<String>? onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0F172A),
+          ),
+        ),
+        const SizedBox(height: 5),
+        TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF0F172A),
+          ),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            filled: true,
+            fillColor: Colors.white,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+            ),
+          ),
+          onChanged: (val) {
+            setState(() {});
+            onChanged?.call(val);
+          },
+        ),
+      ],
     );
   }
 
