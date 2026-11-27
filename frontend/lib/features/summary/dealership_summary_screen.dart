@@ -1004,190 +1004,256 @@ class _DealershipSummaryScreenState
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 6,
-              offset: const Offset(0, 2)),
-        ],
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Table Header Row: Metric / Breakdown + 6 Branches + Consolidated
-            Container(
-              height: 48,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F5F9),
-                border: Border(
-                    bottom: BorderSide(color: Color(0xFFCBD5E1), width: 1.5)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 240,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    alignment: Alignment.centerLeft,
-                    child: const Text(
-                      'METRIC / BREAKDOWN',
-                      style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF334155),
-                          letterSpacing: 0.5),
-                    ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : 1100.0;
+        final colCount = branches.length + 1;
+        final double metricWidth = availWidth >= 820
+            ? (availWidth * 0.21).clamp(165.0, 220.0)
+            : 180.0;
+        final double rawColWidth =
+            (availWidth - metricWidth - 2) / math.max(1, colCount);
+        final double colWidth = rawColWidth < 92.0 ? 96.0 : rawColWidth;
+        final double consolidatedWidth = colWidth;
+        final double totalWidth = metricWidth + (colWidth * colCount);
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2)),
+            ],
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Table Header Row: Metric / Breakdown + Branches + Consolidated
+                Container(
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF1F5F9),
+                    border: Border(
+                        bottom:
+                            BorderSide(color: Color(0xFFCBD5E1), width: 1.5)),
                   ),
-                  ...branches.map((b) {
-                    final index = branches.indexOf(b) + 1;
-                    return Container(
-                      width: 175,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: const BoxDecoration(
-                        border:
-                            Border(left: BorderSide(color: Color(0xFFE2E8F0))),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: metricWidth,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        alignment: Alignment.centerLeft,
+                        child: const Text(
+                          'METRIC / BREAKDOWN',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF334155),
+                              letterSpacing: 0.4),
+                        ),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('LOCATION $index',
-                              style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF0F172A))),
-                          Text(b['name'] ?? '',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 12, color: Color(0xFF64748B))),
-                        ],
+                      ...branches.map((b) {
+                        final index = branches.indexOf(b) + 1;
+                        return Container(
+                          width: colWidth,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                                left: BorderSide(color: Color(0xFFE2E8F0))),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('LOC $index',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF0F172A))),
+                              Text(b['name'] ?? '',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontSize: 10.5,
+                                      color: Color(0xFF64748B))),
+                            ],
+                          ),
+                        );
+                      }),
+                      // Consolidated Column
+                      Container(
+                        width: consolidatedWidth,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFEF3C7),
+                          border: Border(
+                              left: BorderSide(
+                                  color: Color(0xFFFDE68A), width: 2)),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('TOTAL',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFFB45309))),
+                            Text('All Branches',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 10, color: Color(0xFF92400E))),
+                          ],
+                        ),
                       ),
-                    );
-                  }),
-                  // Consolidated Column
-                  Container(
-                    width: 185,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFEF3C7),
-                      border: Border(
-                          left: BorderSide(color: Color(0xFFFDE68A), width: 2)),
-                    ),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('CONSOLIDATED',
-                            style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFFB45309))),
-                        Text('All Dealerships',
-                            style: TextStyle(
-                                fontSize: 12, color: Color(0xFF92400E))),
-                      ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+
+                // Section 1: AS ON DATE
+                _buildSectionHeader('AS ON DATE ($date)', width: totalWidth),
+                _buildMatrixDataRow('TOTAL LEADS', branches, branchIds,
+                    (id) => (totalLeads[id] ?? 0).toString(),
+                    isBold: true,
+                    highlightColor: const Color(0xFF2563EB),
+                    metricWidth: metricWidth,
+                    colWidth: colWidth,
+                    consolidatedWidth: consolidatedWidth),
+                _buildMatrixDataRow('TOTAL BK', branches, branchIds,
+                    (id) => (totalBk[id] ?? 0).toString(),
+                    isBold: true,
+                    highlightColor: const Color(0xFF16A34A),
+                    metricWidth: metricWidth,
+                    colWidth: colWidth,
+                    consolidatedWidth: consolidatedWidth),
+                _buildMatrixDataRow('CONVERSION', branches, branchIds,
+                    (id) => (conversion[id] ?? '0.00%').toString(),
+                    isBold: true,
+                    highlightColor: const Color(0xFFDC2626),
+                    metricWidth: metricWidth,
+                    colWidth: colWidth,
+                    consolidatedWidth: consolidatedWidth),
+
+                // Section 2: MODE BREAK UP
+                _buildSectionHeader('MODE BREAK UP', width: totalWidth),
+                ...modeBreakup.map((row) => _buildMatrixDataRow(
+                    row['label'] ?? '',
+                    branches,
+                    branchIds,
+                    (id) => (row['values']?[id] ?? 0).toString(),
+                    metricWidth: metricWidth,
+                    colWidth: colWidth,
+                    consolidatedWidth: consolidatedWidth)),
+
+                // Section 3: SOURCE
+                _buildSectionHeader('SOURCE', width: totalWidth),
+                ...sourceBreakup.map((row) => _buildMatrixDataRow(
+                    row['label'] ?? '',
+                    branches,
+                    branchIds,
+                    (id) => (row['values']?[id] ?? 0).toString(),
+                    metricWidth: metricWidth,
+                    colWidth: colWidth,
+                    consolidatedWidth: consolidatedWidth)),
+
+                // Section 4: MODEL WISE LEADS
+                _buildSectionHeader('MODEL WISE LEADS', width: totalWidth),
+                ...modelWiseLeads.map((row) => _buildMatrixDataRow(
+                    row['label'] ?? '',
+                    branches,
+                    branchIds,
+                    (id) => (row['values']?[id] ?? 0).toString(),
+                    metricWidth: metricWidth,
+                    colWidth: colWidth,
+                    consolidatedWidth: consolidatedWidth)),
+
+                // Section 5: MODEL WISE BK
+                _buildSectionHeader('MODEL WISE BK', width: totalWidth),
+                ...modelWiseBk.map((row) => _buildMatrixDataRow(
+                    row['label'] ?? '',
+                    branches,
+                    branchIds,
+                    (id) => (row['values']?[id] ?? 0).toString(),
+                    highlightColor: const Color(0xFF16A34A),
+                    metricWidth: metricWidth,
+                    colWidth: colWidth,
+                    consolidatedWidth: consolidatedWidth)),
+
+                // Section 6: SALES EX WISE BK
+                _buildSectionHeader('SALES EX WISE BK', width: totalWidth),
+                ...salesExWiseBk.map((row) => _buildMatrixDataRow(
+                    row['label'] ?? '',
+                    branches,
+                    branchIds,
+                    (id) => (row['values']?[id] ?? 0).toString(),
+                    metricWidth: metricWidth,
+                    colWidth: colWidth,
+                    consolidatedWidth: consolidatedWidth)),
+
+                // Section 7: MTD LEADS TO CONVERSION
+                _buildSectionHeader(
+                    'MTD LEADS TO CONVERSION ($monthStart TO $date)',
+                    width: totalWidth),
+                ...mtdModelConv.map((row) => _buildMatrixDataRow(
+                    row['label'] ?? '',
+                    branches,
+                    branchIds,
+                    (id) => (row['values']?[id] ?? '-').toString(),
+                    isConvFormat: true,
+                    metricWidth: metricWidth,
+                    colWidth: colWidth,
+                    consolidatedWidth: consolidatedWidth)),
+
+                // Section 8: MTD SALES EX WISE CONV
+                _buildSectionHeader('MTD SALES EX WISE CONV', width: totalWidth),
+                ...mtdSalesExConv.map((row) => _buildMatrixDataRow(
+                    row['label'] ?? '',
+                    branches,
+                    branchIds,
+                    (id) => (row['values']?[id] ?? '-').toString(),
+                    isConvFormat: true,
+                    metricWidth: metricWidth,
+                    colWidth: colWidth,
+                    consolidatedWidth: consolidatedWidth)),
+
+                // Section 9: SOURCE WISE CONVERSION (MTD)
+                _buildSectionHeader('SOURCE WISE CONVERSION (MTD)',
+                    width: totalWidth),
+                ...mtdSourceConv.map((row) => _buildMatrixDataRow(
+                    row['label'] ?? '',
+                    branches,
+                    branchIds,
+                    (id) => (row['values']?[id] ?? '-').toString(),
+                    isConvFormat: true,
+                    metricWidth: metricWidth,
+                    colWidth: colWidth,
+                    consolidatedWidth: consolidatedWidth)),
+
+                // Section 10: MODE WISE BREAKUP (MTD)
+                _buildSectionHeader('MODE WISE BREAKUP (MTD)',
+                    width: totalWidth),
+                ...mtdModeConv.map((row) => _buildMatrixDataRow(
+                    row['label'] ?? '',
+                    branches,
+                    branchIds,
+                    (id) => (row['values']?[id] ?? '-').toString(),
+                    isConvFormat: true,
+                    metricWidth: metricWidth,
+                    colWidth: colWidth,
+                    consolidatedWidth: consolidatedWidth)),
+              ],
             ),
-
-            // Section 1: AS ON DATE
-            _buildSectionHeader('AS ON DATE ($date)'),
-            _buildMatrixDataRow('TOTAL LEADS', branches, branchIds,
-                (id) => (totalLeads[id] ?? 0).toString(),
-                isBold: true, highlightColor: const Color(0xFF2563EB)),
-            _buildMatrixDataRow('TOTAL BK', branches, branchIds,
-                (id) => (totalBk[id] ?? 0).toString(),
-                isBold: true, highlightColor: const Color(0xFF16A34A)),
-            _buildMatrixDataRow('CONVERSION', branches, branchIds,
-                (id) => (conversion[id] ?? '0.00%').toString(),
-                isBold: true, highlightColor: const Color(0xFFDC2626)),
-
-            // Section 2: MODE BREAK UP
-            _buildSectionHeader('MODE BREAK UP'),
-            ...modeBreakup.map((row) => _buildMatrixDataRow(
-                row['label'] ?? '',
-                branches,
-                branchIds,
-                (id) => (row['values']?[id] ?? 0).toString())),
-
-            // Section 3: SOURCE
-            _buildSectionHeader('SOURCE'),
-            ...sourceBreakup.map((row) => _buildMatrixDataRow(
-                row['label'] ?? '',
-                branches,
-                branchIds,
-                (id) => (row['values']?[id] ?? 0).toString())),
-
-            // Section 4: MODEL WISE LEADS
-            _buildSectionHeader('MODEL WISE LEADS'),
-            ...modelWiseLeads.map((row) => _buildMatrixDataRow(
-                row['label'] ?? '',
-                branches,
-                branchIds,
-                (id) => (row['values']?[id] ?? 0).toString())),
-
-            // Section 5: MODEL WISE BK
-            _buildSectionHeader('MODEL WISE BK'),
-            ...modelWiseBk.map((row) => _buildMatrixDataRow(
-                row['label'] ?? '',
-                branches,
-                branchIds,
-                (id) => (row['values']?[id] ?? 0).toString(),
-                highlightColor: const Color(0xFF16A34A))),
-
-            // Section 6: SALES EX WISE BK
-            _buildSectionHeader('SALES EX WISE BK'),
-            ...salesExWiseBk.map((row) => _buildMatrixDataRow(
-                row['label'] ?? '',
-                branches,
-                branchIds,
-                (id) => (row['values']?[id] ?? 0).toString())),
-
-            // Section 7: MTD LEADS TO CONVERSION
-            _buildSectionHeader(
-                'MTD LEADS TO CONVERSION ($monthStart TO $date)'),
-            ...mtdModelConv.map((row) => _buildMatrixDataRow(
-                row['label'] ?? '',
-                branches,
-                branchIds,
-                (id) => (row['values']?[id] ?? '-').toString(),
-                isConvFormat: true)),
-
-            // Section 8: MTD SALES EX WISE CONV
-            _buildSectionHeader('MTD SALES EX WISE CONV'),
-            ...mtdSalesExConv.map((row) => _buildMatrixDataRow(
-                row['label'] ?? '',
-                branches,
-                branchIds,
-                (id) => (row['values']?[id] ?? '-').toString(),
-                isConvFormat: true)),
-
-            // Section 9: SOURCE WISE CONVERSION (MTD)
-            _buildSectionHeader('SOURCE WISE CONVERSION (MTD)'),
-            ...mtdSourceConv.map((row) => _buildMatrixDataRow(
-                row['label'] ?? '',
-                branches,
-                branchIds,
-                (id) => (row['values']?[id] ?? '-').toString(),
-                isConvFormat: true)),
-
-            // Section 10: MODE WISE BREAKUP (MTD)
-            _buildSectionHeader('MODE WISE BREAKUP (MTD)'),
-            ...mtdModeConv.map((row) => _buildMatrixDataRow(
-                row['label'] ?? '',
-                branches,
-                branchIds,
-                (id) => (row['values']?[id] ?? '-').toString(),
-                isConvFormat: true)),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -1631,10 +1697,10 @@ class _DealershipSummaryScreenState
     return (item['values']?[bId] ?? 0) as int;
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {double width = 1515}) {
     return Container(
-      width: 1515,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: const BoxDecoration(
         color: Color(0xFFF8FAFC),
         border: Border(
@@ -1645,10 +1711,10 @@ class _DealershipSummaryScreenState
       child: Text(
         title,
         style: const TextStyle(
-            fontSize: 12.5,
+            fontSize: 11,
             fontWeight: FontWeight.w800,
             color: Color(0xFF1E293B),
-            letterSpacing: 0.5),
+            letterSpacing: 0.4),
       ),
     );
   }
@@ -1661,23 +1727,26 @@ class _DealershipSummaryScreenState
     bool isBold = false,
     Color? highlightColor,
     bool isConvFormat = false,
+    double metricWidth = 240,
+    double colWidth = 175,
+    double consolidatedWidth = 185,
   }) {
     return Container(
-      height: 38,
+      height: 28,
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
       ),
       child: Row(
         children: [
           Container(
-            width: 240,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            width: metricWidth,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             alignment: Alignment.centerLeft,
             child: Text(
               label,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: 11.5,
                 fontWeight: isBold ? FontWeight.w800 : FontWeight.w500,
                 color: const Color(0xFF334155),
               ),
@@ -1693,8 +1762,8 @@ class _DealershipSummaryScreenState
                     '');
 
             return Container(
-              width: isAll ? 185 : 175,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              width: isAll ? consolidatedWidth : colWidth,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 color: isAll ? const Color(0xFFFFFBEB) : Colors.white,
                 border:
@@ -1705,8 +1774,9 @@ class _DealershipSummaryScreenState
                   ? _buildConvPillCell(bName, label, val)
                   : Text(
                       val,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: isBold ? 13 : 11.5,
+                        fontSize: isBold ? 12 : 11,
                         fontWeight:
                             isBold || isAll ? FontWeight.w800 : FontWeight.w600,
                         color: isAll
