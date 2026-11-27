@@ -154,7 +154,7 @@ class _DealershipSummaryScreenState
       'METRIC / BREAKDOWN',
       ...List.generate(branches.length, (i) {
         final b = branches[i];
-        return 'LOC ${i + 1}: ${b['name'] ?? ''}';
+        return '${b['name'] ?? ''}';
       }),
       'CONSOLIDATED',
     ];
@@ -1062,7 +1062,6 @@ class _DealershipSummaryScreenState
                         ),
                       ),
                       ...branches.map((b) {
-                        final index = branches.indexOf(b) + 1;
                         return Container(
                           width: colWidth,
                           padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1070,21 +1069,16 @@ class _DealershipSummaryScreenState
                             border: Border(
                                 left: BorderSide(color: Color(0xFFE2E8F0))),
                           ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text('LOC $index',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFF0F172A))),
-                              Text(b['name'] ?? '',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 10.5,
-                                      color: Color(0xFF64748B))),
-                            ],
+                          alignment: Alignment.center,
+                          child: Text(
+                            b['name'] ?? '',
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                            style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A)),
                           ),
                         );
                       }),
@@ -2083,7 +2077,7 @@ class _DealershipSummaryScreenState
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('LOC $index · ${b['name']}',
+                                Text('${b['name'] ?? ''}',
                                     style: const TextStyle(
                                         fontSize: 12.5,
                                         fontWeight: FontWeight.w700,
