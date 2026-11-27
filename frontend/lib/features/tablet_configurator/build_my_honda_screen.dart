@@ -257,11 +257,21 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
       if (!mounted || data == null) return;
 
-      final rawVehicles = (data['vehicles'] as List? ?? []);
-      final rawAccessories = (data['accessories'] as List? ?? []);
-      final rawFinanciers = (data['financiers'] as List? ?? []);
-      final rawBranches = (data['branches'] as List? ?? []);
-      final rawColours = (data['colours'] as List? ?? []);
+      final rawVehicles = (data['vehicles'] as List? ?? [])
+          .where((x) => (x['status'] ?? 'Active') == 'Active')
+          .toList();
+      final rawAccessories = (data['accessories'] as List? ?? [])
+          .where((x) => (x['status'] ?? 'Active') == 'Active')
+          .toList();
+      final rawFinanciers = (data['financiers'] as List? ?? [])
+          .where((x) => (x['status'] ?? 'Active') == 'Active')
+          .toList();
+      final rawBranches = (data['branches'] as List? ?? [])
+          .where((x) => (x['status'] ?? 'Active') == 'Active')
+          .toList();
+      final rawColours = (data['colours'] as List? ?? [])
+          .where((x) => (x['status'] ?? 'Active') == 'Active')
+          .toList();
 
       setState(() {
         _backendVehicles = rawVehicles.map((raw) {
@@ -675,66 +685,66 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         textScaler: const TextScaler.linear(1.18),
       ),
       child: Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Original Honda Wing watermark in background
-            if (_currentStep <= 6)
-              Positioned(
-                top: 48,
-                right: 280,
-                child: IgnorePointer(
-                  child: Opacity(
-                    opacity: 0.05,
-                    child: ColorFiltered(
-                      colorFilter: const ColorFilter.mode(
-                        Color(0xFF0F172A),
-                        BlendMode.srcIn,
-                      ),
-                      child: Image.asset(
-                        'assets/honda_wing_logo.png',
-                        width: 520,
-                        height: 300,
-                        fit: BoxFit.contain,
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              // Original Honda Wing watermark in background
+              if (_currentStep <= 6)
+                Positioned(
+                  top: 48,
+                  right: 280,
+                  child: IgnorePointer(
+                    child: Opacity(
+                      opacity: 0.05,
+                      child: ColorFiltered(
+                        colorFilter: const ColorFilter.mode(
+                          Color(0xFF0F172A),
+                          BlendMode.srcIn,
+                        ),
+                        child: Image.asset(
+                          'assets/honda_wing_logo.png',
+                          width: 520,
+                          height: 300,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
 
-            Column(
-              children: [
-                _buildTopHeader(),
-                Expanded(
-                  child: _currentStep == 7
-                      ? _buildStep7Layout()
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(44, 24, 28, 24),
-                                child: _buildMainStage(),
+              Column(
+                children: [
+                  _buildTopHeader(),
+                  Expanded(
+                    child: _currentStep == 7
+                        ? _buildStep7Layout()
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(44, 24, 28, 24),
+                                  child: _buildMainStage(),
+                                ),
                               ),
-                            ),
-                            SizedBox(
-                              width: 316,
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(4, 24, 40, 24),
-                                child: _buildQuotationSidebar(),
+                              SizedBox(
+                                width: 316,
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(4, 24, 40, 24),
+                                  child: _buildQuotationSidebar(),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
-            ),
-          ],
+                            ],
+                          ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1293,8 +1303,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                     )
                   : LayoutBuilder(
                       builder: (context, constraints) {
-                        final colsCount =
-                            constraints.maxWidth >= 640 ? 2 : 1;
+                        final colsCount = constraints.maxWidth >= 640 ? 2 : 1;
                         return GridView.builder(
                           padding: const EdgeInsets.only(bottom: 16),
                           gridDelegate:
@@ -1316,295 +1325,309 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                             final cols = _getColoursForVehicle(v);
 
                             return InkWell(
-                            onTap: () => _selectVehicle(v, advance: true),
-                            borderRadius: BorderRadius.circular(22),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(22),
-                                border: Border.all(
-                                  color: isSel
-                                      ? const Color(0xFFDC2626)
-                                      : const Color(0xFFE2E8F0),
-                                  width: isSel ? 2.2 : 1.0,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
+                              onTap: () => _selectVehicle(v, advance: true),
+                              borderRadius: BorderRadius.circular(22),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(22),
+                                  border: Border.all(
                                     color: isSel
-                                        ? const Color(0x26DC2626)
-                                        : const Color(0x0D000000),
-                                    blurRadius: isSel ? 18 : 12,
-                                    offset: const Offset(0, 5),
+                                        ? const Color(0xFFDC2626)
+                                        : const Color(0xFFE2E8F0),
+                                    width: isSel ? 2.2 : 1.0,
                                   ),
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  // Top Card Image Stage (fits full landscape vehicle cleanly)
-                                  Expanded(
-                                    child: ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(
-                                          top: Radius.circular(20)),
-                                      child: Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          Container(
-                                            decoration: const BoxDecoration(
-                                              gradient: LinearGradient(
-                                                begin: Alignment.topCenter,
-                                                end: Alignment.bottomCenter,
-                                                colors: [
-                                                  Color(0xFFFFFFFF),
-                                                  Color(0xFFF8FAFC),
-                                                  Color(0xFFF1F5F9),
-                                                ],
-                                              ),
-                                            ),
-                                            padding: const EdgeInsets.fromLTRB(
-                                                16, 36, 16, 12),
-                                            child: SmartMediaImage(
-                                              source: _resolveListingImage(v),
-                                              fit: BoxFit.contain,
-                                              fallback: Center(
-                                                child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    const Icon(
-                                                      Icons
-                                                          .two_wheeler_outlined,
-                                                      size: 46,
-                                                      color: Color(0xFF94A3B8),
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    Text(
-                                                      v['name']?.toString() ??
-                                                          '',
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: const TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                        color:
-                                                            Color(0xFF475569),
-                                                      ),
-                                                    ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: isSel
+                                          ? const Color(0x26DC2626)
+                                          : const Color(0x0D000000),
+                                      blurRadius: isSel ? 18 : 12,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    // Top Card Image Stage (fits full landscape vehicle cleanly)
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                                top: Radius.circular(20)),
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            Container(
+                                              decoration: const BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  begin: Alignment.topCenter,
+                                                  end: Alignment.bottomCenter,
+                                                  colors: [
+                                                    Color(0xFFFFFFFF),
+                                                    Color(0xFFF8FAFC),
+                                                    Color(0xFFF1F5F9),
                                                   ],
                                                 ),
                                               ),
-                                            ),
-                                          ),
-                                          if (cc != null)
-                                            Positioned(
-                                              top: 12,
-                                              left: 12,
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 10,
-                                                        vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFF0F172A)
-                                                      .withValues(alpha: 0.82),
-                                                  borderRadius:
-                                                      BorderRadius.circular(14),
-                                                ),
-                                                child: Text(
-                                                  '$cc CC',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 10.5,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          if (cols.isNotEmpty)
-                                            Positioned(
-                                              top: 14,
-                                              right: 14,
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white
-                                                      .withValues(alpha: 0.92),
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                  border: Border.all(
-                                                    color:
-                                                        const Color(0xFFE2E8F0),
-                                                  ),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    ...cols.take(4).map((c) =>
-                                                        Container(
-                                                          width: 10,
-                                                          height: 10,
-                                                          margin:
-                                                              const EdgeInsets
-                                                                  .only(
-                                                                  right: 3),
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: _parseColor(
-                                                                c['hex']
-                                                                    ?.toString()),
-                                                            shape:
-                                                                BoxShape.circle,
-                                                            border: Border.all(
-                                                              color: const Color(
-                                                                  0x33000000),
-                                                              width: 0.7,
-                                                            ),
-                                                          ),
-                                                        )),
-                                                    if (cols.length > 4)
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                      16, 36, 16, 12),
+                                              child: SmartMediaImage(
+                                                source: _resolveListingImage(v),
+                                                fit: BoxFit.contain,
+                                                fallback: Center(
+                                                  child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(
+                                                        Icons
+                                                            .two_wheeler_outlined,
+                                                        size: 46,
+                                                        color:
+                                                            Color(0xFF94A3B8),
+                                                      ),
+                                                      const SizedBox(height: 8),
                                                       Text(
-                                                        '+${cols.length - 4}',
+                                                        v['name']?.toString() ??
+                                                            '',
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
                                                         style: const TextStyle(
-                                                          fontSize: 9.5,
+                                                          fontSize: 12,
                                                           fontWeight:
                                                               FontWeight.w700,
                                                           color:
                                                               Color(0xFF475569),
                                                         ),
                                                       ),
-                                                  ],
+                                                    ],
+                                                  ),
                                                 ),
                                               ),
                                             ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-
-                                  // Bottom Vehicle Name & Price Bar
-                                  Container(
-                                    width: double.infinity,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.vertical(
-                                          bottom: Radius.circular(20)),
-                                      border: Border(
-                                        top: BorderSide(
-                                            color: Color(0xFFF1F5F9)),
-                                      ),
-                                    ),
-                                    padding: const EdgeInsets.fromLTRB(
-                                        18, 12, 18, 14),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              if ((v['wordmarkImageUrl']
-                                                          ?.toString() ??
-                                                      '')
-                                                  .isNotEmpty)
-                                                SizedBox(
-                                                  height: 24,
-                                                  width: double.infinity,
-                                                  child: FittedBox(
-                                                    fit: BoxFit.scaleDown,
-                                                    alignment:
-                                                        Alignment.centerLeft,
-                                                    child: SizedBox(
-                                                      height: 24,
-                                                      child: SmartMediaImage(
-                                                        source: v[
-                                                                'wordmarkImageUrl']
-                                                            ?.toString(),
-                                                        fit: BoxFit.contain,
-                                                        fallback: Text(
-                                                          v['name']
-                                                                  ?.toString() ??
-                                                              '',
-                                                          maxLines: 1,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
+                                            if (cc != null)
+                                              Positioned(
+                                                top: 12,
+                                                left: 12,
+                                                child: Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        const Color(0xFF0F172A)
+                                                            .withValues(
+                                                                alpha: 0.82),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            14),
+                                                  ),
+                                                  child: Text(
+                                                    '$cc CC',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 10.5,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            if (cols.isNotEmpty)
+                                              Positioned(
+                                                top: 14,
+                                                right: 14,
+                                                child: Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white
+                                                        .withValues(
+                                                            alpha: 0.92),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12),
+                                                    border: Border.all(
+                                                      color: const Color(
+                                                          0xFFE2E8F0),
+                                                    ),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      ...cols.take(4).map((c) =>
+                                                          Container(
+                                                            width: 10,
+                                                            height: 10,
+                                                            margin:
+                                                                const EdgeInsets
+                                                                    .only(
+                                                                    right: 3),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: _parseColor(c[
+                                                                      'hex']
+                                                                  ?.toString()),
+                                                              shape: BoxShape
+                                                                  .circle,
+                                                              border:
+                                                                  Border.all(
+                                                                color: const Color(
+                                                                    0x33000000),
+                                                                width: 0.7,
+                                                              ),
+                                                            ),
+                                                          )),
+                                                      if (cols.length > 4)
+                                                        Text(
+                                                          '+${cols.length - 4}',
                                                           style:
                                                               const TextStyle(
-                                                            fontSize: 14.5,
+                                                            fontSize: 9.5,
                                                             fontWeight:
-                                                                FontWeight.w800,
+                                                                FontWeight.w700,
                                                             color: Color(
-                                                                0xFF0F172A),
+                                                                0xFF475569),
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Bottom Vehicle Name & Price Bar
+                                    Container(
+                                      width: double.infinity,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.vertical(
+                                            bottom: Radius.circular(20)),
+                                        border: Border(
+                                          top: BorderSide(
+                                              color: Color(0xFFF1F5F9)),
+                                        ),
+                                      ),
+                                      padding: const EdgeInsets.fromLTRB(
+                                          18, 12, 18, 14),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                if ((v['wordmarkImageUrl']
+                                                            ?.toString() ??
+                                                        '')
+                                                    .isNotEmpty)
+                                                  SizedBox(
+                                                    height: 24,
+                                                    width: double.infinity,
+                                                    child: FittedBox(
+                                                      fit: BoxFit.scaleDown,
+                                                      alignment:
+                                                          Alignment.centerLeft,
+                                                      child: SizedBox(
+                                                        height: 24,
+                                                        child: SmartMediaImage(
+                                                          source:
+                                                              v['wordmarkImageUrl']
+                                                                  ?.toString(),
+                                                          fit: BoxFit.contain,
+                                                          fallback: Text(
+                                                            v['name']
+                                                                    ?.toString() ??
+                                                                '',
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 14.5,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w800,
+                                                              color: Color(
+                                                                  0xFF0F172A),
+                                                            ),
                                                           ),
                                                         ),
                                                       ),
                                                     ),
+                                                  )
+                                                else
+                                                  Text(
+                                                    v['name']?.toString() ?? '',
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontSize: 14.5,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: Color(0xFF0F172A),
+                                                    ),
                                                   ),
-                                                )
-                                              else
+                                                const SizedBox(height: 4),
                                                 Text(
-                                                  v['name']?.toString() ?? '',
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                                  '${CurrencyFormatter.format(displayPrice)}*',
                                                   style: const TextStyle(
-                                                    fontSize: 14.5,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: Color(0xFF0F172A),
+                                                    fontSize: 19,
+                                                    fontWeight: FontWeight.w900,
+                                                    color: Color(0xFFDC2626),
+                                                    letterSpacing: -0.4,
                                                   ),
                                                 ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                '${CurrencyFormatter.format(displayPrice)}*',
-                                                style: const TextStyle(
-                                                  fontSize: 19,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: Color(0xFFDC2626),
-                                                  letterSpacing: -0.4,
+                                                Text(
+                                                  _showOnRoadPrice
+                                                      ? 'On-Road Price (Pune)'
+                                                      : 'Ex-Showroom Price',
+                                                  style: const TextStyle(
+                                                    fontSize: 10.5,
+                                                    color: Color(0xFF64748B),
+                                                  ),
                                                 ),
-                                              ),
-                                              Text(
-                                                _showOnRoadPrice
-                                                    ? 'On-Road Price (Pune)'
-                                                    : 'Ex-Showroom Price',
-                                                style: const TextStyle(
-                                                  fontSize: 10.5,
-                                                  color: Color(0xFF64748B),
-                                                ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFFEF2F2),
-                                            borderRadius:
-                                                BorderRadius.circular(10),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFEF2F2),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: const Icon(
+                                              Icons.arrow_forward_rounded,
+                                              size: 16,
+                                              color: Color(0xFFDC2626),
+                                            ),
                                           ),
-                                          child: const Icon(
-                                            Icons.arrow_forward_rounded,
-                                            size: 16,
-                                            color: Color(0xFFDC2626),
-                                          ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
+                            );
                           },
                         );
                       },
@@ -1630,7 +1653,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         : (Color.lerp(activeColor, Colors.black, 0.45) ?? activeColor);
     final stageEdge = isVeryLight
         ? const Color(0xFF0F172A)
-        : (Color.lerp(activeColor, Colors.black, 0.78) ?? const Color(0xFF0F172A));
+        : (Color.lerp(activeColor, Colors.black, 0.78) ??
+            const Color(0xFF0F172A));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2469,7 +2493,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+              borderSide:
+                  const BorderSide(color: Color(0xFFDC2626), width: 1.5),
             ),
           ),
           onChanged: (_) => setState(() {}),
@@ -3197,9 +3222,9 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   ),
                   if (_selectedVehicle != null && _showOnRoadPrice) ...[
                     Builder(builder: (context) {
-                      final ex = ((_selectedVehicle!['exShowroomPrice'] ?? 0)
-                              as num)
-                          .toDouble();
+                      final ex =
+                          ((_selectedVehicle!['exShowroomPrice'] ?? 0) as num)
+                              .toDouble();
                       final onR =
                           ((_selectedVehicle!['onRoadPrice'] ?? 0) as num)
                               .toDouble();
@@ -3751,9 +3776,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                         labelStyle: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: isSel
-                              ? Colors.white
-                              : const Color(0xFF0F172A),
+                          color: isSel ? Colors.white : const Color(0xFF0F172A),
                         ),
                         showCheckmark: false,
                         padding: const EdgeInsets.symmetric(
@@ -4167,7 +4190,9 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           if (e is DioException && e.response?.data is Map) {
             final errData = e.response!.data as Map;
             final rawMsg = errData['message'];
-            msg = rawMsg is List ? rawMsg.join(', ') : (rawMsg?.toString() ?? msg);
+            msg = rawMsg is List
+                ? rawMsg.join(', ')
+                : (rawMsg?.toString() ?? msg);
           }
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -4274,9 +4299,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               pw.Container(
                 padding: const pw.EdgeInsets.all(16),
                 decoration: pw.BoxDecoration(
-                  color: isBigWing
-                      ? PdfColor.fromHex('#0F172A')
-                      : PdfColors.white,
+                  color:
+                      isBigWing ? PdfColor.fromHex('#0F172A') : PdfColors.white,
                   border: isBigWing
                       ? null
                       : pw.Border.all(color: PdfColor.fromHex('#E2E8F0')),

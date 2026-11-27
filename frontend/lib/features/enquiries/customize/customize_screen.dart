@@ -199,14 +199,28 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         dio.get('/users'),
       ]);
 
-      final vehicles = results[0].data as List;
-      final branches = results[1].data as List;
+      final vehicles = (results[0].data as List)
+          .where((x) => (x['status'] ?? 'Active') == 'Active')
+          .toList();
+      final branches = (results[1].data as List)
+          .where((x) => (x['status'] ?? 'Active') == 'Active')
+          .toList();
       final settings = results[2].data as Map<String, dynamic>;
-      final accessories = results[3].data as List;
-      final financiers = results[4].data as List;
-      final areas = results[5].data as List;
-      final leadSources = results[6].data as List;
-      final users = results[7].data as List;
+      final accessories = (results[3].data as List)
+          .where((x) => (x['status'] ?? 'Active') == 'Active')
+          .toList();
+      final financiers = (results[4].data as List)
+          .where((x) => (x['status'] ?? 'Active') == 'Active')
+          .toList();
+      final areas = (results[5].data as List)
+          .where((x) => (x['status'] ?? 'Active') == 'Active')
+          .toList();
+      final leadSources = (results[6].data as List)
+          .where((x) => (x['status'] ?? 'Active') == 'Active')
+          .toList();
+      final users = (results[7].data as List)
+          .where((x) => (x['status'] ?? 'Active') == 'Active')
+          .toList();
 
       // Filter sales reps
       final reps = users

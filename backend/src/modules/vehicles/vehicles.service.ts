@@ -23,36 +23,47 @@ export class VehiclesService {
 
   // Public bootstrap endpoint for Build My Honda (works logged-in OR unauthenticated kiosk)
   async getConfiguratorBootstrap(category?: string, cc?: number) {
-    const [vehicles, accessories, financiers, branches, colours] = await Promise.all([
-      this.prisma.vehicle.findMany({
-        where: { status: 'Active' },
-        include: {
-          modelGroup: true,
-          colours: { include: { colour: true } },
-        },
-        orderBy: [{ ccDisplacement: 'asc' }, { exShowroomPrice: 'asc' }],
-      }),
-      this.prisma.accessory.findMany({
-        where: { status: 'Active' },
-        orderBy: [{ isStandard: 'desc' }, { sortOrder: 'asc' }, { name: 'asc' }],
-      }),
-      this.prisma.financier.findMany({
-        where: { status: 'Active' },
-        orderBy: { name: 'asc' },
-      }),
-      this.prisma.branch.findMany({
-        where: { status: 'Active' },
-        select: { id: true, code: true, name: true, wing: true, address: true },
-        orderBy: { name: 'asc' },
-      }),
-      this.prisma.colour.findMany({
-        where: { status: 'Active' },
-        orderBy: { name: 'asc' },
-      }),
-    ]);
+    const [vehicles, accessories, financiers, branches, colours, areas, leadSources, settings] =
+      await Promise.all([
+        this.prisma.vehicle.findMany({
+          where: { status: 'Active' },
+          include: {
+            modelGroup: true,
+            colours: { include: { colour: true } },
+          },
+          orderBy: [{ ccDisplacement: 'asc' }, { exShowroomPrice: 'asc' }],
+        }),
+        this.prisma.accessory.findMany({
+          where: { status: 'Active' },
+          orderBy: [{ isStandard: 'desc' }, { sortOrder: 'asc' }, { name: 'asc' }],
+        }),
+        this.prisma.financier.findMany({
+          where: { status: 'Active' },
+          orderBy: { name: 'asc' },
+        }),
+        this.prisma.branch.findMany({
+          where: { status: 'Active' },
+          select: { id: true, code: true, name: true, wing: true, address: true, status: true },
+          orderBy: { name: 'asc' },
+        }),
+        this.prisma.colour.findMany({
+          where: { status: 'Active' },
+          orderBy: { name: 'asc' },
+        }),
+        this.prisma.area.findMany({
+          where: { status: 'Active' },
+          orderBy: { name: 'asc' },
+        }),
+        this.prisma.leadSource.findMany({
+          where: { status: 'Active' },
+          orderBy: { name: 'asc' },
+        }),
+        this.prisma.companySettings.findFirst(),
+      ]);
 
     let filteredVehicles = vehicles.map((v) => ({
       ...v,
+      colours: (v.colours || []).filter((c) => c.colour?.status === 'Active'),
       normalizedCategory: this.normalizeCategory(v.category, v.modelGroup?.name),
     }));
 
@@ -71,6 +82,9 @@ export class VehiclesService {
       financiers,
       branches,
       colours,
+      areas,
+      leadSources,
+      settings,
     };
   }
 
