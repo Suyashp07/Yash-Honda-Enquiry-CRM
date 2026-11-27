@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -1547,13 +1548,45 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     return _buildRowsTimelineGrid(reps, sessions, cellWidth, nowSlotTarget);
   }
 
-  // --- Rows Mode: Reps as Rows (Horizontal Time) ---
+  // --- Rows Mode: Reps as Rows (Horizontal Time with Pinned Left Rep Column) ---
   Widget _buildRowsTimelineGrid(
     List<dynamic> reps,
     List<dynamic> sessions,
     double cellWidth,
     String? nowSlotTarget,
   ) {
+    final double rowHeight = (72.0 * (_zoomLevel / 100.0)).clamp(54.0, 108.0);
+
+    // Precompute per-rep session metadata so left pinned column and right grid stay in sync
+    final repRowsData = reps.map((rep) {
+      final repMap = Map<String, dynamic>.from(rep as Map);
+      final repName = repMap['name'] ?? 'Executive';
+      final isBusy = repMap['status'] == 'Busy';
+      final avatarLetter =
+          repName.isNotEmpty ? repName[0].toUpperCase() : 'R';
+      final repSessions = sessions
+          .where((s) => s['sales_exec_id'] == repMap['id'])
+          .toList();
+      repSessions.sort((a, b) {
+        final at = a['created_at']?.toString() ?? '';
+        final bt = b['created_at']?.toString() ?? '';
+        return bt.compareTo(at);
+      });
+      final currentSession =
+          repSessions.isNotEmpty ? repSessions.first : null;
+      final customerName = repMap['activeCustomerName'] ??
+          currentSession?['customer_name'] ??
+          'Guest';
+      return {
+        'rep': repMap,
+        'repName': repName,
+        'isBusy': isBusy,
+        'avatarLetter': avatarLetter,
+        'repSessions': repSessions,
+        'customerName': customerName,
+      };
+    }).toList();
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -1570,134 +1603,56 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
           bottomLeft: Radius.circular(16),
           bottomRight: Radius.circular(16),
         ),
-        child: SingleChildScrollView(
-          controller: _timelineScrollController,
-          scrollDirection: Axis.horizontal,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row: Sales Rep + Time Slots
-              Container(
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF8FAFC),
-                  border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
-                ),
-                child: Row(
-                  children: [
-                    // Rep Label Column
-                    Container(
-                      width: 200,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      alignment: Alignment.centerLeft,
-                      child: const Text(
-                        'SALES REP',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF64748B),
-                            letterSpacing: 0.5),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Pinned Left Column: SALES REP Header + Rep Info Tiles (never scrolls horizontally)
+            SizedBox(
+              width: 200,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF8FAFC),
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                        right: BorderSide(color: Color(0xFFE2E8F0)),
                       ),
                     ),
+                    alignment: Alignment.centerLeft,
+                    child: const Text(
+                      'SALES REP',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF64748B),
+                          letterSpacing: 0.5),
+                    ),
+                  ),
+                  ...repRowsData.map((rd) {
+                    final repName = rd['repName'] as String;
+                    final isBusy = rd['isBusy'] as bool;
+                    final avatarLetter = rd['avatarLetter'] as String;
+                    final repSessions = rd['repSessions'] as List;
+                    final customerName = rd['customerName'] as String;
 
-                    // Time Slots
-                    ..._timeSlots.map((slot) {
-                      final isNow = slot == nowSlotTarget;
-                      return Container(
-                        width: cellWidth,
-                        decoration: BoxDecoration(
-                          color: isNow
-                              ? const Color(0xFFFFFBEB)
-                              : Colors.transparent,
-                          border: Border(
-                            left: const BorderSide(color: Color(0xFFE2E8F0)),
-                            right: isNow
-                                ? const BorderSide(
-                                    color: Color(0xFFDC2626), width: 2)
-                                : BorderSide.none,
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              slot.replaceAll(' AM', '').replaceAll(' PM', ''),
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight:
-                                    isNow ? FontWeight.w800 : FontWeight.w500,
-                                color: isNow
-                                    ? const Color(0xFFDC2626)
-                                    : const Color(0xFF64748B),
-                              ),
-                            ),
-                            if (isNow) ...[
-                              const SizedBox(width: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFDC2626),
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                                child: const Text('NOW',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-
-            // Rep Rows
-            ...reps.map((rep) {
-              final repName = rep['name'] ?? 'Executive';
-              final isBusy = rep['status'] == 'Busy';
-              final avatarLetter =
-                  repName.isNotEmpty ? repName[0].toUpperCase() : 'R';
-
-              // Associated active sessions for this rep
-              final repSessions = sessions
-                  .where((s) => s['sales_exec_id'] == rep['id'])
-                  .toList();
-              // Sort newest first
-              repSessions.sort((a, b) {
-                final at = a['created_at']?.toString() ?? '';
-                final bt = b['created_at']?.toString() ?? '';
-                return bt.compareTo(at);
-              });
-              final currentSession =
-                  repSessions.isNotEmpty ? repSessions.first : null;
-              final customerName = rep['activeCustomerName'] ??
-                  currentSession?['customer_name'] ??
-                  'Guest';
-
-              return Container(
-                height: (72.0 * (_zoomLevel / 100.0)).clamp(54.0, 108.0),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
-                ),
-                child: Row(
-                  children: [
-                    // Rep Info Tile (Left Pinned) matching prototype
-                    Tooltip(
+                    return Tooltip(
                       message:
                           'Sales Rep: $repName\nStatus: ${isBusy ? 'With $customerName' : 'Available'}\nActive Sessions: ${repSessions.length}',
                       child: Container(
                         width: 200,
+                        height: rowHeight,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 4),
                         decoration: const BoxDecoration(
                           color: Colors.white,
                           border: Border(
-                              right: BorderSide(color: Color(0xFFE2E8F0))),
+                            bottom: BorderSide(color: Color(0xFFF1F5F9)),
+                            right: BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -1758,52 +1713,164 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                           ],
                         ),
                       ),
-                    ),
+                    );
+                  }),
+                ],
+              ),
+            ),
 
-                    // Time Slot Cells for this Rep
-                    ..._timeSlots.map((slot) {
-                      final isNow =
-                          nowSlotTarget != null && slot == nowSlotTarget;
-
-                      // Collect ALL sessions in this 30-minute slot (completed quotes + active session)
-                      final slotSessions = _collectSlotSessions(
-                        Map<String, dynamic>.from(rep as Map),
-                        repSessions,
-                        slot,
-                        isNow,
-                        isBusy,
-                      );
-
-                      return Container(
-                        width: cellWidth,
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: isNow
-                              ? const Color(0xFFFFFBEB).withValues(alpha: 0.6)
-                              : Colors.white,
-                          border: Border(
-                            left: const BorderSide(color: Color(0xFFF1F5F9)),
-                            right: isNow
-                                ? const BorderSide(
-                                    color: Color(0xFFDC2626), width: 2)
-                                : BorderSide.none,
+            // Right Scrollable Time Slots Area (with visible scrollbar & mouse drag support)
+            Expanded(
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: Scrollbar(
+                  controller: _timelineScrollController,
+                  thumbVisibility: true,
+                  trackVisibility: true,
+                  interactive: true,
+                  child: SingleChildScrollView(
+                    controller: _timelineScrollController,
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header Row: Time Slots
+                        Container(
+                          height: 40,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF8FAFC),
+                            border: Border(
+                                bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                          ),
+                          child: Row(
+                            children: _timeSlots.map((slot) {
+                              final isNow = slot == nowSlotTarget;
+                              return Container(
+                                width: cellWidth,
+                                decoration: BoxDecoration(
+                                  color: isNow
+                                      ? const Color(0xFFFFFBEB)
+                                      : Colors.transparent,
+                                  border: Border(
+                                    left: const BorderSide(
+                                        color: Color(0xFFE2E8F0)),
+                                    right: isNow
+                                        ? const BorderSide(
+                                            color: Color(0xFFDC2626), width: 2)
+                                        : BorderSide.none,
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      slot
+                                          .replaceAll(' AM', '')
+                                          .replaceAll(' PM', ''),
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: isNow
+                                            ? FontWeight.w800
+                                            : FontWeight.w500,
+                                        color: isNow
+                                            ? const Color(0xFFDC2626)
+                                            : const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                    if (isNow) ...[
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 4, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFDC2626),
+                                          borderRadius:
+                                              BorderRadius.circular(3),
+                                        ),
+                                        child: const Text('NOW',
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.bold)),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              );
+                            }).toList(),
                           ),
                         ),
-                        child: _buildSlotCellContent(
-                          slotSessions,
-                          repName,
-                          repId: rep['id']?.toString(),
-                          slot: slot,
-                        ),
-                      );
-                    }),
-                  ],
+
+                        // Rep Time-Slot Rows
+                        ...repRowsData.map((rd) {
+                          final rep = rd['rep'] as Map<String, dynamic>;
+                          final repName = rd['repName'] as String;
+                          final isBusy = rd['isBusy'] as bool;
+                          final repSessions = rd['repSessions'] as List;
+
+                          return Container(
+                            height: rowHeight,
+                            decoration: const BoxDecoration(
+                              border: Border(
+                                  bottom: BorderSide(color: Color(0xFFF1F5F9))),
+                            ),
+                            child: Row(
+                              children: _timeSlots.map((slot) {
+                                final isNow = nowSlotTarget != null &&
+                                    slot == nowSlotTarget;
+                                final slotSessions = _collectSlotSessions(
+                                  rep,
+                                  repSessions,
+                                  slot,
+                                  isNow,
+                                  isBusy,
+                                );
+
+                                return Container(
+                                  width: cellWidth,
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    color: isNow
+                                        ? const Color(0xFFFFFBEB)
+                                            .withValues(alpha: 0.6)
+                                        : Colors.white,
+                                    border: Border(
+                                      left: const BorderSide(
+                                          color: Color(0xFFF1F5F9)),
+                                      right: isNow
+                                          ? const BorderSide(
+                                              color: Color(0xFFDC2626),
+                                              width: 2)
+                                          : BorderSide.none,
+                                    ),
+                                  ),
+                                  child: _buildSlotCellContent(
+                                    slotSessions,
+                                    repName,
+                                    repId: rep['id']?.toString(),
+                                    slot: slot,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
                 ),
-              );
-            }),
+              ),
+            ),
           ],
         ),
-      ),
       ),
     );
   }
