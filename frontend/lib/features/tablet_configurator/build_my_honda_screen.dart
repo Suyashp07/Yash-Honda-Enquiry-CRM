@@ -2617,7 +2617,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   const SizedBox(height: 16),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(18),
+                    padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(18),
@@ -2636,12 +2636,12 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                         const Text(
                           'Tell us about your current vehicle',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: Color(0xFF0F172A),
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
                         Row(
                           children: [
                             Expanded(
@@ -2652,7 +2652,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 controller: _exchangeModelController,
                               ),
                             ),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2660,25 +2660,26 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                   const Row(
                                     children: [
                                       Icon(Icons.calendar_month_outlined,
-                                          size: 14, color: Color(0xFF64748B)),
+                                          size: 16, color: Color(0xFF64748B)),
                                       SizedBox(width: 6),
                                       Text('Year of Purchase',
                                           style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF334155))),
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF1E293B))),
                                     ],
                                   ),
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 8),
                                   Container(
-                                    height: 40,
+                                    height: 54,
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 12),
+                                        horizontal: 14),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFF8FAFC),
-                                      borderRadius: BorderRadius.circular(10),
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                          color: const Color(0xFFE2E8F0)),
+                                          color: const Color(0xFFCBD5E1),
+                                          width: 1.2),
                                     ),
                                     child: DropdownButtonHideUnderline(
                                       child: DropdownButton<String>(
@@ -2687,7 +2688,8 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                             : 'Select Year',
                                         isExpanded: true,
                                         style: const TextStyle(
-                                            fontSize: 12.5,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
                                             color: Color(0xFF0F172A)),
                                         items: years
                                             .map((y) => DropdownMenuItem(
@@ -4750,36 +4752,40 @@ class _ExchangeTextField extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 14, color: const Color(0xFF64748B)),
+            Icon(icon, size: 16, color: const Color(0xFF64748B)),
             const SizedBox(width: 6),
             Text(
               label,
               style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF334155),
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E293B),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: 54,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
           ),
           alignment: Alignment.centerLeft,
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
-            style: const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0F172A),
+            ),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle:
-                  const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                  const TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
               border: InputBorder.none,
               isDense: true,
               contentPadding: EdgeInsets.zero,
