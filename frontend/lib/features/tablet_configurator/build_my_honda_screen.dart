@@ -889,14 +889,28 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
           const SizedBox(width: 24),
 
-          // Right: Simple icon to go directly to the normal Quick Enquiry form
-          IconButton(
-            tooltip: 'Go to Normal Form',
-            onPressed: () => context.go('/tablet'),
-            icon: const Icon(
-              Icons.assignment_outlined,
-              color: Color(0xFF0F172A),
-              size: 22,
+          // Right: Open the standard Quick Enquiry form directly
+          OutlinedButton.icon(
+            onPressed: () {
+              final repId = widget.initialRepId;
+              if (repId != null && repId.isNotEmpty) {
+                context.go('/tablet?repId=$repId');
+              } else {
+                context.go('/tablet');
+              }
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF0F172A),
+              side: const BorderSide(color: Color(0xFFCBD5E1)),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            icon: const Icon(Icons.assignment_outlined, size: 18),
+            label: const Text(
+              'Enquiry Form',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             ),
           ),
         ],

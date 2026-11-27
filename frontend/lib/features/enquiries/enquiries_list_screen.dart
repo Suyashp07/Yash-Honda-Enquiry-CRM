@@ -1674,7 +1674,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                     backgroundColor: const Color(0xFFDC2626),
                                     foregroundColor: Colors.white),
                                 onPressed: () =>
-                                    context.go('/enquiries/vehicle-picker'),
+                                    context.go('/build-my-honda'),
                                 child: const Text('+ New Enquiry'),
                               ),
                             ],

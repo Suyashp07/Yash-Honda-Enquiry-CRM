@@ -816,7 +816,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
           ),
           const SizedBox(width: AppSpacing.s8),
           ElevatedButton.icon(
-            onPressed: () => context.go('/tablet'),
+            onPressed: () => context.go('/build-my-honda'),
             icon: const Icon(AppIcons.add, size: 18),
             label: const Text('New enquiry'),
           ),
@@ -982,7 +982,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
       ),
       body: widget.body,
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/tablet'),
+        onPressed: () => context.go('/build-my-honda'),
         backgroundColor: AppColors.brand,
         foregroundColor: Colors.white,
         icon: const Icon(AppIcons.add),
