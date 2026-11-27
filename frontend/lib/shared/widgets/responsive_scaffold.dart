@@ -84,7 +84,9 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
       final res = await dio.get('/branches');
       if (mounted) {
         setState(() {
-          _branches = List<Map<String, dynamic>>.from(res.data);
+          _branches = List<Map<String, dynamic>>.from(res.data)
+              .where((b) => (b['status'] ?? 'Active') == 'Active')
+              .toList();
         });
       }
       // Fetch overdue follow-up count for real notification badge
@@ -246,6 +248,9 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(branchesRefreshProvider, (prev, next) {
+      if (prev != next) _loadShellData();
+    });
     final authState = ref.watch(authStateProvider);
     final user = authState.user;
 

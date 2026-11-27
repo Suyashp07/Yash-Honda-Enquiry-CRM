@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/networking/api_client.dart';
+import '../../core/providers/branch_provider.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../auth/auth_notifier.dart';
 import 'widgets/configurator_media_dialogs.dart';
@@ -307,6 +308,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           break;
         case 'branches':
           await dio.put('/branches/$id', data: {'status': newStatus});
+          ref.read(branchesRefreshProvider.notifier).state++;
           break;
         case 'users':
           await dio.put('/users/$id', data: {'status': newStatus});
@@ -414,6 +416,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           break;
         case 'branches':
           await dio.delete('/branches/$id');
+          ref.read(branchesRefreshProvider.notifier).state++;
           break;
         case 'users':
           await dio.delete('/users/$id');

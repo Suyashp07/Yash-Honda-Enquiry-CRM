@@ -9,3 +9,6 @@ final lastDataUpdatedProvider = StateProvider<DateTime?>((ref) => null);
 
 /// Tracks whether the active view's latest refresh failed.
 final dataFreshnessErrorProvider = StateProvider<bool>((ref) => false);
+
+/// Incremented whenever branches are created, edited, toggled, or deleted in Admin Panel.
+final branchesRefreshProvider = StateProvider<int>((ref) => 0);
