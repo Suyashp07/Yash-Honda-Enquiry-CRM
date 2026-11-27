@@ -4609,9 +4609,11 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     'Quotes',
     'Follow-ups',
     'Dashboard',
+    'Summary',
     'Reports',
     'Masters',
     'Users',
+    'Company Profile',
   ];
 
   static const List<String> _rbacActions = [

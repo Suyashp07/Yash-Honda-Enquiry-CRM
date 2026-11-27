@@ -218,54 +218,66 @@ export class UsersService {
         'Quotes': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Follow-ups': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Dashboard': { view: false, create: false, edit: false, delete: false, export: false, send: false },
+        'Summary': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Reports': { view: true, create: false, edit: false, delete: false, export: true, send: false },
         'Masters': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Users': { view: false, create: false, edit: false, delete: false, export: false, send: false },
+        'Company Profile': { view: false, create: false, edit: false, delete: false, export: false, send: false },
       },
       'Branch Manager': {
         'Leads': { view: true, create: true, edit: true, delete: true, export: false, send: false },
         'Quotes': { view: true, create: true, edit: true, delete: false, export: false, send: true },
         'Follow-ups': { view: true, create: true, edit: true, delete: true, export: false, send: false },
         'Dashboard': { view: true, create: false, edit: false, delete: false, export: false, send: false },
+        'Summary': { view: true, create: false, edit: false, delete: false, export: true, send: false },
         'Reports': { view: true, create: false, edit: false, delete: false, export: true, send: false },
         'Masters': { view: true, create: false, edit: false, delete: false, export: false, send: false },
         'Users': { view: false, create: false, edit: false, delete: false, export: false, send: false },
+        'Company Profile': { view: false, create: false, edit: false, delete: false, export: false, send: false },
       },
       'Sales Executive': {
         'Leads': { view: true, create: true, edit: true, delete: false, export: false, send: false },
         'Quotes': { view: true, create: true, edit: true, delete: false, export: false, send: true },
         'Follow-ups': { view: true, create: true, edit: true, delete: false, export: false, send: false },
         'Dashboard': { view: true, create: false, edit: false, delete: false, export: false, send: false },
+        'Summary': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Reports': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Masters': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Users': { view: false, create: false, edit: false, delete: false, export: false, send: false },
+        'Company Profile': { view: false, create: false, edit: false, delete: false, export: false, send: false },
       },
       'Owner': {
         'Leads': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Quotes': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Follow-ups': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Dashboard': { view: true, create: true, edit: true, delete: true, export: true, send: true },
+        'Summary': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Reports': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Masters': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Users': { view: true, create: true, edit: true, delete: true, export: true, send: true },
+        'Company Profile': { view: true, create: true, edit: true, delete: true, export: true, send: true },
       },
       'Super Admin': {
         'Leads': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Quotes': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Follow-ups': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Dashboard': { view: true, create: true, edit: true, delete: true, export: true, send: true },
+        'Summary': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Reports': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Masters': { view: true, create: true, edit: true, delete: true, export: true, send: true },
         'Users': { view: true, create: true, edit: true, delete: true, export: true, send: true },
+        'Company Profile': { view: true, create: true, edit: true, delete: true, export: true, send: true },
       },
       'Tele-caller': {
         'Leads': { view: true, create: true, edit: false, delete: false, export: false, send: false },
         'Quotes': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Follow-ups': { view: true, create: true, edit: true, delete: false, export: false, send: false },
         'Dashboard': { view: false, create: false, edit: false, delete: false, export: false, send: false },
+        'Summary': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Reports': { view: true, create: false, edit: false, delete: false, export: true, send: false },
         'Masters': { view: false, create: false, edit: false, delete: false, export: false, send: false },
         'Users': { view: false, create: false, edit: false, delete: false, export: false, send: false },
+        'Company Profile': { view: false, create: false, edit: false, delete: false, export: false, send: false },
       },
     };
 
@@ -273,7 +285,10 @@ export class UsersService {
     const result = { ...defaultPermissions };
     for (const item of saved) {
       if (item.permissions && typeof item.permissions === 'object') {
-        result[item.role] = item.permissions as Record<string, Record<string, boolean>>;
+        result[item.role] = {
+          ...(defaultPermissions[item.role] || {}),
+          ...(item.permissions as Record<string, Record<string, boolean>>),
+        };
       }
     }
     return result;
