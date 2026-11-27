@@ -1479,17 +1479,13 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                         }),
 
                         // Hypothecation Charge if Finance
-                        if (_purchaseMode == 'Finance' &&
-                            (double.tryParse(
-                                        _hypothecationController.text.trim()) ??
-                                    0) >
-                                0)
+                        if (_purchaseMode == 'Finance')
                           _buildPriceRow(
                             'Hypothecation Charge',
                             CurrencyFormatter.format(
                               double.tryParse(
                                       _hypothecationController.text.trim()) ??
-                                  0,
+                                  500,
                             ),
                           ),
                       ],
@@ -1533,45 +1529,28 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                             Expanded(
                                 child: _buildEmiBox(
                                     'Down Payment',
-                                    _downPaymentController.text
-                                            .trim()
-                                            .isNotEmpty
-                                        ? CurrencyFormatter.format(
-                                            double.tryParse(
-                                                    _downPaymentController.text
-                                                        .trim()) ??
-                                                0)
-                                        : '—')),
+                                    CurrencyFormatter.format(double.tryParse(
+                                            _downPaymentController.text
+                                                .trim()) ??
+                                        (grandTotal * 0.20)))),
                             Expanded(
                                 child: _buildEmiBox(
                                     'EMI · 24m',
-                                    _emi24Controller.text.trim().isNotEmpty
-                                        ? CurrencyFormatter.format(
-                                            double.tryParse(_emi24Controller
-                                                    .text
-                                                    .trim()) ??
-                                                0)
-                                        : '—')),
+                                    CurrencyFormatter.format(double.tryParse(
+                                            _emi24Controller.text.trim()) ??
+                                        ((grandTotal * 0.80 * 1.12) / 24)))),
                             Expanded(
                                 child: _buildEmiBox(
                                     'EMI · 36m',
-                                    _emi36Controller.text.trim().isNotEmpty
-                                        ? CurrencyFormatter.format(
-                                            double.tryParse(_emi36Controller
-                                                    .text
-                                                    .trim()) ??
-                                                0)
-                                        : '—')),
+                                    CurrencyFormatter.format(double.tryParse(
+                                            _emi36Controller.text.trim()) ??
+                                        ((grandTotal * 0.80 * 1.18) / 36)))),
                             Expanded(
                                 child: _buildEmiBox(
                                     'EMI · 48m',
-                                    _emi48Controller.text.trim().isNotEmpty
-                                        ? CurrencyFormatter.format(
-                                            double.tryParse(_emi48Controller
-                                                    .text
-                                                    .trim()) ??
-                                                0)
-                                        : '—')),
+                                    CurrencyFormatter.format(double.tryParse(
+                                            _emi48Controller.text.trim()) ??
+                                        ((grandTotal * 0.80 * 1.24) / 48)))),
                           ],
                         ),
                       ],
