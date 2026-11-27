@@ -127,7 +127,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
   final _emi24Controller = TextEditingController();
   final _emi36Controller = TextEditingController();
   final _emi48Controller = TextEditingController();
-  final _hypothecationController = TextEditingController(text: '500');
+  final _hypothecationController = TextEditingController();
   String? _emiDefaultsVehicleId;
 
   void _populateEmiDefaults(double total, {bool force = false}) {
@@ -312,17 +312,10 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
         'accessories': accList,
         if (_purchaseMode == 'Finance')
           'hypothecationCharge':
-              double.tryParse(_hypothecationController.text.trim()) ?? 500,
+              double.tryParse(_hypothecationController.text.trim()) ?? 0,
       });
 
       if (!mounted) return;
-      final calcData = res.data as Map<String, dynamic>?;
-      final calcTotal = double.tryParse(
-              calcData?['grandTotal']?.toString() ?? '') ??
-          0.0;
-      if (_purchaseMode == 'Finance') {
-        _populateEmiDefaults(calcTotal);
-      }
       setState(() {
         _liveCalculation = res.data;
         _isCalculating = false;
@@ -457,7 +450,7 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
           'accessories': accList,
           if (_purchaseMode == 'Finance')
             'hypothecationCharge':
-                double.tryParse(_hypothecationController.text.trim()) ?? 500,
+                double.tryParse(_hypothecationController.text.trim()) ?? 0,
         },
       });
 
@@ -1482,13 +1475,17 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                     }),
 
                     // Hypothecation Charge if Finance
-                    if (_purchaseMode == 'Finance')
+                    if (_purchaseMode == 'Finance' &&
+                        (double.tryParse(
+                                    _hypothecationController.text.trim()) ??
+                                0) >
+                            0)
                       _buildPriceRow(
                         'Hypothecation Charge',
                         CurrencyFormatter.format(
                           double.tryParse(
                                   _hypothecationController.text.trim()) ??
-                              500,
+                              0,
                         ),
                       ),
                   ],
@@ -1532,27 +1529,36 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                         Expanded(
                             child: _buildEmiBox(
                                 'Down Payment',
-                                CurrencyFormatter.format(double.tryParse(
-                                        _downPaymentController.text.trim()) ??
-                                    (grandTotal * 0.20)))),
+                                _downPaymentController.text.trim().isNotEmpty
+                                    ? CurrencyFormatter.format(double.tryParse(
+                                            _downPaymentController.text
+                                                .trim()) ??
+                                        0)
+                                    : '—')),
                         Expanded(
                             child: _buildEmiBox(
                                 'EMI · 24m',
-                                CurrencyFormatter.format(double.tryParse(
-                                        _emi24Controller.text.trim()) ??
-                                    ((grandTotal * 0.80 * 1.12) / 24)))),
+                                _emi24Controller.text.trim().isNotEmpty
+                                    ? CurrencyFormatter.format(double.tryParse(
+                                            _emi24Controller.text.trim()) ??
+                                        0)
+                                    : '—')),
                         Expanded(
                             child: _buildEmiBox(
                                 'EMI · 36m',
-                                CurrencyFormatter.format(double.tryParse(
-                                        _emi36Controller.text.trim()) ??
-                                    ((grandTotal * 0.80 * 1.18) / 36)))),
+                                _emi36Controller.text.trim().isNotEmpty
+                                    ? CurrencyFormatter.format(double.tryParse(
+                                            _emi36Controller.text.trim()) ??
+                                        0)
+                                    : '—')),
                         Expanded(
                             child: _buildEmiBox(
                                 'EMI · 48m',
-                                CurrencyFormatter.format(double.tryParse(
-                                        _emi48Controller.text.trim()) ??
-                                    ((grandTotal * 0.80 * 1.24) / 48)))),
+                                _emi48Controller.text.trim().isNotEmpty
+                                    ? CurrencyFormatter.format(double.tryParse(
+                                            _emi48Controller.text.trim()) ??
+                                        0)
+                                    : '—')),
                       ],
                     ),
                   ],

@@ -57,7 +57,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   final _emi24Controller = TextEditingController();
   final _emi36Controller = TextEditingController();
   final _emi48Controller = TextEditingController();
-  final _hypothecationController = TextEditingController(text: '500');
+  final _hypothecationController = TextEditingController();
   String? _emiDefaultsVehicleId;
 
   void _populateEmiDefaults(double total, {bool force = false}) {
@@ -336,10 +336,6 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
         _backendFinanciers = rawFinanciers
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList();
-        if (_backendFinanciers.isNotEmpty) {
-          _selectedFinancierId = _backendFinanciers.first['id']?.toString();
-          _selectedFinancierName = _backendFinanciers.first['name']?.toString();
-        }
 
         _backendBranches = rawBranches
             .map((e) => Map<String, dynamic>.from(e as Map))
@@ -2249,7 +2245,6 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                   InkWell(
                     onTap: () => setState(() {
                       _paymentMode = 'Finance';
-                      _populateEmiDefaults(_estimatedTotal);
                       _invalidateQuoteCache();
                     }),
                     borderRadius: BorderRadius.circular(18),
@@ -2317,47 +2312,19 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                             ],
                           ),
                           if (_paymentMode == 'Finance') ...[
-                            const SizedBox(height: 16),
-                            const Row(
-                              children: [
-                                Expanded(
-                                    child: Divider(color: Color(0xFFFECACA))),
-                                Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 12),
-                                  child: Text(
-                                    'Choose a Finance Option',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                    child: Divider(color: Color(0xFFFECACA))),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                _buildFinanceOptionBtn(
-                                    'Bank Loan', Icons.account_balance_rounded),
-                                const SizedBox(width: 10),
-                                _buildFinanceOptionBtn(
-                                    'Dealer Finance', Icons.handshake_outlined),
-                                const SizedBox(width: 10),
-                                _buildFinanceOptionBtn(
-                                    'Flexi EMI Plans', Icons.currency_rupee),
-                              ],
-                            ),
                             if (_backendFinanciers.isNotEmpty) ...[
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 14),
                               DropdownButtonFormField<String>(
                                 initialValue: _selectedFinancierId,
+                                hint: const Text(
+                                  'Select Financier',
+                                  style: TextStyle(
+                                      fontSize: 13, color: Color(0xFF94A3B8)),
+                                ),
                                 decoration: InputDecoration(
                                   filled: true,
                                   fillColor: Colors.white,
-                                  labelText: 'Preferred Financier (Optional)',
+                                  labelText: 'Financier',
                                   isDense: true,
                                   contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 12, vertical: 10),
@@ -2373,7 +2340,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                           child: Text(
                                             f['name']?.toString() ?? '',
                                             style:
-                                                const TextStyle(fontSize: 12.5),
+                                                const TextStyle(fontSize: 13),
                                           ),
                                         ))
                                     .toList(),
@@ -2406,6 +2373,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 Expanded(
                                   child: _buildWizardFinanceInput(
                                     label: 'Down Payment',
+                                    hint: 'e.g. 25000',
                                     controller: _downPaymentController,
                                   ),
                                 ),
@@ -2413,6 +2381,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 Expanded(
                                   child: _buildWizardFinanceInput(
                                     label: 'EMI · 24m',
+                                    hint: 'e.g. 4800',
                                     controller: _emi24Controller,
                                   ),
                                 ),
@@ -2420,6 +2389,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 Expanded(
                                   child: _buildWizardFinanceInput(
                                     label: 'EMI · 36m',
+                                    hint: 'e.g. 3500',
                                     controller: _emi36Controller,
                                   ),
                                 ),
@@ -2427,6 +2397,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 Expanded(
                                   child: _buildWizardFinanceInput(
                                     label: 'EMI · 48m',
+                                    hint: 'e.g. 2800',
                                     controller: _emi48Controller,
                                   ),
                                 ),
@@ -2434,30 +2405,10 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
                                 Expanded(
                                   child: _buildWizardFinanceInput(
                                     label: 'Hypothecation',
+                                    hint: 'e.g. 500',
                                     controller: _hypothecationController,
                                   ),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Down payment and each EMI tenure default from the vehicle\'s Model Master figures and are independently editable - changing one does not recalculate the others.',
-                              style: TextStyle(
-                                  fontSize: 10.5, color: Color(0xFF64748B)),
-                            ),
-                            const SizedBox(height: 16),
-                            const Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _TrustFeatureItem(
-                                    icon: Icons.percent,
-                                    label: 'Low\nInterest Rates'),
-                                _TrustFeatureItem(
-                                    icon: Icons.calendar_month_outlined,
-                                    label: 'Flexible\nEMI Tenure'),
-                                _TrustFeatureItem(
-                                    icon: Icons.handshake_outlined,
-                                    label: 'Hassle-Free\nApproval'),
                               ],
                             ),
                           ],
@@ -2477,6 +2428,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
   Widget _buildWizardFinanceInput({
     required String label,
     required TextEditingController controller,
+    String? hint,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2501,6 +2453,12 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           ),
           decoration: InputDecoration(
             isDense: true,
+            hintText: hint,
+            hintStyle: const TextStyle(
+              fontSize: 11.5,
+              color: Color(0xFF94A3B8),
+              fontWeight: FontWeight.w400,
+            ),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
             filled: true,
@@ -3994,7 +3952,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
           if (quoteAccessories.isNotEmpty) 'accessories': quoteAccessories,
           if (_paymentMode == 'Finance')
             'hypothecationCharge':
-                double.tryParse(_hypothecationController.text.trim()) ?? 500,
+                double.tryParse(_hypothecationController.text.trim()) ?? 0,
         },
       };
 
