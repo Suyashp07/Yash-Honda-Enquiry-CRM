@@ -37,6 +37,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   DateTime _currentDate = DateTime.now();
   final _searchController = TextEditingController();
   final _timelineScrollController = ScrollController();
+  final _verticalScrollController = ScrollController();
   String _searchQuery = '';
   String _repStatusFilter = 'all'; // 'all' | 'active' | 'available'
   String _repSortMode = 'default'; // 'default' | 'active_first' | 'available_first' | 'name_asc'
@@ -517,8 +518,13 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     // the duplicated "Live floor" heading seen in the deployed build.
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 6, 24, 24),
+      body: Scrollbar(
+        controller: _verticalScrollController,
+        thumbVisibility: true,
+        interactive: true,
+        child: SingleChildScrollView(
+          controller: _verticalScrollController,
+          padding: const EdgeInsets.fromLTRB(24, 6, 24, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -572,6 +578,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
             if (!Breakpoints.isPhone(context)) _buildTimelineLegend(),
             const SizedBox(height: 40),
           ],
+        ),
         ),
       ),
     );
@@ -1623,13 +1630,58 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                       ),
                     ),
                     alignment: Alignment.centerLeft,
-                    child: const Text(
-                      'SALES REP',
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF64748B),
-                          letterSpacing: 0.5),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'SALES REP',
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF64748B),
+                                letterSpacing: 0.5),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () {
+                            if (_timelineScrollController.hasClients) {
+                              _timelineScrollController.animateTo(
+                                math.max(
+                                    0, _timelineScrollController.offset - 260),
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeOut,
+                              );
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: const Padding(
+                            padding: EdgeInsets.all(3),
+                            child: Icon(Icons.chevron_left_rounded,
+                                size: 16, color: Color(0xFF64748B)),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () {
+                            if (_timelineScrollController.hasClients) {
+                              _timelineScrollController.animateTo(
+                                math.min(
+                                  _timelineScrollController
+                                      .position.maxScrollExtent,
+                                  _timelineScrollController.offset + 260,
+                                ),
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeOut,
+                              );
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: const Padding(
+                            padding: EdgeInsets.all(3),
+                            child: Icon(Icons.chevron_right_rounded,
+                                size: 16, color: Color(0xFF64748B)),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   ...repRowsData.map((rd) {
@@ -1719,14 +1771,14 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
               ),
             ),
 
-            // Right Scrollable Time Slots Area (with visible scrollbar & mouse drag support)
+            // Right Scrollable Time Slots Area (with visible scrollbar, no accidental mouse-drag hijack)
             Expanded(
               child: ScrollConfiguration(
                 behavior: ScrollConfiguration.of(context).copyWith(
                   dragDevices: {
                     PointerDeviceKind.touch,
-                    PointerDeviceKind.mouse,
-                    PointerDeviceKind.trackpad,
+                    PointerDeviceKind.stylus,
+                    PointerDeviceKind.invertedStylus,
                   },
                 ),
                 child: Scrollbar(
@@ -1737,6 +1789,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                   child: SingleChildScrollView(
                     controller: _timelineScrollController,
                     scrollDirection: Axis.horizontal,
+                    physics: const ClampingScrollPhysics(),
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
