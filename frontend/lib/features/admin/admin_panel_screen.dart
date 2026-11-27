@@ -3982,7 +3982,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           Expanded(flex: 3, child: Text('Branches', style: headerStyle)),
           SizedBox(width: 80, child: Text('Active', style: headerStyle)),
           const SizedBox(
-              width: 170, child: Text('', textAlign: TextAlign.right)),
+              width: 205, child: Text('', textAlign: TextAlign.right)),
         ];
 
       default:
@@ -4497,7 +4497,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             .join(', ');
 
         Widget userActions = SizedBox(
-          width: 170,
+          width: 205,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -4527,6 +4527,21 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                 child: const Text('Reset password',
                     style: TextStyle(fontSize: 11, color: Color(0xFFCC0000))),
               ),
+              if (isSuperAdmin) ...[
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline,
+                      size: 18, color: Color(0xFF94A3B8)),
+                  splashRadius: 18,
+                  padding: const EdgeInsets.all(4),
+                  constraints: const BoxConstraints(),
+                  style: IconButton.styleFrom(
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  tooltip: 'Delete ${item['name'] ?? 'user'}',
+                  onPressed: () => _deleteItem(item),
+                ),
+              ],
             ],
           ),
         );
