@@ -1325,8 +1325,8 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
               Tooltip(
                 message: 'Zoom out timeline (see full day)',
                 child: InkWell(
-                  onTap: _zoomLevel > 35
-                      ? () => setState(() => _zoomLevel = math.max(35, _zoomLevel - 15))
+                  onTap: _zoomLevel > 20
+                      ? () => setState(() => _zoomLevel = math.max(20, _zoomLevel - 15))
                       : null,
                   borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
                   child: Container(
@@ -1336,7 +1336,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     child: Icon(
                       Icons.zoom_out_rounded,
                       size: 17,
-                      color: _zoomLevel > 35
+                      color: _zoomLevel > 20
                           ? const Color(0xFF334155)
                           : const Color(0xFFCBD5E1),
                     ),
@@ -1344,14 +1344,14 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                 ),
               ),
               Container(width: 1, height: 16, color: const Color(0xFFE2E8F0)),
-              // Fit Day (45%) / Reset (100%) Center Pill
+              // Fit Day (25%) / Reset (100%) Center Pill
               Tooltip(
                 message: _zoomLevel == 100
-                    ? 'Fit entire day to screen (45%)'
+                    ? 'Fit entire day to screen (25%)'
                     : 'Reset zoom to 100%',
                 child: InkWell(
                   onTap: () => setState(() {
-                    _zoomLevel = _zoomLevel == 100 ? 45 : 100;
+                    _zoomLevel = _zoomLevel == 100 ? 25 : 100;
                   }),
                   child: Container(
                     height: 32,
@@ -1384,12 +1384,12 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                 ),
               ),
               Container(width: 1, height: 16, color: const Color(0xFFE2E8F0)),
-              // Zoom In (+) Button (up to 180% for detailed card view)
+              // Zoom In (+) Button (up to 300% for detailed card view)
               Tooltip(
                 message: 'Zoom in timeline (expanded cards)',
                 child: InkWell(
-                  onTap: _zoomLevel < 180
-                      ? () => setState(() => _zoomLevel = math.min(180, _zoomLevel + 15))
+                  onTap: _zoomLevel < 300
+                      ? () => setState(() => _zoomLevel = math.min(300, _zoomLevel + 25))
                       : null,
                   borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
                   child: Container(
@@ -1399,7 +1399,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
                     child: Icon(
                       Icons.zoom_in_rounded,
                       size: 17,
-                      color: _zoomLevel < 180
+                      color: _zoomLevel < 300
                           ? const Color(0xFF334155)
                           : const Color(0xFFCBD5E1),
                     ),
@@ -1555,7 +1555,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
     double cellWidth,
     String? nowSlotTarget,
   ) {
-    final double rowHeight = (72.0 * (_zoomLevel / 100.0)).clamp(54.0, 108.0);
+    final double rowHeight = (72.0 * (_zoomLevel / 100.0)).clamp(54.0, 160.0);
 
     // Precompute per-rep session metadata so left pinned column and right grid stay in sync
     final repRowsData = reps.map((rep) {
@@ -1883,7 +1883,7 @@ class _FloorDashboardScreenState extends ConsumerState<FloorDashboardScreen> {
   ) {
     final double repColWidth = math.max(95.0, 200.0 * (_zoomLevel / 100.0));
     const double timeColWidth = 110.0;
-    final double rowHeight = (68.0 * (_zoomLevel / 100.0)).clamp(44.0, 108.0);
+    final double rowHeight = (68.0 * (_zoomLevel / 100.0)).clamp(44.0, 160.0);
 
     return Container(
       decoration: const BoxDecoration(
