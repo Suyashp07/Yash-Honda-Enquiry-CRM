@@ -8,8 +8,8 @@ class AppTypography {
 
   static const TextStyle display = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 32,
-    height: 40 / 32,
+    fontSize: 35,
+    height: 42 / 35,
     fontWeight: FontWeight.w700,
     color: AppColors.ink,
     letterSpacing: -0.5,
@@ -17,8 +17,8 @@ class AppTypography {
 
   static const TextStyle headline = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 24,
-    height: 32 / 24,
+    fontSize: 26,
+    height: 34 / 26,
     fontWeight: FontWeight.w700,
     color: AppColors.ink,
     letterSpacing: -0.3,
@@ -26,8 +26,8 @@ class AppTypography {
 
   static const TextStyle title = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 20,
-    height: 28 / 20,
+    fontSize: 22,
+    height: 30 / 22,
     fontWeight: FontWeight.w600,
     color: AppColors.ink,
     letterSpacing: -0.2,
@@ -35,56 +35,56 @@ class AppTypography {
 
   static const TextStyle section = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 16,
-    height: 24 / 16,
+    fontSize: 18,
+    height: 25 / 18,
     fontWeight: FontWeight.w600,
     color: AppColors.ink,
   );
 
   static const TextStyle body = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 14,
-    height: 20 / 14,
+    fontSize: 15.5,
+    height: 22 / 15.5,
     fontWeight: FontWeight.w400,
     color: AppColors.body,
   );
 
   static const TextStyle bodyStrong = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 14,
-    height: 20 / 14,
+    fontSize: 15.5,
+    height: 22 / 15.5,
     fontWeight: FontWeight.w600,
     color: AppColors.ink,
   );
 
   static const TextStyle label = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 12,
-    height: 16 / 12,
+    fontSize: 13.5,
+    height: 18 / 13.5,
     fontWeight: FontWeight.w600,
     color: AppColors.ink,
   );
 
   static const TextStyle caption = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 11,
-    height: 16 / 11,
+    fontSize: 12.5,
+    height: 17 / 12.5,
     fontWeight: FontWeight.w400,
     color: AppColors.secondary,
   );
 
   static const TextStyle table = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 12,
-    height: 16 / 12,
+    fontSize: 13,
+    height: 18 / 13,
     fontWeight: FontWeight.w400,
     color: AppColors.body,
   );
 
   static const TextStyle tableStrong = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 12,
-    height: 16 / 12,
+    fontSize: 13,
+    height: 18 / 13,
     fontWeight: FontWeight.w600,
     color: AppColors.ink,
   );

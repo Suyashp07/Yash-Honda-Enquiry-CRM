@@ -650,7 +650,11 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: const TextScaler.linear(1.18),
+      ),
+      child: Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
@@ -710,6 +714,7 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
