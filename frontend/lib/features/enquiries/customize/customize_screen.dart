@@ -1272,12 +1272,12 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
           child: SingleChildScrollView(
             child: Builder(
               builder: (context) {
-                final mgName =
-                    (_selectedVehicle?['modelGroup']?['name'] ?? '')
-                        .toString()
-                        .toLowerCase();
-                final catName =
-                    (_selectedVehicle?['category'] ?? '').toString().toLowerCase();
+                final mgName = (_selectedVehicle?['modelGroup']?['name'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                final catName = (_selectedVehicle?['category'] ?? '')
+                    .toString()
+                    .toLowerCase();
                 final isBigWing =
                     mgName.contains('big') || catName.contains('big');
                 final accentColor = isBigWing
@@ -1368,250 +1368,255 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
                           ],
                         ),
                       ),
-                  const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                      const Divider(height: 20, color: Color(0xFFE2E8F0)),
 
-                  // Metadata Grid: Quote No, Date, Customer, Mobile
-                  Row(
-                    children: [
-                      Expanded(child: _buildMetaCell('Quote No.', 'Draft')),
-                      Expanded(
-                          child: _buildMetaCell(
-                              'Date',
-                              DateFormat('dd MMM yyyy')
-                                  .format(DateTime.now()))),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(child: _buildMetaCell('Customer', customerName)),
-                      Expanded(child: _buildMetaCell('Mobile', customerMobile)),
-                    ],
-                  ),
-                  const Divider(height: 20, color: Color(0xFFE2E8F0)),
-
-                  // Model, Colour & Purchase Mode
-                  Row(
-                    children: [
-                      Text(
-                        _selectedVehicle != null ? vehicleName : '—',
-                        style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A)),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Color: ${_selectedColour ?? '—'}',
-                        style: const TextStyle(
-                            fontSize: 10, color: Color(0xFF64748B)),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Mode: $_purchaseMode',
-                        style: const TextStyle(
-                            fontSize: 10, color: Color(0xFF64748B)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  if (_selectedVehicle == null) ...[
-                    Container(
-                      margin: const EdgeInsets.symmetric(vertical: 14),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: const Row(
+                      // Metadata Grid: Quote No, Date, Customer, Mobile
+                      Row(
                         children: [
-                          Icon(Icons.touch_app_outlined,
-                              size: 20, color: Color(0xFFDC2626)),
-                          SizedBox(width: 12),
+                          Expanded(child: _buildMetaCell('Quote No.', 'Draft')),
+                          Expanded(
+                              child: _buildMetaCell(
+                                  'Date',
+                                  DateFormat('dd MMM yyyy')
+                                      .format(DateTime.now()))),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                              child: _buildMetaCell('Customer', customerName)),
+                          Expanded(
+                              child: _buildMetaCell('Mobile', customerMobile)),
+                        ],
+                      ),
+                      const Divider(height: 20, color: Color(0xFFE2E8F0)),
+
+                      // Model, Colour & Purchase Mode
+                      Row(
+                        children: [
+                          Text(
+                            _selectedVehicle != null ? vehicleName : '—',
+                            style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A)),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Color: ${_selectedColour ?? '—'}',
+                            style: const TextStyle(
+                                fontSize: 10, color: Color(0xFF64748B)),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Mode: $_purchaseMode',
+                            style: const TextStyle(
+                                fontSize: 10, color: Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      if (_selectedVehicle == null) ...[
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.touch_app_outlined,
+                                  size: 20, color: Color(0xFFDC2626)),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'No vehicle selected',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF0F172A)),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Choose a model from the left to calculate real-time on-road prices, road tax, and insurance.',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF64748B)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        // Itemized Price List
+                        _buildPriceRow('Ex-showroom',
+                            CurrencyFormatter.format(exShowroom)),
+                        _buildPriceRow(
+                            'Road Tax', CurrencyFormatter.format(roadTax)),
+                        _buildPriceRow(
+                            'Insurance', CurrencyFormatter.format(insurance)),
+                        _buildPriceRow('Standard Accessories',
+                            CurrencyFormatter.format(stdAccessories)),
+
+                        // Add-on Accessories List
+                        ...calcAccessories.map((acc) {
+                          final rawAmt = acc['amount'];
+                          final amt = rawAmt is num
+                              ? rawAmt.toDouble()
+                              : (double.tryParse(rawAmt?.toString() ?? '') ??
+                                  0.0);
+                          return _buildPriceRow(acc['name'] ?? 'Accessory',
+                              CurrencyFormatter.format(amt));
+                        }),
+
+                        // Hypothecation Charge if Finance
+                        if (_purchaseMode == 'Finance' &&
+                            (double.tryParse(
+                                        _hypothecationController.text.trim()) ??
+                                    0) >
+                                0)
+                          _buildPriceRow(
+                            'Hypothecation Charge',
+                            CurrencyFormatter.format(
+                              double.tryParse(
+                                      _hypothecationController.text.trim()) ??
+                                  0,
+                            ),
+                          ),
+                      ],
+
+                      const Divider(height: 20, color: Color(0xFFE2E8F0)),
+
+                      // Grand Total
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Grand Total',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: accentColor),
+                          ),
+                          Text(
+                            CurrencyFormatter.format(grandTotal),
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: accentColor),
+                          ),
+                        ],
+                      ),
+
+                      // Finance Options Box (If Finance selected)
+                      if (_purchaseMode == 'Finance') ...[
+                        const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                        const Text(
+                          'Finance Option',
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF1E293B)),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Expanded(
+                                child: _buildEmiBox(
+                                    'Down Payment',
+                                    _downPaymentController.text
+                                            .trim()
+                                            .isNotEmpty
+                                        ? CurrencyFormatter.format(
+                                            double.tryParse(
+                                                    _downPaymentController.text
+                                                        .trim()) ??
+                                                0)
+                                        : '—')),
+                            Expanded(
+                                child: _buildEmiBox(
+                                    'EMI · 24m',
+                                    _emi24Controller.text.trim().isNotEmpty
+                                        ? CurrencyFormatter.format(
+                                            double.tryParse(_emi24Controller
+                                                    .text
+                                                    .trim()) ??
+                                                0)
+                                        : '—')),
+                            Expanded(
+                                child: _buildEmiBox(
+                                    'EMI · 36m',
+                                    _emi36Controller.text.trim().isNotEmpty
+                                        ? CurrencyFormatter.format(
+                                            double.tryParse(_emi36Controller
+                                                    .text
+                                                    .trim()) ??
+                                                0)
+                                        : '—')),
+                            Expanded(
+                                child: _buildEmiBox(
+                                    'EMI · 48m',
+                                    _emi48Controller.text.trim().isNotEmpty
+                                        ? CurrencyFormatter.format(
+                                            double.tryParse(_emi48Controller
+                                                    .text
+                                                    .trim()) ??
+                                                0)
+                                        : '—')),
+                          ],
+                        ),
+                      ],
+
+                      const Divider(height: 20, color: Color(0xFFE2E8F0)),
+
+                      // Payment Section & QR Code
+                      const Text(
+                        'Payment',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E293B)),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'No vehicle selected',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF0F172A)),
-                                ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'Choose a model from the left to calculate real-time on-road prices, road tax, and insurance.',
-                                  style: TextStyle(
-                                      fontSize: 11, color: Color(0xFF64748B)),
-                                ),
+                                _buildBankRow('Bank', bankName),
+                                _buildBankRow('Account', accountNo),
+                                _buildBankRow('IFSC', ifsc),
+                                _buildBankRow('UPI', upiId),
                               ],
                             ),
                           ),
+                          // UPI QR Code Card from Company Profile (or dynamic scan & pay QR)
+                          _buildQuoteQrCode(upiId, grandTotal),
                         ],
                       ),
-                    ),
-                  ] else ...[
-                    // Itemized Price List
-                    _buildPriceRow(
-                        'Ex-showroom', CurrencyFormatter.format(exShowroom)),
-                    _buildPriceRow(
-                        'Road Tax', CurrencyFormatter.format(roadTax)),
-                    _buildPriceRow(
-                        'Insurance', CurrencyFormatter.format(insurance)),
-                    _buildPriceRow('Standard Accessories',
-                        CurrencyFormatter.format(stdAccessories)),
-
-                    // Add-on Accessories List
-                    ...calcAccessories.map((acc) {
-                      final rawAmt = acc['amount'];
-                      final amt = rawAmt is num
-                          ? rawAmt.toDouble()
-                          : (double.tryParse(rawAmt?.toString() ?? '') ?? 0.0);
-                      return _buildPriceRow(acc['name'] ?? 'Accessory',
-                          CurrencyFormatter.format(amt));
-                    }),
-
-                    // Hypothecation Charge if Finance
-                    if (_purchaseMode == 'Finance' &&
-                        (double.tryParse(
-                                    _hypothecationController.text.trim()) ??
-                                0) >
-                            0)
-                      _buildPriceRow(
-                        'Hypothecation Charge',
-                        CurrencyFormatter.format(
-                          double.tryParse(
-                                  _hypothecationController.text.trim()) ??
-                              0,
-                        ),
-                      ),
-                  ],
-
-                  const Divider(height: 20, color: Color(0xFFE2E8F0)),
-
-                  // Grand Total
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Grand Total',
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Prices indicative and subject to change. Insurance as applicable. Delivery subject to availability. Exchange value declared by customer and recorded for reference only. E&OE.',
                         style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: accentColor),
-                      ),
-                      Text(
-                        CurrencyFormatter.format(grandTotal),
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: accentColor),
+                            fontSize: 8, color: Color(0xFF94A3B8), height: 1.3),
                       ),
                     ],
                   ),
-
-                  // Finance Options Box (If Finance selected)
-                  if (_purchaseMode == 'Finance') ...[
-                    const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                    const Text(
-                      'Finance Option',
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1E293B)),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Expanded(
-                            child: _buildEmiBox(
-                                'Down Payment',
-                                _downPaymentController.text.trim().isNotEmpty
-                                    ? CurrencyFormatter.format(double.tryParse(
-                                            _downPaymentController.text
-                                                .trim()) ??
-                                        0)
-                                    : '—')),
-                        Expanded(
-                            child: _buildEmiBox(
-                                'EMI · 24m',
-                                _emi24Controller.text.trim().isNotEmpty
-                                    ? CurrencyFormatter.format(double.tryParse(
-                                            _emi24Controller.text.trim()) ??
-                                        0)
-                                    : '—')),
-                        Expanded(
-                            child: _buildEmiBox(
-                                'EMI · 36m',
-                                _emi36Controller.text.trim().isNotEmpty
-                                    ? CurrencyFormatter.format(double.tryParse(
-                                            _emi36Controller.text.trim()) ??
-                                        0)
-                                    : '—')),
-                        Expanded(
-                            child: _buildEmiBox(
-                                'EMI · 48m',
-                                _emi48Controller.text.trim().isNotEmpty
-                                    ? CurrencyFormatter.format(double.tryParse(
-                                            _emi48Controller.text.trim()) ??
-                                        0)
-                                    : '—')),
-                      ],
-                    ),
-                  ],
-
-                  const Divider(height: 20, color: Color(0xFFE2E8F0)),
-
-                  // Payment Section & QR Code
-                  const Text(
-                    'Payment',
-                    style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1E293B)),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildBankRow('Bank', bankName),
-                            _buildBankRow('Account', accountNo),
-                            _buildBankRow('IFSC', ifsc),
-                            _buildBankRow('UPI', upiId),
-                          ],
-                        ),
-                      ),
-                      // UPI QR Code Card from Company Profile (or dynamic scan & pay QR)
-                      _buildQuoteQrCode(upiId, grandTotal),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (_isCalculating)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 6),
-                      child: LinearProgressIndicator(
-                          minHeight: 2, color: AppColors.primary),
-                    ),
-
-                  // Legal Disclaimer
-                  const Text(
-                    'Prices indicative and subject to change. Insurance as applicable. Delivery subject to availability. Exchange value declared by customer and recorded for reference only. E&OE.',
-                    style: TextStyle(
-                        fontSize: 8, color: Color(0xFF94A3B8), height: 1.3),
-                  ),
-                  ],
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
         ),
       ],
     );
@@ -1803,7 +1808,8 @@ class _CustomizeScreenState extends ConsumerState<CustomizeScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              borderSide:
+                  const BorderSide(color: AppColors.primary, width: 1.5),
             ),
           ),
           onChanged: (val) {
