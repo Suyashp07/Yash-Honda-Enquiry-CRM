@@ -1118,73 +1118,24 @@ class _BuildMyHondaScreenState extends ConsumerState<BuildMyHondaScreen> {
               fit: StackFit.expand,
               children: [
                 SmartMediaImage(source: imagePath, fit: BoxFit.cover),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 120,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.92),
-                          Colors.white.withValues(alpha: 0.0),
-                        ],
+                if (isSelected)
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFCC0000),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check,
+                        size: 16,
+                        color: Colors.white,
                       ),
                     ),
                   ),
-                ),
-                Positioned(
-                  top: 20,
-                  left: 20,
-                  right: 20,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: const TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.4,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF64748B),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (isSelected)
-                        Container(
-                          width: 26,
-                          height: 26,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFCC0000),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.check,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
