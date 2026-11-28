@@ -100,12 +100,50 @@ export class AiInsightsService {
     const { query, branch = 'all', range = 'today', history = [] } = dto;
     const branchId = branch === 'all' ? undefined : branch;
 
-    // Fetch live ground-truth metrics across floor & analytics
-    const [execSummary, floorData, allBranches] = await Promise.all([
-      this.analyticsService.getExecutiveSummary(user, branchId, range),
-      this.analyticsService.getFloorDashboard(user, branchId),
-      this.prisma.branch.findMany({ select: { id: true, name: true, code: true, wing: true } }),
-    ]);
+    // Fetch live ground-truth metrics across floor, analytics, branches, enquiries, follow-ups
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const enquiryWhere: any = branchId ? { branchId } : {};
+
+    const [execSummary, floorData, allBranches, mtdEnquiries, followUps, activeVehiclesCount] =
+      await Promise.all([
+        this.analyticsService.getExecutiveSummary(user, branchId, range),
+        this.analyticsService.getFloorDashboard(user, branchId),
+        this.prisma.branch.findMany({
+          orderBy: { name: 'asc' },
+          select: { id: true, name: true, code: true, wing: true, address: true, status: true },
+        }),
+        this.prisma.enquiry.findMany({
+          where: { ...enquiryWhere, createdAt: { gte: startOfMonth } },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            branch: { select: { id: true, name: true, code: true, wing: true } },
+            customer: { select: { name: true, mobile: true, area: { select: { name: true } } } },
+            leadSource: { select: { name: true } },
+            assignedTo: { select: { id: true, name: true } },
+            quotations: {
+              take: 1,
+              orderBy: { createdAt: 'desc' },
+              include: { vehicle: { select: { name: true, code: true, category: true } } },
+            },
+          },
+        }),
+        this.prisma.followUp.findMany({
+          where: branchId ? { enquiry: { branchId } } : {},
+          include: {
+            enquiry: {
+              select: {
+                branch: { select: { name: true } },
+                customer: { select: { name: true, mobile: true } },
+              },
+            },
+          },
+        }),
+        this.prisma.vehicle.count({ where: { status: 'Active' } }),
+      ]);
 
     const kpis = execSummary.kpis;
     const floor = floorData.summary;
@@ -114,10 +152,93 @@ export class AiInsightsService {
     const idleReps = reps.filter((r: any) => r.status === 'Available' || r.status === 'Idle');
     const sessions = floorData.sessions || [];
 
+    // Per-branch breakdown (MTD + Today)
+    const branchBreakdown = allBranches.map((b) => {
+      const bEnqs = mtdEnquiries.filter((e) => e.branchId === b.id);
+      const bToday = bEnqs.filter((e) => e.createdAt >= startOfToday);
+      const bBooked = bEnqs.filter((e) => e.status === 'CUSTOMER_BOUGHT').length;
+      const bConv = bEnqs.length > 0 ? ((bBooked / bEnqs.length) * 100).toFixed(1) : '0.0';
+      return {
+        id: b.id,
+        name: b.name,
+        code: b.code,
+        wing: b.wing || 'RedWing',
+        status: b.status,
+        address: b.address,
+        todayLeads: bToday.length,
+        mtdLeads: bEnqs.length,
+        mtdBooked: bBooked,
+        mtdConversion: `${bConv}%`,
+        walkIns: bEnqs.filter((e) => e.enquiryType === 'Walk-in').length,
+        telephonic: bEnqs.filter((e) => e.enquiryType !== 'Walk-in').length,
+        cash: bEnqs.filter((e) => e.purchaseMode === 'Cash').length,
+        finance: bEnqs.filter((e) => e.purchaseMode === 'Finance').length,
+        exchange: bEnqs.filter((e) => e.exchange !== 'No').length,
+      };
+    });
+
+    // Model-wise breakdown (MTD)
+    const modelMap = new Map<string, { leads: number; booked: number }>();
+    const sourceMap = new Map<string, number>();
+    const areaMap = new Map<string, number>();
+    const repMap = new Map<string, { leads: number; booked: number }>();
+
+    for (const e of mtdEnquiries) {
+      const vName = e.quotations?.[0]?.vehicle?.name || 'Unspecified';
+      const curM = modelMap.get(vName) || { leads: 0, booked: 0 };
+      curM.leads += 1;
+      if (e.status === 'CUSTOMER_BOUGHT') curM.booked += 1;
+      modelMap.set(vName, curM);
+
+      const src = e.leadSource?.name || e.enquiryType || 'Direct';
+      sourceMap.set(src, (sourceMap.get(src) || 0) + 1);
+
+      const area = e.customer?.area?.name || 'Unspecified';
+      areaMap.set(area, (areaMap.get(area) || 0) + 1);
+
+      const repName = e.assignedTo?.name || 'Unassigned';
+      const curR = repMap.get(repName) || { leads: 0, booked: 0 };
+      curR.leads += 1;
+      if (e.status === 'CUSTOMER_BOUGHT') curR.booked += 1;
+      repMap.set(repName, curR);
+    }
+
+    const topModels = Array.from(modelMap.entries())
+      .map(([model, s]) => ({ model, leads: s.leads, booked: s.booked }))
+      .sort((a, b) => b.leads - a.leads)
+      .slice(0, 12);
+
+    const topSources = Array.from(sourceMap.entries())
+      .map(([source, count]) => ({ source, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const topAreas = Array.from(areaMap.entries())
+      .map(([area, count]) => ({ area, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    const repPerformance = Array.from(repMap.entries())
+      .map(([name, s]) => ({ name, mtdLeads: s.leads, mtdBooked: s.booked }))
+      .sort((a, b) => b.mtdLeads - a.mtdLeads);
+
+    // Follow-ups summary
+    const overdueFollowUps = followUps.filter(
+      (f) => !f.completedAt && f.scheduledAt && f.scheduledAt < startOfToday,
+    );
+    const dueTodayFollowUps = followUps.filter(
+      (f) => !f.completedAt && f.scheduledAt && f.scheduledAt >= startOfToday && f.scheduledAt <= endOfToday,
+    );
+    const upcomingFollowUps = followUps.filter(
+      (f) => !f.completedAt && f.scheduledAt && f.scheduledAt > endOfToday,
+    );
+    const completedFollowUps = followUps.filter((f) => Boolean(f.completedAt));
+
     // System context for LLM / reasoning engine
     const dealershipContext = {
       dealership: 'Yash Honda Two-Wheelers Pvt Ltd (Authorized Honda Dealership, Pune Network)',
-      branches: allBranches.map((b) => `${b.name} (${b.code}, ${b.wing || 'RedWing'})`).join(', '),
+      selectedScope: branch === 'all' ? 'All Branches' : branch,
+      selectedRange: range,
+      activeCatalogVehicles: activeVehiclesCount,
       kpis: {
         totalLeads: kpis.totalLeads,
         walkInsToday: floor.walkInsToday,
@@ -131,14 +252,41 @@ export class AiInsightsService {
         financePercentage: `${kpis.financePercentage}%`,
         exchangeCount: kpis.exchangeCount || 0,
       },
+      branches: branchBreakdown,
+      topModelsMtd: topModels,
+      topSourcesMtd: topSources,
+      topAreasMtd: topAreas,
+      followUps: {
+        overdueCount: overdueFollowUps.length,
+        dueTodayCount: dueTodayFollowUps.length,
+        upcomingCount: upcomingFollowUps.length,
+        completedCount: completedFollowUps.length,
+        overdueSample: overdueFollowUps.slice(0, 5).map((f) => ({
+          customer: f.enquiry?.customer?.name,
+          branch: f.enquiry?.branch?.name,
+          scheduledAt: f.scheduledAt,
+        })),
+      },
       repsStatus: {
         totalReps: reps.length,
         busyCount: busyReps.length,
         busyNames: busyReps.map((r: any) => `${r.name} (with ${r.activeCustomerName || 'Customer'})`),
         idleCount: idleReps.length,
-        idleNames: idleReps.slice(0, 8).map((r: any) => r.name),
+        idleNames: idleReps.slice(0, 10).map((r: any) => r.name),
       },
-      activeSessions: sessions.slice(0, 5).map((s: any) => ({
+      repPerformanceMtd: repPerformance.slice(0, 12),
+      recentEnquiries: mtdEnquiries.slice(0, 10).map((e) => ({
+        customer: e.customer?.name,
+        branch: e.branch?.name,
+        vehicle: e.quotations?.[0]?.vehicle?.name || 'N/A',
+        quoteNo: e.quotations?.[0]?.quoteNumber || 'N/A',
+        grandTotal: e.quotations?.[0]?.grandTotal ? Number(e.quotations[0].grandTotal) : 0,
+        mode: e.purchaseMode,
+        status: e.status,
+        rep: e.assignedTo?.name || 'Unassigned',
+        date: e.createdAt.toISOString().split('T')[0],
+      })),
+      activeSessions: sessions.slice(0, 8).map((s: any) => ({
         customer: s.customer_name,
         vehicle: s.vehicle_name,
         rep: s.sales_exec_id,
@@ -203,80 +351,121 @@ export class AiInsightsService {
 
   private generateExecutiveResponse(query: string, ctx: any): string {
     const q = query.toLowerCase();
-    const { kpis, repsStatus, branches } = ctx;
+    const {
+      kpis,
+      repsStatus,
+      branches = [],
+      topModelsMtd = [],
+      topSourcesMtd = [],
+      topAreasMtd = [],
+      followUps = {},
+      repPerformanceMtd = [],
+      recentEnquiries = [],
+      activeCatalogVehicles = 0,
+    } = ctx;
 
-    // 1. Overall Company / Performance Summary
-    if (q.includes('summary') || q.includes('performance') || q.includes('how are we doing') || q.includes('overview') || q.includes('today')) {
-      return `### Dealership Daily Briefing (AI-Assisted)
-Based on live database metrics for the selected scope:
-
-* **Total Leads**: **${kpis.totalLeads}** customer interactions
-* **Showroom Walk-ins**: **${kpis.walkInsToday}** (${Math.round((kpis.walkInsToday / Math.max(1, kpis.totalLeads)) * 100)}% of traffic)
-* **Telephonic Inquiries**: **${kpis.telephonicToday}** calls
-* **Bookings Secured**: **${kpis.bookedCount}** units booked
-* **Lead-to-Booking Conversion**: **${kpis.conversionRate}**
-* **Floor Activity**: **${repsStatus.busyCount}** sales executives currently busy; **${repsStatus.idleCount}** available.
-* **Open Quotations**: **${kpis.quotedCount}** recorded in current floor outcomes.`;
+    // 0. Specific Branch Query (match by branch name or code)
+    const matchedBranch = (branches as any[]).find(
+      (b) =>
+        q.includes((b.name || '').toLowerCase()) ||
+        q.includes((b.code || '').toLowerCase()),
+    );
+    if (matchedBranch) {
+      return `### ${matchedBranch.name} (${matchedBranch.code} · ${matchedBranch.wing})
+- Status: **${matchedBranch.status}**
+- Address: ${matchedBranch.address || 'Pune'}
+- Today's Leads: **${matchedBranch.todayLeads}**
+- Month-to-Date (MTD) Leads: **${matchedBranch.mtdLeads}** (Walk-in: **${matchedBranch.walkIns}**, Tele: **${matchedBranch.telephonic}**)
+- MTD Bookings: **${matchedBranch.mtdBooked}** (**${matchedBranch.mtdConversion}** conversion)
+- Payment Split (MTD): **${matchedBranch.finance}** Finance · **${matchedBranch.cash}** Cash · **${matchedBranch.exchange}** Exchange`;
     }
 
-    // 2. Branch Performance / Comparison
-    if (q.includes('branch') || q.includes('location')) {
-      return `### Active Branch Scope
-Configured branches in database: **${branches || 'None found'}**.
-
-For branch-by-branch lead, booking, and conversion metrics, open **Dealership Summary -> Branch comparison**.`;
+    // 1. Branch Performance / Comparison
+    if (q.includes('branch') || q.includes('location') || q.includes('leading') || q.includes('compare')) {
+      const sorted = [...(branches as any[])].sort((a, b) => b.mtdLeads - a.mtdLeads);
+      const lines = sorted.map(
+        (b) =>
+          `- **${b.name}** (${b.wing}): **${b.todayLeads}** today · **${b.mtdLeads}** MTD leads · **${b.mtdBooked}** booked (**${b.mtdConversion}**)`,
+      );
+      return `### Branch-by-Branch Performance (Live)
+${lines.join('\n')}`;
     }
 
-    // 3. Sales Reps / Floor Attendance / Staffing
-    if (q.includes('rep') || q.includes('staff') || q.includes('executive') || q.includes('idle') || q.includes('busy') || q.includes('attendance')) {
-      const busyLines = repsStatus.busyNames.length > 0
-        ? repsStatus.busyNames.map((n: string) => `  * **${n}**`).join('\n')
-        : '  * None currently engaged';
-      const idleLines = repsStatus.idleNames.length > 0
-        ? repsStatus.idleNames.slice(0, 8).map((n: string) => `  * **${n}**`).join('\n')
-        : '  * None currently idle';
-
-      return `### Showroom Floor & Staffing
-**${repsStatus.totalReps} sales executives** in current scope:
-
-* **Currently Busy (${repsStatus.busyCount})**:
-${busyLines}
-* **Available / Idle (${repsStatus.idleCount})**:
-${idleLines}`;
+    // 2. Follow-ups & Alerts
+    if (q.includes('follow') || q.includes('pending') || q.includes('overdue') || q.includes('alert')) {
+      const sample = (followUps.overdueSample || []) as any[];
+      const sampleLines = sample.length
+        ? '\n\nTop overdue follow-ups:\n' +
+          sample.map((s) => `- **${s.customer || 'Customer'}** (${s.branch || 'Branch'})`).join('\n')
+        : '';
+      return `### Follow-up Status
+- Overdue: **${followUps.overdueCount ?? 0}**
+- Due Today: **${followUps.dueTodayCount ?? 0}**
+- Upcoming: **${followUps.upcomingCount ?? 0}**
+- Completed: **${followUps.completedCount ?? 0}**${sampleLines}`;
     }
 
-    // 4. Models / Top Selling Vehicles
-    if (q.includes('model') || q.includes('bike') || q.includes('scooter') || q.includes('vehicle')) {
-      return `### Model Demand
-Model-level breakdowns are available in **Dealership Summary**. Current aggregate totals: **${kpis.totalLeads} leads** and **${kpis.bookedCount} bookings** (${kpis.conversionRate} conversion).`;
+    // 3. Top Models / Vehicle Catalog
+    if (q.includes('model') || q.includes('bike') || q.includes('scooter') || q.includes('vehicle') || q.includes('selling')) {
+      const modelLines = (topModelsMtd as any[]).slice(0, 6).map(
+        (m) => `- **${m.model}**: **${m.leads}** leads · **${m.booked}** booked`,
+      );
+      return `### Top Honda Models (MTD · ${activeCatalogVehicles} active models in catalog)
+${modelLines.length ? modelLines.join('\n') : '- No model enquiries recorded MTD yet.'}`;
     }
 
-    // 5. Finance vs Cash Breakdown / Revenue
-    if (q.includes('finance') || q.includes('cash') || q.includes('bank') || q.includes('loan') || q.includes('emi') || q.includes('money') || q.includes('revenue')) {
-      const finPct = parseInt(kpis.financePercentage || '0', 10) || 0;
-      return `### Commercial & Finance Breakdown
-* **Finance Share**: **${kpis.financePercentage}** (${kpis.financeCount} deals)
-* **Cash Share**: **${Math.max(0, 100 - finPct)}%** (${kpis.cashCount} deals)
-* **Exchange Inquiries**: **${kpis.exchangeCount}**`;
+    // 4. Sales Reps / Floor Attendance / Performance
+    if (q.includes('rep') || q.includes('staff') || q.includes('executive') || q.includes('floor') || q.includes('busy') || q.includes('idle')) {
+      const repLines = (repPerformanceMtd as any[]).slice(0, 6).map(
+        (r) => `- **${r.name}**: **${r.mtdLeads}** MTD leads · **${r.mtdBooked}** booked`,
+      );
+      return `### Sales Floor & Team Status
+- Active on Floor: **${repsStatus.totalReps}** total (**${repsStatus.busyCount}** busy, **${repsStatus.idleCount}** available)
+- Currently Busy: ${repsStatus.busyNames?.length ? repsStatus.busyNames.join(', ') : 'None'}
+- Available Reps: ${repsStatus.idleNames?.length ? repsStatus.idleNames.join(', ') : 'None'}
+
+Top MTD Performers:
+${repLines.length ? repLines.join('\n') : '- No MTD rep activity recorded yet.'}`;
     }
 
-    // 6. Follow-ups / Alerts
-    if (q.includes('follow') || q.includes('alert') || q.includes('pending') || q.includes('callback') || q.includes('lost')) {
-      return `### Follow-up & Quotation Summary
-* **Quoted Outcomes**: **${kpis.quotedCount}**
-* **Active In-Progress**: **${kpis.activeInProgress}**
+    // 5. Sources & Areas
+    if (q.includes('source') || q.includes('area') || q.includes('marketing') || q.includes('channel')) {
+      const srcLines = (topSourcesMtd as any[]).slice(0, 5).map((s) => `- **${s.source}**: **${s.count}**`);
+      const areaLines = (topAreasMtd as any[]).slice(0, 5).map((a) => `- **${a.area}**: **${a.count}**`);
+      return `### Lead Sources & Top Areas (MTD)
+Sources:
+${srcLines.length ? srcLines.join('\n') : '- No source data yet.'}
 
-Open **Follow-ups** or **Reports -> Pending Leads** to review overdue callbacks and unbooked quotations.`;
+Top Areas:
+${areaLines.length ? areaLines.join('\n') : '- No area data yet.'}`;
     }
 
-    // Generic Grounded Response
-    return `### Yash Honda Assistant (AI-Assisted)
-Summary for **"${query}"** from live data:
+    // 6. Finance / Cash / Payment
+    if (q.includes('finance') || q.includes('cash') || q.includes('loan') || q.includes('payment') || q.includes('exchange')) {
+      return `### Payment Mode & Exchange Mix
+- Finance Leads: **${kpis.financeCount}** (**${kpis.financePercentage}**)
+- Cash Leads: **${kpis.cashCount}**
+- Exchange Enquiries: **${kpis.exchangeCount}**`;
+    }
 
-* **Lead Volume**: **${kpis.totalLeads} total leads** (${kpis.walkInsToday} walk-ins, ${kpis.telephonicToday} calls)
-* **Bookings**: **${kpis.bookedCount} units booked** (**${kpis.conversionRate}** conversion)
-* **Floor Utilization**: **${repsStatus.busyCount} of ${repsStatus.totalReps} sales executives** currently busy
-* **Commercial Split**: **${kpis.financePercentage}** financed deals (${kpis.financeCount} finance / ${kpis.cashCount} cash)`;
+    // 7. Recent Enquiries / Quotes
+    if (q.includes('recent') || q.includes('latest') || q.includes('enquiry') || q.includes('quote') || q.includes('customer')) {
+      const recLines = (recentEnquiries as any[]).slice(0, 5).map(
+        (e) => `- **${e.customer || 'Guest'}** · ${e.vehicle} · ${e.branch} (${e.status})`,
+      );
+      return `### Recent Enquiries
+${recLines.length ? recLines.join('\n') : '- No enquiries found in current MTD scope.'}`;
+    }
+
+    // 8. Default / Overall Performance Summary
+    return `### Dealership Executive Briefing
+- Total Leads (Scope): **${kpis.totalLeads}** (${kpis.walkInsToday} walk-ins today, ${kpis.telephonicToday} calls)
+- Bookings: **${kpis.bookedCount}** (**${kpis.conversionRate}** conversion)
+- Floor Team: **${repsStatus.busyCount}** busy · **${repsStatus.idleCount}** available
+- Payment Split: **${kpis.financeCount}** Finance (${kpis.financePercentage}) · **${kpis.cashCount}** Cash · **${kpis.exchangeCount}** Exchange
+- Follow-ups: **${followUps.overdueCount ?? 0}** overdue · **${followUps.dueTodayCount ?? 0}** due today
+
+Ask about any specific branch (e.g. Phursungi, BT Kawade, Saswad, Sasane Nagar, Uruli Kanchan, Wadki), model, sales rep, or follow-up.`;
   }
 
   private generateFollowUps(query: string): string[] {
@@ -311,8 +500,7 @@ Summary for **"${query}"** from live data:
   }
 
   private async callGeminiApi(apiKey: string, query: string, history: ChatMessage[], context: any): Promise<string> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
-    const systemPrompt = `You are the executive AI Business Advisor for Yash Honda Two-Wheelers in Pune (Owner: Suyash Pandey). You have direct access to live dealership data: ${JSON.stringify(context)}. Provide crisp, professional, data-backed business insights, formatted in clean markdown with bullet points and clear numbers. Do not fabricate data; stick to the provided dealership metrics.`;
+    const systemPrompt = `You are the executive Business Advisor for Yash Honda Two-Wheelers in Pune. You have complete live dealership data: ${JSON.stringify(context)}. Answer any question about any branch, vehicle model, sales executive, follow-up, lead source, area, payment mode, or recent enquiry using ONLY the provided live metrics. Be concise, structured with clean headings (###) and bullet points (- ), and never invent numbers.`;
 
     const contents = [
       ...history.map((h) => ({
@@ -329,19 +517,23 @@ Summary for **"${query}"** from live data:
       contents,
     };
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Gemini API error: ${res.statusText} - ${errText}`);
+    for (const model of ['gemini-2.5-flash', 'gemini-2.0-flash']) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (text) return text;
+      } else {
+        const errText = await res.text();
+        this.logger.warn(`Gemini ${model} returned ${res.status}: ${errText}`);
+      }
     }
-
-    const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    throw new Error('All Gemini models failed');
   }
 
   private async callClaudeApi(apiKey: string, query: string, history: ChatMessage[], context: any): Promise<string> {
