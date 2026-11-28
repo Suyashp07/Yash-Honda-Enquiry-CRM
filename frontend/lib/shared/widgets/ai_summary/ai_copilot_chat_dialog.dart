@@ -80,20 +80,16 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
   late String _activeBranchId;
 
   final List<String> _promptSuggestions = [
-    'Today\'s performance summary',
-    'Branch-wise comparison',
-    'Phursungi branch stats',
-    'Top-selling Honda models',
-    'Sales rep floor status',
-    'Pending & overdue follow-ups',
-    'Cash vs Finance split',
+    'Today\'s summary',
+    'Branch comparison',
+    'Top models',
+    'Pending follow-ups',
   ];
 
   @override
   void initState() {
     super.initState();
     _activeBranchId = widget.initialBranchId;
-    _initializeGreeting();
   }
 
   @override
@@ -102,19 +98,6 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
-  }
-
-  void _initializeGreeting() {
-    _messages.add(
-      AiCopilotMessage(
-        id: 'msg-0',
-        role: 'assistant',
-        content: '### Dealership Intelligence Ready\n\n'
-            'Ask anything about your branches (Phursungi, BT Kawade, Saswad, Sasane Nagar, Uruli Kanchan, Wadki), '
-            'today\'s leads, bookings, top models, sales executives, or pending follow-ups.',
-        timestamp: DateTime.now(),
-      ),
-    );
   }
 
   void _cancelInFlightRequest() {
@@ -264,7 +247,6 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
   void _clearChat() {
     setState(() {
       _messages.clear();
-      _initializeGreeting();
     });
   }
 
@@ -302,25 +284,24 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
               // 1. Clean CRM Header Bar
               _buildHeader(),
 
-              // 2. Chat Messages Stream Area
+              // 2. Empty State or Chat Messages Stream
               Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                  itemCount: _messages.length + (_isAwaitingResponse ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == _messages.length && _isAwaitingResponse) {
-                      return _buildThinkingBubble();
-                    }
-                    return _buildMessageBubble(_messages[index]);
-                  },
-                ),
+                child: _messages.isEmpty && !_isAwaitingResponse
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                        itemCount: _messages.length + (_isAwaitingResponse ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == _messages.length && _isAwaitingResponse) {
+                            return _buildThinkingBubble();
+                          }
+                          return _buildMessageBubble(_messages[index]);
+                        },
+                      ),
               ),
 
-              // 3. Wrapped Quick Suggestions
-              _buildSuggestionsRow(),
-
-              // 4. Bottom Input Composer
+              // 3. Bottom Input Composer
               _buildInputComposer(),
             ],
           ),
@@ -332,40 +313,24 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
   // --- Header ---
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      padding: const EdgeInsets.fromLTRB(20, 14, 12, 14),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
       ),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEF2F2),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFFECACA)),
-            ),
-            child: const Icon(
-              Icons.auto_awesome_rounded,
-              color: Color(0xFFDC2626),
-              size: 19,
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Title & Live Status
+          // Title & Live Scope
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'Yash Honda Copilot',
+                  'Yash Honda Assistant',
                   style: TextStyle(
                     color: Color(0xFF0F172A),
-                    fontSize: 15,
+                    fontSize: 15.5,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.2,
                   ),
@@ -373,30 +338,17 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
                 const SizedBox(height: 3),
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircleAvatar(
-                              radius: 3, backgroundColor: Color(0xFF16A34A)),
-                          const SizedBox(width: 4),
-                          Text(
-                            _activeBranchId == 'all'
-                                ? 'Live · All branches'
-                                : 'Live · Branch scoped',
-                            style: const TextStyle(
-                              color: Color(0xFF15803D),
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
+                    const CircleAvatar(
+                        radius: 3.5, backgroundColor: Color(0xFF16A34A)),
+                    const SizedBox(width: 6),
+                    Text(
+                      _activeBranchId == 'all'
+                          ? 'All branches'
+                          : 'Branch scoped',
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -406,19 +358,69 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
           ),
 
           // Clear Chat Button
-          IconButton(
-            onPressed: _clearChat,
-            icon: const Icon(Icons.refresh_rounded,
-                color: Color(0xFF64748B), size: 20),
-            tooltip: 'New Conversation',
-          ),
+          if (_messages.isNotEmpty)
+            IconButton(
+              onPressed: _clearChat,
+              icon: const Icon(Icons.refresh_rounded,
+                  color: Color(0xFF64748B), size: 20),
+              tooltip: 'New Conversation',
+            ),
 
           // Close Drawer Button
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close_rounded,
                 color: Color(0xFF64748B), size: 22),
-            tooltip: 'Close Copilot',
+            tooltip: 'Close',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          const Text(
+            'How can I help?',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _promptSuggestions.map((prompt) {
+              return InkWell(
+                onTap: () => _sendMessage(prompt),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Text(
+                    prompt,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -430,49 +432,26 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
     final isUser = msg.role == 'user';
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
-          if (!isUser) ...[
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEE2E2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFCA5A5)),
-              ),
-              child: Image.asset(
-                'assets/ai_icon.png',
-                width: 18,
-                height: 18,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
-              ),
-            ),
-            const SizedBox(width: 10),
-          ],
-
           Flexible(
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 580),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              constraints: BoxConstraints(maxWidth: isUser ? 340 : double.infinity),
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
               decoration: BoxDecoration(
                 color: isUser ? const Color(0xFF0F172A) : Colors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isUser ? 16 : 4),
-                  bottomRight: Radius.circular(isUser ? 4 : 16),
+                  topLeft: const Radius.circular(14),
+                  topRight: const Radius.circular(14),
+                  bottomLeft: Radius.circular(isUser ? 14 : 4),
+                  bottomRight: Radius.circular(isUser ? 4 : 14),
                 ),
                 border: Border.all(
                   color: isUser ? Colors.transparent : const Color(0xFFE2E8F0),
                 ),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
-                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -657,89 +636,30 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
   // --- Thinking indicator bubble ---
   Widget _buildThinkingBubble() {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEE2E2),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFFCA5A5)),
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Color(0xFFDC2626)),
             ),
-            child: Image.asset(
-              'assets/ai_icon.png',
-              width: 18,
-              height: 18,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
+            SizedBox(width: 10),
+            Text(
+              'Checking live data...',
+              style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
             ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFDC2626)),
-                ),
-                SizedBox(width: 10),
-                Text(
-                  'Synthesizing Yash Honda live floor intelligence...',
-                  style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B), fontStyle: FontStyle.italic),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- Wrapped Quick Prompts (no clipped chips) ---
-  Widget _buildSuggestionsRow() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-      ),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: _promptSuggestions.map((prompt) {
-          return InkWell(
-            onTap: () => _sendMessage(prompt),
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Text(
-                prompt,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF334155),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
+          ],
+        ),
       ),
     );
   }
@@ -747,18 +667,19 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
   // --- Input Composer ---
   Widget _buildInputComposer() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: const BoxDecoration(
         color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
       ),
       child: Row(
         children: [
           Expanded(
             child: Container(
-              height: 46,
+              height: 44,
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -770,10 +691,10 @@ class _AiCopilotChatDialogState extends ConsumerState<AiCopilotChatDialog> {
                 style: const TextStyle(fontSize: 13.5, color: Color(0xFF0F172A)),
                 decoration: const InputDecoration(
                   border: InputBorder.none,
-                  hintText: 'Ask about revenue, leads, models, sales reps, or branch performance...',
+                  hintText: 'Ask about branches, leads, models, reps...',
                   hintStyle: TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
                   isDense: true,
-                  contentPadding: EdgeInsets.symmetric(vertical: 13),
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
