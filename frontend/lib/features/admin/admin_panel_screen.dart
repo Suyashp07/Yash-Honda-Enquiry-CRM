@@ -2617,32 +2617,6 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       ),
                     ],
                     if (_currentSection == 'branches') ...[
-                      const Text('Dealership Wing',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 12)),
-                      const SizedBox(height: 4),
-                      DropdownButtonFormField<String>(
-                        value: ['BigWing', 'RedWing'].contains(branchWing)
-                            ? branchWing
-                            : 'RedWing',
-                        items: const [
-                          DropdownMenuItem(
-                              value: 'BigWing',
-                              child: Text('BigWing (Premium / Phursungi)')),
-                          DropdownMenuItem(
-                              value: 'RedWing',
-                              child: Text('RedWing (Commuter / Network)')),
-                        ],
-                        onChanged: (val) =>
-                            setDlgState(() => branchWing = val ?? 'RedWing'),
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
                       const Text('Showroom Address',
                           style: TextStyle(
                               fontWeight: FontWeight.w600, fontSize: 12)),
@@ -2868,7 +2842,6 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                         await dio.put('/branches/${editingItem['id']}', data: {
                           'name': nameCtrl.text.trim(),
                           'code': codeCtrl.text.trim(),
-                          'wing': branchWing,
                           'address': addressCtrl.text.trim().isNotEmpty
                               ? addressCtrl.text.trim()
                               : 'Pune, MH',
@@ -2877,7 +2850,6 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                         await dio.post('/branches', data: {
                           'code': codeCtrl.text.trim(),
                           'name': nameCtrl.text.trim(),
-                          'wing': branchWing,
                           'address': addressCtrl.text.trim().isNotEmpty
                               ? addressCtrl.text.trim()
                               : 'Pune, MH',
@@ -3967,8 +3939,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         return [
           Expanded(flex: 2, child: Text('Code', style: headerStyle)),
           Expanded(flex: 3, child: Text('Name', style: headerStyle)),
-          Expanded(flex: 2, child: Text('Wing', style: headerStyle)),
-          Expanded(flex: 4, child: Text('Address', style: headerStyle)),
+          Expanded(flex: 6, child: Text('Address', style: headerStyle)),
           SizedBox(width: 80, child: Text('Active', style: headerStyle)),
           const SizedBox(
               width: 100, child: Text('', textAlign: TextAlign.right)),
@@ -4435,12 +4406,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       case 'branches':
         final code = item['code'] ?? '';
         final name = item['name'] ?? '';
-        final wing = item['wing'] ??
-            (code.toString().startsWith('BW') || name.toString().contains('Big')
-                ? 'BigWing'
-                : 'RedWing');
         final address = item['address'] ?? '';
-        final isBigWing = wing == 'BigWing';
 
         return [
           Expanded(flex: 2, child: Text(code, style: textStyle)),
@@ -4449,36 +4415,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
               child: Text(name,
                   style: textStyle.copyWith(fontWeight: FontWeight.w500))),
           Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isBigWing
-                      ? const Color(0xFF0F172A)
-                      : const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                      color: isBigWing
-                          ? const Color(0xFF334155)
-                          : const Color(0xFFFCA5A5)),
-                ),
-                child: Text(
-                  wing,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: isBigWing
-                        ? const Color(0xFFF8FAFC)
-                        : const Color(0xFFDC2626),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-              flex: 4,
+              flex: 6,
               child: Text(address,
                   style: textStyle,
                   maxLines: 1,
